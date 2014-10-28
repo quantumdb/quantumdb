@@ -132,7 +132,22 @@ public class CatalogTest {
 	}
 
 	@Test
-	public void testThatCopyTableReturnCopy() {
+	public void testThatRenamingTableIsReflectedInCatalog() {
+		Table table = new Table("users")
+				.addColumn(new Column("id", int8(), IDENTITY, AUTO_INCREMENT));
+
+		Catalog catalog = new Catalog("public")
+				.addTable(table);
+
+		table.rename("players");
+
+		assertFalse(catalog.containsTable("users"));
+		assertTrue(catalog.containsTable("players"));
+		assertEquals(table, catalog.getTable("players"));
+	}
+
+	@Test
+	public void testThatCopyMethodReturnsCopy() {
 		Table table = new Table("users")
 				.addColumn(new Column("id", int8(), IDENTITY, AUTO_INCREMENT));
 

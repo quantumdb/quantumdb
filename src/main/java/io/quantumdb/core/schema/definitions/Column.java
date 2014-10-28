@@ -1,5 +1,7 @@
 package io.quantumdb.core.schema.definitions;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.util.Arrays;
 
 import com.google.common.base.Strings;
@@ -29,6 +31,9 @@ public class Column implements Copyable<Column> {
 	}
 
 	public Column(String name, ColumnType type, String defaultValueExpression, Hint... hints) {
+		checkArgument(!Strings.isNullOrEmpty(name), "You must specify a 'name'.");
+		checkArgument(type != null, "You must specify a 'type'.");
+
 		this.name = name;
 		this.type = type;
 		this.defaultValueExpression = defaultValueExpression;
@@ -59,9 +64,12 @@ public class Column implements Copyable<Column> {
 	}
 
 	public void rename(String newName) {
-		if (parent.containsColumn(newName)) {
-			throw new IllegalArgumentException("Table already contains column with name: " + newName);
+		checkArgument(!Strings.isNullOrEmpty(newName), "You must specify a 'name'.");
+		if (parent != null) {
+			checkArgument(!parent.containsColumn(newName),
+					"Table: " + parent.getName() + " already contains column with name: " + newName);
 		}
+
 		this.name = newName;
 	}
 
