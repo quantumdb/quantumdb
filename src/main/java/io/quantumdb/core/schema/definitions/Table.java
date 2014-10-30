@@ -1,9 +1,12 @@
 package io.quantumdb.core.schema.definitions;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import lombok.AccessLevel;
@@ -22,6 +25,7 @@ public class Table implements Copyable<Table> {
 	private final List<Column> columns = Lists.newArrayList();
 
 	public Table(String name) {
+		checkArgument(!Strings.isNullOrEmpty(name), "You must specify a 'name'.");
 		this.name = name;
 	}
 
@@ -30,20 +34,25 @@ public class Table implements Copyable<Table> {
 	}
 
 	public Table addColumn(Column column) {
+		checkArgument(column != null, "You must specify a 'column'.");
 		if (containsColumn(column.getName())) {
 			throw new IllegalArgumentException("Table already contains a column with name: " + column.getName());
 		}
+
 		columns.add(column);
 		column.setParent(this);
 		return this;
 	}
 
 	public Table addColumns(Collection<Column> newColumns) {
+		checkArgument(newColumns != null, "You must specify a 'newColumns'.");
 		newColumns.forEach(this::addColumn);
 		return this;
 	}
 
 	public Column getColumn(String columnName) {
+		checkArgument(columnName != null, "You must specify a 'columnName'.");
+
 		return columns.stream()
 				.filter(c -> c.getName().equals(columnName))
 				.findFirst()
@@ -58,16 +67,21 @@ public class Table implements Copyable<Table> {
 	}
 
 	public boolean containsColumn(String columnName) {
+		checkArgument(!Strings.isNullOrEmpty(columnName), "You must specify a 'name'.");
+
 		return columns.stream()
 				.filter(c -> c.getName().equals(columnName))
 				.findFirst()
 				.isPresent();
 	}
 
-	public void removeColumn(String columnName) {
+	public Column removeColumn(String columnName) {
+		checkArgument(!Strings.isNullOrEmpty(columnName), "You must specify a 'name'.");
+
 		Column column = getColumn(columnName);
 		column.setParent(null);
 		columns.remove(column);
+		return column;
 	}
 
 	public ImmutableList<Column> getColumns() {
@@ -75,9 +89,12 @@ public class Table implements Copyable<Table> {
 	}
 
 	public void rename(String newName) {
-		if (parent.containsTable(newName)) {
-			throw new IllegalArgumentException("Catalog already contains table with name: " + newName);
+		checkArgument(!Strings.isNullOrEmpty(newName), "You must specify a 'name'.");
+		if (parent != null) {
+			checkArgument(!parent.containsTable(newName),
+					"Catalog: " + parent.getName() + " already contains table with name: " + newName);
 		}
+
 		this.name = newName;
 	}
 

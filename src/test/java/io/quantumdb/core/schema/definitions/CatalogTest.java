@@ -37,8 +37,13 @@ public class CatalogTest {
 
 	@Test
 	public void testAddingTableToCatalog() {
-		new Catalog("public").addTable(new Table("users")
-				.addColumn(new Column("id", int8(), IDENTITY, AUTO_INCREMENT)));
+		Table table = new Table("users")
+				.addColumn(new Column("id", int8(), IDENTITY, AUTO_INCREMENT));
+
+		Catalog catalog = new Catalog("public")
+				.addTable(table);
+
+		assertEquals(catalog, table.getParent());
 	}
 
 	@Test
@@ -144,6 +149,21 @@ public class CatalogTest {
 		assertFalse(catalog.containsTable("users"));
 		assertTrue(catalog.containsTable("players"));
 		assertEquals(table, catalog.getTable("players"));
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void testThatRenamingTableThrowsExceptionWhenNameIsAlreadyTaken() {
+		Table usersTable = new Table("users")
+				.addColumn(new Column("id", int8(), IDENTITY, AUTO_INCREMENT));
+
+		Table playersTable = new Table("players")
+				.addColumn(new Column("id", int8(), IDENTITY, AUTO_INCREMENT));
+
+		new Catalog("public")
+				.addTable(usersTable)
+				.addTable(playersTable);
+
+		usersTable.rename("players");
 	}
 
 	@Test
