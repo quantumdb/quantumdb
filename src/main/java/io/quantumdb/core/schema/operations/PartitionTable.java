@@ -2,9 +2,10 @@ package io.quantumdb.core.schema.operations;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import java.util.LinkedHashMap;
+import java.util.Map;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -14,7 +15,7 @@ import lombok.experimental.Accessors;
 public class PartitionTable implements SchemaOperation {
 
 	private final String tableName;
-	private final LinkedHashMap<String, String> partitions;
+	private final Map<String, String> partitions;
 
 	PartitionTable(String tableName) {
 		checkArgument(!Strings.isNullOrEmpty(tableName), "You must specify a 'tableName'.");
@@ -30,6 +31,10 @@ public class PartitionTable implements SchemaOperation {
 
 		partitions.put(tableName, expression);
 		return this;
+	}
+
+	public ImmutableMap<String, String> getPartitions() {
+		return ImmutableMap.copyOf(partitions);
 	}
 
 }

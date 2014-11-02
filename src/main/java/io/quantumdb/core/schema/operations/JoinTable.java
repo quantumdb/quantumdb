@@ -7,10 +7,13 @@ import java.util.Map;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
+import lombok.AccessLevel;
 import lombok.Data;
+import lombok.Setter;
 import lombok.experimental.Accessors;
 
 @Data
@@ -20,6 +23,8 @@ public class JoinTable implements SchemaOperation {
 	private final Map<String, String> sourceTables;
 	private final Multimap<String, String> sourceColumns;
 	private final Map<String, String> joinConditions;
+
+	@Setter(AccessLevel.NONE)
 	private String targetTableName;
 
 	JoinTable(String sourceTable, String alias, String... columns) {
@@ -36,6 +41,10 @@ public class JoinTable implements SchemaOperation {
 
 	public ImmutableMap<String, String> getSourceTables() {
 		return ImmutableMap.copyOf(sourceTables);
+	}
+
+	public ImmutableMultimap<String, String> getSourceColumns() {
+		return ImmutableMultimap.copyOf(sourceColumns);
 	}
 
 	public ImmutableMap<String, String> getJoinConditions() {

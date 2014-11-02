@@ -5,10 +5,13 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.util.Set;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import io.quantumdb.core.schema.definitions.Column.Hint;
 import io.quantumdb.core.schema.definitions.ColumnType;
+import lombok.AccessLevel;
 import lombok.Data;
+import lombok.Setter;
 import lombok.experimental.Accessors;
 
 
@@ -24,9 +27,16 @@ public class AlterColumn implements SchemaOperation {
 	private final Set<Hint> hintsToDrop;
 	private final Set<Hint> hintsToAdd;
 
+	@Setter(AccessLevel.NONE)
 	private String newColumnName;
+
+	@Setter(AccessLevel.NONE)
 	private ColumnType newColumnType;
+
+	@Setter(AccessLevel.NONE)
 	private String newDefaultExpression;
+
+	@Setter(AccessLevel.NONE)
 	private boolean dropDefaultExpression;
 
 	AlterColumn(String tableName, String columnName) {
@@ -81,6 +91,14 @@ public class AlterColumn implements SchemaOperation {
 		this.hintsToAdd.add(hint);
 		this.hintsToDrop.remove(hint);
 		return this;
+	}
+
+	public ImmutableSet<Hint> getHintsToDrop() {
+		return ImmutableSet.copyOf(hintsToDrop);
+	}
+
+	public ImmutableSet<Hint> getHintsToAdd() {
+		return ImmutableSet.copyOf(hintsToAdd);
 	}
 	
 }
