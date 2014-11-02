@@ -4,7 +4,6 @@ import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
 import static io.quantumdb.core.schema.definitions.GenericColumnTypes.varchar;
 import static org.junit.Assert.assertEquals;
 
-import io.quantumdb.core.schema.definitions.Column;
 import org.junit.Test;
 
 public class AddColumnTest {

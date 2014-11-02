@@ -10,7 +10,6 @@ import static org.junit.Assert.assertEquals;
 import java.util.List;
 
 import com.google.common.collect.Lists;
-import io.quantumdb.core.schema.definitions.Column;
 import org.junit.Test;
 
 public class CreateTableTest {
