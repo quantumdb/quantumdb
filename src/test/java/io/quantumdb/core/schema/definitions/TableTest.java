@@ -36,7 +36,7 @@ public class TableTest {
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testAddingNullColumnToTable() {
-		new Table("public").addColumn(null);
+		new Table("test-db").addColumn(null);
 	}
 
 	@Test
@@ -44,7 +44,7 @@ public class TableTest {
 		new Table("users").addColumn(new Column("id", int8(), IDENTITY, AUTO_INCREMENT));
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test(expected = IllegalStateException.class)
 	public void testThatAddingColumnWithAnAlreadyTakenNameToTableThrowsException() {
 		new Table("users")
 				.addColumn(new Column("id", int8(), IDENTITY, AUTO_INCREMENT))
@@ -99,7 +99,7 @@ public class TableTest {
 		assertEquals(column, table.getColumn("id"));
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test(expected = IllegalStateException.class)
 	public void testThatGetTableMethodThrowsExceptionWhenTableDoesNotExist() {
 		Table table = new Table("users");
 		table.getColumn("id");
@@ -159,7 +159,7 @@ public class TableTest {
 		assertFalse(table.containsColumn("id"));
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test(expected = IllegalStateException.class)
 	public void testThatRemoveColumnMethodThrowsExceptionWhenColumnDoesNotExist() {
 		Table table = new Table("users");
 		table.removeColumn("id");

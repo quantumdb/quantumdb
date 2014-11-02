@@ -49,14 +49,14 @@ public class Catalog implements Copyable<Catalog> {
 		return tables.stream()
 				.filter(t -> t.getName().equals(tableName))
 				.findFirst()
-				.orElseThrow(() -> new IllegalArgumentException(
+				.orElseThrow(() -> new IllegalStateException(
 						"Catalog: " + name + " does not contain a table: " + tableName));
 	}
 
 	public Table removeTable(String tableName) {
 		Table table = getTable(tableName);
-		table.setParent(null);
 		tables.remove(table);
+		table.setParent(null);
 		return table;
 	}
 
