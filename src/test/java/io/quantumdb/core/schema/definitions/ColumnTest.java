@@ -66,6 +66,11 @@ public class ColumnTest {
 		new Column("id", null);
 	}
 
+	@Test(expected = IllegalArgumentException.class)
+	public void testCreatingColumnWithNullHintThrowsException() {
+		new Column("id", int8(), null);
+	}
+
 	@Test
 	public void testGetParentReturnsNullWhenColumnDoesNotBelongToTable() {
 		Column column = new Column("id", int8());

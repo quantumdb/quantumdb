@@ -33,6 +33,10 @@ public class Column implements Copyable<Column> {
 	public Column(String name, ColumnType type, String defaultValueExpression, Hint... hints) {
 		checkArgument(!Strings.isNullOrEmpty(name), "You must specify a 'name'.");
 		checkArgument(type != null, "You must specify a 'type'.");
+		checkArgument(hints != null, "You may not specify 'hints' as NULL.");
+		for (Hint hint : hints) {
+			checkArgument(hint != null, "You cannot add NULL as a hint.");
+		}
 
 		this.name = name;
 		this.type = type;
