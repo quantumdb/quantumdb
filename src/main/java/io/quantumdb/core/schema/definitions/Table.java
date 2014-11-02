@@ -1,6 +1,7 @@
 package io.quantumdb.core.schema.definitions;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 
 import java.util.Collection;
 import java.util.List;
@@ -30,14 +31,21 @@ public class Table implements Copyable<Table> {
 	}
 
 	void setParent(Catalog parent) {
+		if (parent == null && this.parent != null) {
+			checkState(!this.parent.containsTable(name),
+					"The table: " + name + " is still present in the catalog: " + this.parent.getName() + ".");
+		}
+		else if (parent != null && this.parent == null) {
+			checkState(parent.containsTable(name) && this.equals(parent.getTable(name)),
+					"The catalog: " + parent.getName() + " already contains a different table with the name: " + name);
+		}
+
 		this.parent = parent;
 	}
 
 	public Table addColumn(Column column) {
 		checkArgument(column != null, "You must specify a 'column'.");
-		if (containsColumn(column.getName())) {
-			throw new IllegalArgumentException("Table already contains a column with name: " + column.getName());
-		}
+		checkState(!containsColumn(column.getName()), "Table already contains a column with name: " + column.getName());
 
 		columns.add(column);
 		column.setParent(this);
@@ -51,12 +59,12 @@ public class Table implements Copyable<Table> {
 	}
 
 	public Column getColumn(String columnName) {
-		checkArgument(columnName != null, "You must specify a 'columnName'.");
+		checkArgument(!Strings.isNullOrEmpty(columnName), "You must specify a 'columnName'.");
 
 		return columns.stream()
 				.filter(c -> c.getName().equals(columnName))
 				.findFirst()
-				.orElseThrow(() -> new IllegalArgumentException(
+				.orElseThrow(() -> new IllegalStateException(
 						"Table: " + name + " does not contain column: " + columnName));
 	}
 
@@ -77,6 +85,7 @@ public class Table implements Copyable<Table> {
 
 	public Column removeColumn(String columnName) {
 		checkArgument(!Strings.isNullOrEmpty(columnName), "You must specify a 'name'.");
+		checkState(containsColumn(columnName), "You cannot remove a column which does not exist: " + columnName);
 
 		Column column = getColumn(columnName);
 		column.setParent(null);
@@ -91,7 +100,7 @@ public class Table implements Copyable<Table> {
 	public void rename(String newName) {
 		checkArgument(!Strings.isNullOrEmpty(newName), "You must specify a 'name'.");
 		if (parent != null) {
-			checkArgument(!parent.containsTable(newName),
+			checkState(!parent.containsTable(newName),
 					"Catalog: " + parent.getName() + " already contains table with name: " + newName);
 		}
 
