@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.util.Arrays;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Multimap;
 import lombok.Data;
@@ -35,6 +36,10 @@ public class DecomposeTable implements SchemaOperation {
 
 		decompositions.putAll(tableName, Arrays.asList(columns));
 		return this;
+	}
+
+	public ImmutableMultimap<String, String> getDecompositions() {
+		return ImmutableMultimap.copyOf(decompositions);
 	}
 
 }
