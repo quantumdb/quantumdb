@@ -2,9 +2,8 @@ package io.quantumdb.core.schema.operations;
 
 import static org.junit.Assert.assertEquals;
 
-import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
 import org.junit.Test;
 
 public class DecomposeTableTest {
@@ -15,9 +14,10 @@ public class DecomposeTableTest {
 				.into("names", "id", "name")
 				.into("addresses", "id", "address");
 
-		Multimap<String, String> expectedDecompositions = HashMultimap.create();
-		expectedDecompositions.putAll("names", Lists.newArrayList("id", "name"));
-		expectedDecompositions.putAll("addresses", Lists.newArrayList("id", "address"));
+		ImmutableMultimap<String, String> expectedDecompositions = ImmutableMultimap.<String, String>builder()
+				.putAll("names", Lists.newArrayList("id", "name"))
+				.putAll("addresses", Lists.newArrayList("id", "address"))
+				.build();
 
 		assertEquals("users", operation.getTableName());
 		assertEquals(expectedDecompositions, operation.getDecompositions());

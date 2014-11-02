@@ -5,8 +5,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.util.List;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Column.Hint;
 import io.quantumdb.core.schema.definitions.ColumnType;
 import lombok.Data;
@@ -21,7 +21,7 @@ import lombok.experimental.Accessors;
 public class CreateTable implements SchemaOperation {
 
 	private final String tableName;
-	private final List<Column> columns;
+	private final List<ColumnDefinition> columns;
 
 	CreateTable(String tableName) {
 		checkArgument(!Strings.isNullOrEmpty(tableName), "You must specify a 'tableName'.");
@@ -37,8 +37,12 @@ public class CreateTable implements SchemaOperation {
 		checkArgument(!Strings.isNullOrEmpty(name), "You must specify a 'name'.");
 		checkArgument(type != null, "You must specify a 'type'.");
 
-		columns.add(new Column(name, type, defaultValueExpression, hints));
+		columns.add(new ColumnDefinition(name, type, defaultValueExpression, hints));
 		return this;
+	}
+
+	public ImmutableList<ColumnDefinition> getColumns() {
+		return ImmutableList.copyOf(columns);
 	}
 
 }
