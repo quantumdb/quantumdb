@@ -3,7 +3,6 @@ package io.quantumdb.core.schema.operations;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.common.base.Strings;
-import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Column.Hint;
 import io.quantumdb.core.schema.definitions.ColumnType;
 import lombok.Data;
@@ -18,15 +17,15 @@ import lombok.experimental.Accessors;
 public class AddColumn implements SchemaOperation {
 
 	private final String tableName;
-	private final Column columnDefinition;
-	
+	private final ColumnDefinition columnDefinition;
+
 	AddColumn(String tableName, String columnName, ColumnType type, String defaultExpression, Hint... hints) {
 		checkArgument(!Strings.isNullOrEmpty(tableName), "You must specify a 'tableName'");
 		checkArgument(!Strings.isNullOrEmpty(columnName), "You must specify a 'columnName'");
 		checkArgument(type != null, "You must specify a 'type'");
 
 		this.tableName = tableName;
-		this.columnDefinition = new Column(columnName, type, defaultExpression, hints);
+		this.columnDefinition = new ColumnDefinition(columnName, type, defaultExpression, hints);
 	}
 	
 }
