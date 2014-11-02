@@ -14,9 +14,9 @@ public class CatalogTest {
 
 	@Test
 	public void testCreatingCatalog() {
-		Catalog catalog = new Catalog("public");
+		Catalog catalog = new Catalog("test-db");
 
-		assertEquals("public", catalog.getName());
+		assertEquals("test-db", catalog.getName());
 		assertTrue(catalog.getTables().isEmpty());
 	}
 
@@ -32,7 +32,7 @@ public class CatalogTest {
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testAddingNullTableToCatalog() {
-		new Catalog("public").addTable(null);
+		new Catalog("test-db").addTable(null);
 	}
 
 	@Test
@@ -40,7 +40,7 @@ public class CatalogTest {
 		Table table = new Table("users")
 				.addColumn(new Column("id", int8(), IDENTITY, AUTO_INCREMENT));
 
-		Catalog catalog = new Catalog("public")
+		Catalog catalog = new Catalog("test-db")
 				.addTable(table);
 
 		assertEquals(catalog, table.getParent());
@@ -51,7 +51,7 @@ public class CatalogTest {
 		Table table = new Table("users")
 				.addColumn(new Column("id", int8(), IDENTITY, AUTO_INCREMENT));
 
-		Catalog catalog = new Catalog("public")
+		Catalog catalog = new Catalog("test-db")
 				.addTable(table);
 
 		assertTrue(catalog.containsTable("users"));
@@ -59,20 +59,20 @@ public class CatalogTest {
 
 	@Test
 	public void testThatContainsTableMethodReturnsFalseWhenTableDoesNotExist() {
-		Catalog catalog = new Catalog("public");
+		Catalog catalog = new Catalog("test-db");
 
 		assertFalse(catalog.containsTable("users"));
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testThatContainsTableMethodThrowsExceptionOnNullInput() {
-		Catalog catalog = new Catalog("public");
+		Catalog catalog = new Catalog("test-db");
 		catalog.containsTable(null);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testThatContainsTableMethodThrowsExceptionOnEmptyStringInput() {
-		Catalog catalog = new Catalog("public");
+		Catalog catalog = new Catalog("test-db");
 		catalog.containsTable("");
 	}
 
@@ -81,27 +81,27 @@ public class CatalogTest {
 		Table table = new Table("users")
 				.addColumn(new Column("id", int8(), IDENTITY, AUTO_INCREMENT));
 
-		Catalog catalog = new Catalog("public")
+		Catalog catalog = new Catalog("test-db")
 				.addTable(table);
 
 		assertEquals(table, catalog.getTable("users"));
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test(expected = IllegalStateException.class)
 	public void testThatGetTableMethodThrowsExceptionWhenTableDoesNotExist() {
-		Catalog catalog = new Catalog("public");
+		Catalog catalog = new Catalog("test-db");
 		catalog.getTable("users");
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testThatGetTableMethodThrowsExceptionOnNullInput() {
-		Catalog catalog = new Catalog("public");
+		Catalog catalog = new Catalog("test-db");
 		catalog.getTable(null);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testThatGetTableMethodThrowsExceptionOnEmptyStringInput() {
-		Catalog catalog = new Catalog("public");
+		Catalog catalog = new Catalog("test-db");
 		catalog.getTable("");
 	}
 
@@ -110,7 +110,7 @@ public class CatalogTest {
 		Table table = new Table("users")
 				.addColumn(new Column("id", int8(), IDENTITY, AUTO_INCREMENT));
 
-		Catalog catalog = new Catalog("public")
+		Catalog catalog = new Catalog("test-db")
 				.addTable(table);
 
 		Table removedTable = catalog.removeTable("users");
@@ -118,21 +118,21 @@ public class CatalogTest {
 		assertFalse(catalog.containsTable("users"));
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test(expected = IllegalStateException.class)
 	public void testThatRemoveTableMethodThrowsExceptionWhenTableDoesNotExist() {
-		Catalog catalog = new Catalog("public");
+		Catalog catalog = new Catalog("test-db");
 		catalog.removeTable("users");
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testThatRemoveTableMethodThrowsExceptionOnNullInput() {
-		Catalog catalog = new Catalog("public");
+		Catalog catalog = new Catalog("test-db");
 		catalog.removeTable(null);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testThatRemoveTableMethodThrowsExceptionOnEmptyStringInput() {
-		Catalog catalog = new Catalog("public");
+		Catalog catalog = new Catalog("test-db");
 		catalog.removeTable("");
 	}
 
@@ -141,7 +141,7 @@ public class CatalogTest {
 		Table table = new Table("users")
 				.addColumn(new Column("id", int8(), IDENTITY, AUTO_INCREMENT));
 
-		Catalog catalog = new Catalog("public")
+		Catalog catalog = new Catalog("test-db")
 				.addTable(table);
 
 		table.rename("players");
@@ -151,7 +151,7 @@ public class CatalogTest {
 		assertEquals(table, catalog.getTable("players"));
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test(expected = IllegalStateException.class)
 	public void testThatRenamingTableThrowsExceptionWhenNameIsAlreadyTaken() {
 		Table usersTable = new Table("users")
 				.addColumn(new Column("id", int8(), IDENTITY, AUTO_INCREMENT));
@@ -159,7 +159,7 @@ public class CatalogTest {
 		Table playersTable = new Table("players")
 				.addColumn(new Column("id", int8(), IDENTITY, AUTO_INCREMENT));
 
-		new Catalog("public")
+		new Catalog("test-db")
 				.addTable(usersTable)
 				.addTable(playersTable);
 
@@ -171,7 +171,7 @@ public class CatalogTest {
 		Table table = new Table("users")
 				.addColumn(new Column("id", int8(), IDENTITY, AUTO_INCREMENT));
 
-		Catalog catalog = new Catalog("public")
+		Catalog catalog = new Catalog("test-db")
 				.addTable(table);
 
 		Catalog copy = catalog.copy();
@@ -185,7 +185,7 @@ public class CatalogTest {
 		Table table = new Table("users")
 				.addColumn(new Column("id", int8(), IDENTITY, AUTO_INCREMENT));
 
-		Catalog catalog = new Catalog("public")
+		Catalog catalog = new Catalog("test-db")
 				.addTable(table);
 
 		assertFalse(Strings.isNullOrEmpty(catalog.toString()));
