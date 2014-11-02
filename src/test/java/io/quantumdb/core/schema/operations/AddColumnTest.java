@@ -14,7 +14,7 @@ public class AddColumnTest {
 		AddColumn operation = SchemaOperations.addColumn("users", "name", varchar(255), NOT_NULL);
 
 		assertEquals("users", operation.getTableName());
-		assertEquals(new Column("name", varchar(255), NOT_NULL), operation.getColumnDefinition());
+		assertEquals(new ColumnDefinition("name", varchar(255), NOT_NULL), operation.getColumnDefinition());
 	}
 
 	@Test
@@ -22,7 +22,7 @@ public class AddColumnTest {
 		AddColumn operation = SchemaOperations.addColumn("users", "name", varchar(255), "'unknown'");
 
 		assertEquals("users", operation.getTableName());
-		assertEquals(new Column("name", varchar(255), "'unknown'"), operation.getColumnDefinition());
+		assertEquals(new ColumnDefinition("name", varchar(255), "'unknown'"), operation.getColumnDefinition());
 	}
 
 	@Test(expected = IllegalArgumentException.class)

@@ -20,7 +20,8 @@ public class CreateTableTest {
 		CreateTable operation = SchemaOperations.createTable("addresses")
 				.with("id", int8(), "'1'", IDENTITY, NOT_NULL);
 
-		List<Column> expectedColumns = Lists.newArrayList(new Column("id", int8(), "'1'", IDENTITY, NOT_NULL));
+		List<ColumnDefinition> expectedColumns = Lists.newArrayList(
+				new ColumnDefinition("id", int8(), "'1'", IDENTITY, NOT_NULL));
 
 		assertEquals("addresses", operation.getTableName());
 		assertEquals(expectedColumns, operation.getColumns());
@@ -36,13 +37,13 @@ public class CreateTableTest {
 				.with("postal_code", varchar(10), NOT_NULL)
 				.with("country", varchar(255), NOT_NULL);
 
-		List<Column> expectedColumns = Lists.newArrayList(
-				new Column("id", int8(), IDENTITY, AUTO_INCREMENT, NOT_NULL),
-				new Column("street", varchar(255), NOT_NULL),
-				new Column("street_number", varchar(10), NOT_NULL),
-				new Column("city", varchar(255), NOT_NULL),
-				new Column("postal_code", varchar(10), NOT_NULL),
-				new Column("country", varchar(255), NOT_NULL)
+		List<ColumnDefinition> expectedColumns = Lists.newArrayList(
+				new ColumnDefinition("id", int8(), IDENTITY, AUTO_INCREMENT, NOT_NULL),
+				new ColumnDefinition("street", varchar(255), NOT_NULL),
+				new ColumnDefinition("street_number", varchar(10), NOT_NULL),
+				new ColumnDefinition("city", varchar(255), NOT_NULL),
+				new ColumnDefinition("postal_code", varchar(10), NOT_NULL),
+				new ColumnDefinition("country", varchar(255), NOT_NULL)
 		);
 
 		assertEquals("addresses", operation.getTableName());
