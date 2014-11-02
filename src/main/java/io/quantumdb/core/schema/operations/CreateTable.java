@@ -5,6 +5,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.util.List;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Column.Hint;
@@ -39,6 +40,10 @@ public class CreateTable implements SchemaOperation {
 
 		columns.add(new Column(name, type, defaultValueExpression, hints));
 		return this;
+	}
+
+	public ImmutableList<Column> getColumns() {
+		return ImmutableList.copyOf(columns);
 	}
 
 }
