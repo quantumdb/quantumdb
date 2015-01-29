@@ -1,5 +1,6 @@
-package io.quantumdb.core.schema.definitions;
+package io.quantumdb.core.backends.postgresql;
 
+import io.quantumdb.core.schema.definitions.ColumnType;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
