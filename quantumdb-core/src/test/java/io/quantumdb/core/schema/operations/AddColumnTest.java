@@ -1,7 +1,7 @@
 package io.quantumdb.core.schema.operations;
 
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
-import static io.quantumdb.core.schema.definitions.PostgresTypes.varchar;
+import static io.quantumdb.core.backends.postgresql.PostgresTypes.varchar;
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;

@@ -3,7 +3,7 @@ package io.quantumdb.core.schema.definitions;
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
 import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
-import static io.quantumdb.core.schema.definitions.PostgresTypes.bigint;
+import static io.quantumdb.core.backends.postgresql.PostgresTypes.bigint;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
