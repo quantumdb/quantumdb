@@ -8,7 +8,7 @@
 	<parent>
 		<groupId>io.quantumdb</groupId>
 		<artifactId>quantumdb</artifactId>
-		<version>0.1.0</version>
+		<version>0.1.1-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>quantumdb-core</artifactId>
