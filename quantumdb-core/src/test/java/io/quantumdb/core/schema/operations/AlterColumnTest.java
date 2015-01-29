@@ -5,7 +5,7 @@ import static org.junit.Assert.assertFalse;
 
 import com.google.common.collect.Sets;
 import io.quantumdb.core.schema.definitions.Column;
-import io.quantumdb.core.schema.definitions.PostgresTypes;
+import io.quantumdb.core.backends.postgresql.PostgresTypes;
 import org.junit.Test;
 
 public class AlterColumnTest {

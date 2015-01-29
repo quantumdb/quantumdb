@@ -14,7 +14,6 @@ import com.google.common.collect.Maps;
 import io.quantumdb.core.utils.QueryBuilder;
 import io.quantumdb.core.migration.utils.DataMapping;
 import io.quantumdb.core.schema.definitions.Column;
-import io.quantumdb.core.schema.definitions.PostgresTypes;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -166,6 +165,7 @@ public class TableDataMigrator {
 		return true;
 	}
 
+	// TODO: Move PostgreSQL types abstraction to postgresql package.
 	private Object readValue(ResultSet resultSet, int index, PostgresTypes.Type type) throws SQLException {
 		switch (type) {
 			case INT1:
