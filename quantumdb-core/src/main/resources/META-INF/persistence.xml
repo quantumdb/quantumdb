@@ -1,0 +1,32 @@
+<persistence xmlns="http://java.sun.com/xml/ns/persistence"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="http://java.sun.com/xml/ns/persistence
+   http://java.sun.com/xml/ns/persistence/persistence_2_0.xsd"
+             version="2.0">
+
+	<persistence-unit name="quantumdb" transaction-type="RESOURCE_LOCAL">
+		<provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+
+		<properties>
+			<property name="hibernate.hbm2ddl.auto" value="update" />
+
+			<property name="hibernate.connection.autocommit" value="false" />
+
+			<property name="hibernate.archive.autodetection" value="class" />
+			<property name="hibernate.format_sql" value="false" />
+			<property name="hibernate.show_sql" value="false" />
+
+			<property name="hibernate.c3p0.min_size" value="1" />
+			<property name="hibernate.c3p0.max_size" value="1" />
+			<property name="hibernate.c3p0.timeout" value="1000" />
+			<property name="hibernate.c3p0.max_statements" value="0" />
+
+			<!-- This async checks connection availability before using it -->
+			<property name="hibernate.c3p0.testConnectionOnCheckin" value="true" />
+
+			<!-- This tests connection validity every 100 seconds -->
+			<property name="hibernate.c3p0.idle_test_period" value="100" />
+		</properties>
+	</persistence-unit>
+
+</persistence>
