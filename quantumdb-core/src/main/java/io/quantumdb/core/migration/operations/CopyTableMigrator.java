@@ -1,12 +1,12 @@
 package io.quantumdb.core.migration.operations;
 
 import io.quantumdb.core.migration.utils.DataMappings;
-import io.quantumdb.core.versioning.TableMapping;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.ForeignKey;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.schema.operations.CopyTable;
 import io.quantumdb.core.utils.RandomHasher;
+import io.quantumdb.core.versioning.TableMapping;
 import io.quantumdb.core.versioning.Version;
 
 class CopyTableMigrator implements SchemaOperationMigrator<CopyTable> {
@@ -31,8 +31,8 @@ class CopyTableMigrator implements SchemaOperationMigrator<CopyTable> {
 			referredTableId = tableMapping.getTableId(version, referredTableName);
 
 			Table referredTable = catalog.getTable(referredTableId);
-			copy.addForeignKey(foreignKey.getReferencingColumns())
-					.referencing(referredTable, foreignKey.getReferredColumns());
+			copy.addForeignKey(foreignKey.getReferencingColumns().toArray(new String[0]))
+					.referencing(referredTable, foreignKey.getReferredColumns().toArray(new String[0]));
 		}
 
 		catalog.addTable(copy);

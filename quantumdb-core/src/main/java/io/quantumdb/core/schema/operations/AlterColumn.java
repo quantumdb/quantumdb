@@ -1,13 +1,11 @@
 package io.quantumdb.core.schema.operations;
 
-import static com.google.common.base.Strings.isNullOrEmpty;
-
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Strings.isNullOrEmpty;
 
 import java.util.Optional;
 import java.util.Set;
 
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import io.quantumdb.core.schema.definitions.Column.Hint;
@@ -75,7 +73,7 @@ public class AlterColumn implements SchemaOperation {
 	}
 
 	public AlterColumn dropDefaultExpression() {
-		this.newDefaultValueExpression = Optional.ofNullable(null);
+		this.newDefaultValueExpression = Optional.ofNullable("");
 		return this;
 	}
 

@@ -1,7 +1,4 @@
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 import com.google.common.base.Strings;
 import jline.ANSIBuffer;
@@ -28,9 +25,10 @@ public class Main {
 			for (int i = 0; i <= 100; i++) {
 				setProgress(tableName, i);
 			}
-			reader.printNewline();
+			reader.clearScreen();
 		}
 
+		reader.printNewline();
 		reader.printString(new ANSIBuffer().green("Operation completed").toString());
 		reader.printNewline();
 	}

@@ -25,7 +25,7 @@ public class PersistenceModule extends AbstractModule {
 	}
 
 	public PersistenceModule(String url, String catalog, String user, String pass) {
-		this.url = url;
+		this.url = url + "/" + catalog;
 		this.catalog = catalog;
 		this.user = user;
 		this.pass = pass;

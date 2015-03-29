@@ -10,6 +10,7 @@ import java.util.Set;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import io.quantumdb.core.schema.definitions.Sequence;
 import io.quantumdb.core.utils.QueryBuilder;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
@@ -54,8 +55,7 @@ class CatalogLoader {
 		}
 
 		for (String tableName : tableNames) {
-			catalog.addTable(new Table(tableName)
-					.addColumns(listColumns(tableName)));
+			catalog.addTable(createTable(tableName));
 		}
 
 		for (String tableName : tableNames) {
@@ -63,7 +63,9 @@ class CatalogLoader {
 		}
 	}
 
-	private List<Column> listColumns(String tableName) throws SQLException {
+	private Table createTable(String tableName) throws SQLException {
+		Table table = new Table(tableName);
+
 		String query = new QueryBuilder()
 				.append("SELECT *")
 				.append("FROM information_schema.columns")
@@ -94,16 +96,27 @@ class CatalogLoader {
 				if (primaryKeys.contains(columnName) || (primaryKeys.isEmpty() && columns.isEmpty())) { // TODO: <--- HACK!!
 					hints.add(Column.Hint.IDENTITY);
 				}
+
+				Sequence sequence = null;
 				if (expression != null && expression.equals("nextval('" + tableName + "_id_seq'::regclass)")) { // TODO: fix properly!
 					hints.add(Column.Hint.AUTO_INCREMENT);
+					sequence = new Sequence(tableName + "_id_seq");
 				}
 
 				Column.Hint[] hintArray = hints.stream().toArray(Column.Hint[]::new);
-				columns.add(new Column(columnName, PostgresTypes.from(type, characterMaximum), expression, hintArray));
+
+				Column column;
+				if (sequence == null) {
+					column = new Column(columnName, PostgresTypes.from(type, characterMaximum), expression, hintArray);
+				}
+				else {
+					column = new Column(columnName, PostgresTypes.from(type, characterMaximum), sequence, hintArray);
+				}
+				columns.add(column);
 			}
 		}
 
-		return columns;
+		return table.addColumns(columns);
 	}
 
 	private Set<String> determinePrimaryKeys(String tableName) throws SQLException {

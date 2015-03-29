@@ -2,6 +2,7 @@ package io.quantumdb.core.migration.operations;
 
 import java.util.Optional;
 
+import com.google.common.base.Strings;
 import io.quantumdb.core.migration.utils.DataMappings;
 import io.quantumdb.core.versioning.TableMapping;
 import io.quantumdb.core.schema.definitions.Catalog;
@@ -37,10 +38,13 @@ class AlterColumnMigrator implements SchemaOperationMigrator<AlterColumn> {
 
 		Optional<String> newDefaultValueExpression = operation.getNewDefaultValueExpression();
 		if (newDefaultValueExpression.isPresent()) {
-			column.modifyDefaultValueExpression(newDefaultValueExpression.get());
-		}
-		else {
-			column.modifyDefaultValueExpression(null);
+			String defaultValue = newDefaultValueExpression.get();
+			if (Strings.isNullOrEmpty(defaultValue)) {
+				column.dropDefaultValue();
+			}
+			else {
+				column.modifyDefaultValue(defaultValue);
+			}
 		}
 
 		// TODO: replace pipeline with correct transformation

@@ -20,7 +20,7 @@ public class ColumnTest {
 
 		assertEquals("id", column.getName());
 		assertEquals(bigint(), column.getType());
-		assertEquals(null, column.getDefaultValueExpression());
+		assertEquals(null, column.getDefaultValue());
 	}
 
 	@Test
@@ -48,7 +48,7 @@ public class ColumnTest {
 	public void testCreatingColumnWithDefaultExpression() {
 		Column column = new Column("id", varchar(255), "'unknown'");
 
-		assertEquals("'unknown'", column.getDefaultValueExpression());
+		assertEquals("'unknown'", column.getDefaultValue());
 	}
 
 	@Test(expected = IllegalArgumentException.class)

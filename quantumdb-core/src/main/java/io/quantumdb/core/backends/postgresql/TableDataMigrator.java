@@ -1,7 +1,6 @@
 package io.quantumdb.core.backends.postgresql;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -11,26 +10,24 @@ import java.util.stream.Collectors;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Maps;
-import io.quantumdb.core.utils.QueryBuilder;
+import io.quantumdb.core.backends.Backend;
 import io.quantumdb.core.migration.utils.DataMapping;
 import io.quantumdb.core.schema.definitions.Column;
+import io.quantumdb.core.schema.definitions.ColumnType;
+import io.quantumdb.core.utils.QueryBuilder;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class TableDataMigrator {
+class TableDataMigrator {
 
 	private static final long BATCH_SIZE = 2_000;
 	private static final long WAIT_TIME = 50;
 
 	private final DataMapping mapping;
-	private final String jdbcUrl;
-	private final String jdbcUser;
-	private final String jdbcPass;
+	private final Backend backend;
 
-	public TableDataMigrator(String jdbcUrl, String jdbcUser, String jdbcPass, DataMapping mapping) {
-		this.jdbcUrl = jdbcUrl;
-		this.jdbcUser = jdbcUser;
-		this.jdbcPass = jdbcPass;
+	TableDataMigrator(Backend backend, DataMapping mapping) {
+		this.backend = backend;
 		this.mapping = mapping;
 	}
 
@@ -44,68 +41,70 @@ public class TableDataMigrator {
 		MigratorFunction initialMigratorFunction = MigratorFunction.create(mapping, BATCH_SIZE, true);
 		MigratorFunction successiveMigratorFunction = MigratorFunction.create(mapping, BATCH_SIZE, false);
 
-		execute(initialMigratorFunction.getCreateStatement());
-		execute(successiveMigratorFunction.getCreateStatement());
+		try (Connection connection = backend.connect()) {
+			execute(connection, initialMigratorFunction.getCreateStatement());
+			execute(connection, successiveMigratorFunction.getCreateStatement());
+			execute(connection, "SET synchronous_commit TO off;");
 
-		long start = System.currentTimeMillis();
-		Map<String, Object> lastProcessedId = Maps.newHashMap();
-		Connection connection = DriverManager.getConnection(jdbcUrl, jdbcUser, jdbcPass);
+			long start = System.currentTimeMillis();
+			Map<String, Object> lastProcessedId = Maps.newHashMap();
 
-		while (true) {
-			long innerStart = System.currentTimeMillis();
+			while (true) {
+				long innerStart = System.currentTimeMillis();
 
-			QueryBuilder migrator = new QueryBuilder();
-			if (lastProcessedId.isEmpty()) {
-				migrator.append("SELECT * FROM " + initialMigratorFunction.getName() + "();");
-			}
-			else {
-				List<String> values = successiveMigratorFunction.getParameters().stream()
-						.map(parameterName -> asExpression(lastProcessedId.get(parameterName)))
-						.collect(Collectors.toList());
+				QueryBuilder migrator = new QueryBuilder();
+				if (lastProcessedId.isEmpty()) {
+					migrator.append("SELECT * FROM " + initialMigratorFunction.getName() + "();");
+				}
+				else {
+					List<String> values = successiveMigratorFunction.getParameters().stream()
+							.map(parameterName -> asExpression(lastProcessedId.get(parameterName)))
+							.collect(Collectors.toList());
 
-				migrator.append("SELECT * FROM " + successiveMigratorFunction.getName() + "(")
-						.append(Joiner.on(", ").join(values) + ");");
-			}
+					migrator.append("SELECT * FROM " + successiveMigratorFunction.getName() + "(")
+							.append(Joiner.on(", ").join(values) + ");");
+				}
 
-			try (Statement statement = connection.createStatement()) {
-				ResultSet resultSet = statement.executeQuery(migrator.toString());
+				try (Statement statement = connection.createStatement()) {
+					ResultSet resultSet = statement.executeQuery(migrator.toString());
 
-				if (resultSet.next()) {
-					List<Column> identityColumns = mapping.getSourceTable().getIdentityColumns();
-					for (int i = 0; i < identityColumns.size(); i++) {
-						Column column = identityColumns.get(i);
-						String columnName = column.getName();
-						Object value = readValue(resultSet, i + 1, column.getType().getType());
-						lastProcessedId.put(columnName, value);
+					if (resultSet.next()) {
+						List<Column> identityColumns = mapping.getSourceTable().getIdentityColumns();
+						for (int i = 0; i < identityColumns.size(); i++) {
+							Column column = identityColumns.get(i);
+							String columnName = column.getName();
+							Object value = readValue(resultSet, i + 1, column.getType().getType());
+							lastProcessedId.put(columnName, value);
+						}
+
+						if (greaterThanOrEqualsTo(lastProcessedId, highestId)) {
+							break;
+						}
 					}
-
-					if (greaterThanOrEqualsTo(lastProcessedId, highestId)) {
+					else {
+						// No records returned. We're done migrating data...
 						break;
 					}
 				}
-				else {
-					// No records returned. We're done migrating data...
-					break;
-				}
+
+				long innerEnd = System.currentTimeMillis();
+				log.info("Migration up to id: {} took: {} ms", lastProcessedId, innerEnd - innerStart);
+
+				Thread.sleep(WAIT_TIME);
 			}
 
-			long innerEnd = System.currentTimeMillis();
-			log.info("Migration up to id: {} took: {} ms", lastProcessedId, innerEnd - innerStart);
+			connection.close();
 
-			Thread.sleep(WAIT_TIME);
+			long end = System.currentTimeMillis();
+			log.info("Migrating data from: {} to: {} took: {} ms", new Object[] {
+					mapping.getSourceTable().getName(),
+					mapping.getTargetTable().getName(),
+					end - start
+			});
+
+			execute(connection, initialMigratorFunction.getDropStatement());
+			execute(connection, successiveMigratorFunction.getDropStatement());
 		}
-
-		connection.close();
-
-		long end = System.currentTimeMillis();
-		log.info("Migrating data from: {} to: {} took: {} ms", new Object[] {
-				mapping.getSourceTable().getName(),
-				mapping.getTargetTable().getName(),
-				end - start
-		});
-
-		execute(initialMigratorFunction.getDropStatement());
-		execute(successiveMigratorFunction.getDropStatement());
 	}
 
 	private Map<String, Object> queryHighestId() throws SQLException {
@@ -113,7 +112,7 @@ public class TableDataMigrator {
 				.map(Column::getName)
 				.collect(Collectors.toList());
 
-		try (Connection connection = DriverManager.getConnection(jdbcUrl, jdbcUser, jdbcPass)) {
+		try (Connection connection = backend.connect()) {
 			try (Statement statement = connection.createStatement()) {
 				String query = new QueryBuilder()
 						.append("SELECT " + Joiner.on(", ").join(identityColumns))
@@ -165,10 +164,8 @@ public class TableDataMigrator {
 		return true;
 	}
 
-	// TODO: Move PostgreSQL types abstraction to postgresql package.
-	private Object readValue(ResultSet resultSet, int index, PostgresTypes.Type type) throws SQLException {
+	private Object readValue(ResultSet resultSet, int index, ColumnType.Type type) throws SQLException {
 		switch (type) {
-			case INT1:
 			case SMALLINT:
 			case INTEGER:
 				return resultSet.getInt(index);
@@ -193,12 +190,10 @@ public class TableDataMigrator {
 		}
 	}
 
-	private void execute(String query) throws SQLException {
-		try (Connection connection = DriverManager.getConnection(jdbcUrl, jdbcUser, jdbcPass)) {
-			try (Statement statement = connection.createStatement()) {
-				log.debug("Executing: " + query);
-				statement.execute(query);
-			}
+	private void execute(Connection connection, String query) throws SQLException {
+		try (Statement statement = connection.createStatement()) {
+			log.debug("Executing: " + query);
+			statement.execute(query);
 		}
 	}
 

@@ -5,11 +5,11 @@ import java.util.Set;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import io.quantumdb.core.versioning.TableMapping;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.ForeignKey;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.utils.RandomHasher;
+import io.quantumdb.core.versioning.TableMapping;
 import io.quantumdb.core.versioning.Version;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -45,16 +45,6 @@ class TransitiveTableMirrorer {
 			catalog.getTablesReferencingTable(tableId).stream()
 					.map(referencingTableId -> tableMapping.getTableName(parentVersion, referencingTableId))
 					.forEach(tablesToMirror::add);
-
-			// Traverse outgoing foreign keys (which contains at least 1 non-nullable referring column)
-//			table.getForeignKeys().stream()
-//					.filter(foreignKey -> Arrays.stream(foreignKey.getReferencingColumns())
-//							.map(columnName -> table.getColumn(columnName))
-//							.filter(Column::isNotNull)
-//							.count() > 0)
-//					.map(ForeignKey::getReferredTable)
-//					.map(Table::getName)
-//					.forEach(tablesToMirror::add);
 		}
 
 		// Copying foreign keys for each affected table.
@@ -72,8 +62,8 @@ class TransitiveTableMirrorer {
 				String newReferredTableId = tableMapping.getTableId(version, oldReferredTableName);
 
 				Table newReferredTable = catalog.getTable(newReferredTableId);
-				String[] referencingColumnNames = foreignKey.getReferencingColumns();
-				String[] referredColumnNames = foreignKey.getReferredColumns();
+				String[] referencingColumnNames = foreignKey.getReferencingColumns().toArray(new String[0]);
+				String[] referredColumnNames = foreignKey.getReferredColumns().toArray(new String[0]);
 
 				newTable.addForeignKey(referencingColumnNames).referencing(newReferredTable, referredColumnNames);
 			}

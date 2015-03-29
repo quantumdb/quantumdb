@@ -3,7 +3,10 @@ package io.quantumdb.core.versioning;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.Map;
+import java.util.Optional;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMap.Builder;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.RowSortedTable;
@@ -57,7 +60,7 @@ public class TableMapping {
 			}
 		}
 		throw new IllegalArgumentException("Cannot find a tableName for tableId: "
-				+ tableId + " at version: " + version);
+				+ tableId + " at version: " + version + " - mapping was: " + mapping);
 	}
 
 	public ImmutableSortedSet<Version> getVersions() {
@@ -76,8 +79,20 @@ public class TableMapping {
 		return ImmutableSet.copyOf(versionMapping.row(version).keySet());
 	}
 
+	public Optional<String> getTableName(String referencingTableId) {
+		return versionMapping.cellSet().stream()
+				.filter(entry -> referencingTableId.equals(entry.getValue()))
+				.map(entry -> entry.getColumnKey())
+				.findFirst();
+	}
+
+	public Map<String, String> getTableMapping(Version version) {
+		Builder<String, String> builder = ImmutableMap.builder();
+		getTableIds(version).forEach(tableId -> builder.put(tableId, getTableName(version, tableId)));
+		return builder.build();
+	}
+
 	public String remove(Version version, String tableName) {
 		return versionMapping.remove(version, tableName);
 	}
-
 }

@@ -9,10 +9,11 @@ import java.util.stream.Collectors;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import io.quantumdb.core.backends.Backend;
-import io.quantumdb.core.versioning.TableMapping;
+import io.quantumdb.core.backends.DatabaseMigrator;
 import io.quantumdb.core.migration.utils.VersionTraverser;
-import io.quantumdb.core.versioning.State;
 import io.quantumdb.core.versioning.Changelog;
+import io.quantumdb.core.versioning.State;
+import io.quantumdb.core.versioning.TableMapping;
 import io.quantumdb.core.versioning.Version;
 import lombok.extern.slf4j.Slf4j;
 
@@ -26,10 +27,10 @@ public class Migrator {
 		this.backend = backend;
 	}
 
-	public void addSchemaState(String sourceVersionId, String targetVersionId) throws SQLException, InterruptedException {
+	public void migrate(String sourceVersionId, String targetVersionId) throws DatabaseMigrator.MigrationException {
 		log.info("Migrating database structure from version: {} to version: {}", sourceVersionId, targetVersionId);
 
-		State state = backend.loadState();
+		State state = loadState();
 		Changelog changelog = state.getChangelog();
 		TableMapping tableMapping = state.getTableMapping();
 		Set<Version> versions = tableMapping.getVersions();
@@ -56,17 +57,16 @@ public class Migrator {
 
 		verifyPathAndState(state, from, to);
 
-		PreparedMigrator preparedMigrator = prepareMigration(state, from, to);
-		PreparedMigrator.Expansion expansion = preparedMigrator.expand();
-		preparedMigrator.synchronizeForwards(expansion);
-		preparedMigrator.migrateData(expansion);
-		preparedMigrator.synchronizeBackwards(expansion);
-
-		backend.persistState(state);
+		backend.getMigrator().migrate(state, from, to);
 	}
 
-	private PreparedMigrator prepareMigration(State state, Version from, Version to) {
-		return new PreparedMigrator(state.getCatalog(), state.getTableMapping(), from, to, backend);
+	private State loadState() throws DatabaseMigrator.MigrationException {
+		try {
+			return backend.loadState();
+		}
+		catch (SQLException e) {
+			throw new DatabaseMigrator.MigrationException("Could not load current state: " + e.getMessage(), e);
+		}
 	}
 
 	private void verifyPathAndState(State state, Version from, Version to) {
