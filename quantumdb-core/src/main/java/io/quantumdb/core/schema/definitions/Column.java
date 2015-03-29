@@ -1,7 +1,6 @@
 package io.quantumdb.core.schema.definitions;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
 
 import java.util.List;
 import java.util.Set;
@@ -16,7 +15,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Data
-@EqualsAndHashCode(exclude = { "parent" })
+@EqualsAndHashCode(exclude = { "parent", "outgoingForeignKey", "incomingForeignKeys", "sequence" })
 @Setter(AccessLevel.NONE)
 public class Column implements Copyable<Column> {
 
@@ -25,24 +24,34 @@ public class Column implements Copyable<Column> {
 	}
 
 	private String name;
-	private transient Table parent;
+	private Table parent;
 
 	private ColumnType type;
-	private String defaultValueExpression;
+	private String defaultValue;
 	private final Set<Hint> hints;
 
 	@Setter(AccessLevel.PROTECTED)
-	@Getter(AccessLevel.PROTECTED)
-	private transient ForeignKey outgoingForeignKey;
+	private ForeignKey outgoingForeignKey;
+
+	@Setter(AccessLevel.PROTECTED)
+	private Sequence sequence;
 
 	@Getter(AccessLevel.PROTECTED)
-	private transient List<ForeignKey> incomingForeignKeys;
+	private final List<ForeignKey> incomingForeignKeys;
 
 	public Column(String name, ColumnType type, Hint... hints) {
-		this(name, type, null, hints);
+		this(name, type, null, null, hints);
 	}
 
-	public Column(String name, ColumnType type, String defaultValueExpression, Hint... hints) {
+	public Column(String name, ColumnType type, String defaultValue, Hint... hints) {
+		this(name, type, null, defaultValue, hints);
+	}
+
+	public Column(String name, ColumnType type, Sequence sequence, Hint... hints) {
+		this(name, type, sequence, null, hints);
+	}
+
+	private Column(String name, ColumnType type, Sequence sequence, String defaultValueExpression, Hint... hints) {
 		checkArgument(!Strings.isNullOrEmpty(name), "You must specify a 'name'.");
 		checkArgument(type != null, "You must specify a 'type'.");
 		checkArgument(hints != null, "You may not specify 'hints' as NULL.");
@@ -52,7 +61,8 @@ public class Column implements Copyable<Column> {
 
 		this.name = name;
 		this.type = type;
-		this.defaultValueExpression = defaultValueExpression;
+		this.sequence = sequence;
+		this.defaultValue = defaultValueExpression;
 		this.hints = Sets.newHashSet(hints);
 		this.incomingForeignKeys = Lists.newArrayList();
 	}
@@ -61,21 +71,25 @@ public class Column implements Copyable<Column> {
 		this.parent = parent;
 	}
 
-	void reference(String tableName, String columnName) {
-		checkArgument(!Strings.isNullOrEmpty(tableName), "You must specify a 'tableName'.");
-		checkArgument(!Strings.isNullOrEmpty(columnName), "You must specify a 'columnName'.");
-		checkState(parent != null, "This column must first be added to a table.");
-		checkState(parent.getParent() != null, "The parent table must first be added to a catalog.");
-
-		// TODO...
-	}
-
 	public void modifyType(ColumnType newColumnType) {
 		this.type = newColumnType;
 	}
 
-	public void modifyDefaultValueExpression(String defaultValueExpression) {
-		this.defaultValueExpression = defaultValueExpression;
+	public void dropDefaultValue() {
+		this.defaultValue = null;
+		this.hints.remove(Hint.AUTO_INCREMENT);
+	}
+
+	public void modifyDefaultValue(String defaultValue) {
+		this.defaultValue = defaultValue;
+		this.sequence = null;
+		this.hints.remove(Hint.AUTO_INCREMENT);
+	}
+
+	public void modifyDefaultValue(Sequence sequence) {
+		this.hints.add(Hint.AUTO_INCREMENT);
+		this.sequence = sequence;
+		this.defaultValue = null;
 	}
 
 	public boolean isIdentity() {
@@ -109,42 +123,16 @@ public class Column implements Copyable<Column> {
 		return this;
 	}
 
-	// TODO: This is PostgreSQL specific!
-	public String getSequenceName() {
-		String defaultValue = defaultValueExpression;
-		String lowerCased = defaultValue.toLowerCase();
-
-		String prefix = "nextval(";
-		int index = lowerCased.indexOf(prefix);
-
-		if (index == -1) {
-			return null;
-		}
-
-		int start = index + prefix.length();
-		int end = lowerCased.lastIndexOf(')');
-
-		String substring = defaultValue.substring(start, end);
-
-		start = substring.indexOf('\'');
-		if (start == -1) {
-			return substring;
-		}
-
-		end = substring.lastIndexOf('\'');
-		return substring.substring(start + 1, end);
-	}
-
 	@Override
 	public Column copy() {
-		return new Column(name, type, defaultValueExpression, hints.stream().toArray(Hint[]::new));
+		return new Column(name, type, sequence, defaultValue, hints.stream().toArray(Hint[]::new));
 	}
 
 	@Override
 	public String toString() {
 		StringBuilder builder = new StringBuilder().append("Column ").append("[" + name + "] " + type);
-		if (!Strings.isNullOrEmpty(defaultValueExpression)) {
-			builder.append(" default: '" + defaultValueExpression + "'");
+		if (!Strings.isNullOrEmpty(defaultValue)) {
+			builder.append(" default: '" + defaultValue + "'");
 		}
 		for (Hint hint : hints) {
 			builder.append(" " + hint.name());

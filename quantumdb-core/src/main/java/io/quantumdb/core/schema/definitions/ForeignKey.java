@@ -2,8 +2,11 @@ package io.quantumdb.core.schema.definitions;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Maps;
 import lombok.Data;
 
 @Data
@@ -11,11 +14,11 @@ public class ForeignKey {
 
 	private final Table referencingTable;
 	private final Table referredTable;
-	private final String[] referencingColumns;
-	private final String[] referredColumns;
+	private final ImmutableList<String> referencingColumns;
+	private final ImmutableList<String> referredColumns;
 
-	ForeignKey(Table referencingTable, String[] referencingColumns, Table referredTable, String[] referredColumns) {
-		checkArgument(referredColumns.length == referencingColumns.length,
+	ForeignKey(Table referencingTable, List<String> referencingColumns, Table referredTable, List<String> referredColumns) {
+		checkArgument(referredColumns.size() == referencingColumns.size(),
 				"You must refer to as many columns as you are referring from.");
 
 		for (String referencingColumn : referencingColumns) {
@@ -29,8 +32,8 @@ public class ForeignKey {
 
 		this.referencingTable = referencingTable;
 		this.referredTable = referredTable;
-		this.referencingColumns = referencingColumns;
-		this.referredColumns = referredColumns;
+		this.referencingColumns = ImmutableList.copyOf(referencingColumns);
+		this.referredColumns = ImmutableList.copyOf(referredColumns);
 	}
 
 	public String getReferredTableName() {
@@ -41,22 +44,40 @@ public class ForeignKey {
 		return referencingTable.getName();
 	}
 
-	public String[] getReferredColumns() {
+	public ImmutableList<String> getReferredColumns() {
 		return referredColumns;
 	}
 
-	public String[] getReferencingColumns() {
+	public ImmutableList<String> getReferencingColumns() {
 		return referencingColumns;
 	}
 
+	public Map<String, String> getColumns() {
+		Map<String, String> columns = Maps.newLinkedHashMap();
+		for (int i = 0; i < referredColumns.size(); i++) {
+			String referencingColumnName = referencingColumns.get(i);
+			String referredColumnName = referredColumns.get(i);
+			columns.put(referencingColumnName, referredColumnName);
+		}
+		return columns;
+	}
+
 	public void drop() {
-		Arrays.stream(referencingColumns)
+		referencingColumns.stream()
 				.forEach(column -> referencingTable.getColumn(column).setOutgoingForeignKey(null));
 
-		Arrays.stream(referredColumns)
+		referredColumns.stream()
 				.forEach(column -> referredTable.getColumn(column).getIncomingForeignKeys().clear());
 
 		referencingTable.dropForeignKey(this);
 	}
 
+	public boolean containsNonNullableColumns() {
+		return referencingColumns.stream()
+				.map(referencingTable::getColumn)
+				.filter(Column::isNotNull)
+				.findFirst()
+				.map(column -> true)
+				.orElse(false);
+	}
 }

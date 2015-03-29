@@ -3,9 +3,9 @@ package io.quantumdb.core.schema.definitions;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Strings;
@@ -15,7 +15,6 @@ import lombok.AccessLevel;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.Setter;
-import lombok.ToString;
 
 @Data
 @EqualsAndHashCode(exclude = { "parent", "foreignKeys" })
@@ -24,22 +23,23 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 
 	public static class ForeignKeyBuilder {
 
-		private final String[] referringColumns;
+		private final List<String> referringColumns;
 		private final Table parentTable;
 
-		private ForeignKeyBuilder(Table parent, String... referringColumnNames) {
+		private ForeignKeyBuilder(Table parent, List<String> referringColumnNames) {
 			this.parentTable = parent;
 			this.referringColumns = referringColumnNames;
 		}
 
 		public ForeignKey referencing(Table table, String... referredColumns) {
+			return referencing(table, Lists.newArrayList(referredColumns));
+		}
+
+		public ForeignKey referencing(Table table, List<String> referredColumns) {
 			ForeignKey constraint = new ForeignKey(parentTable, referringColumns, table, referredColumns);
 
-			Arrays.stream(referringColumns)
-					.forEach(column -> parentTable.getColumn(column).setOutgoingForeignKey(constraint));
-
-			Arrays.stream(referredColumns)
-					.forEach(column -> table.getColumn(column).getIncomingForeignKeys().add(constraint));
+			referringColumns.forEach(column -> parentTable.getColumn(column).setOutgoingForeignKey(constraint));
+			referredColumns.forEach(column -> table.getColumn(column).getIncomingForeignKeys().add(constraint));
 
 			parentTable.foreignKeys.add(constraint);
 
@@ -48,7 +48,7 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 	}
 
 	private String name;
-	private transient Catalog parent;
+	private Catalog parent;
 
 	private final List<Column> columns = Lists.newArrayList();
 	private final List<ForeignKey> foreignKeys = Lists.newArrayList();
@@ -138,6 +138,10 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 	}
 
 	public ForeignKeyBuilder addForeignKey(String... referringColumns) {
+		return addForeignKey(Lists.newArrayList(referringColumns));
+	}
+
+	public ForeignKeyBuilder addForeignKey(List<String> referringColumns) {
 		return new ForeignKeyBuilder(this, referringColumns);
 	}
 
@@ -177,6 +181,10 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 				.filter(foreignKey -> foreignKey.getReferredTableName().equals(tableName))
 				.findAny()
 				.isPresent();
+	}
+
+	public Set<String> enumerateReferencedByTables() {
+		return parent.getTablesReferencingTable(getName());
 	}
 
 	@Override

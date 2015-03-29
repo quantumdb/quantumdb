@@ -3,12 +3,12 @@ package io.quantumdb.core.schema.definitions;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.Collection;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import io.quantumdb.core.versioning.Version;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -18,12 +18,14 @@ public class Catalog implements Copyable<Catalog> {
 
 	private final String name;
 	private final Collection<Table> tables;
+	private final Collection<Sequence> sequences;
 
 	public Catalog(String name) {
 		checkArgument(!Strings.isNullOrEmpty(name), "You must specify a 'name'");
 
 		this.name = name;
 		this.tables = Sets.newHashSet();
+		this.sequences = Sets.newHashSet();
 	}
 
 	public Catalog addTable(Table table) {
@@ -67,6 +69,35 @@ public class Catalog implements Copyable<Catalog> {
 		return table;
 	}
 
+	public Catalog addSequence(Sequence sequence) {
+		checkArgument(sequence != null, "You must specify a 'sequence'");
+
+		sequences.add(sequence);
+		return this;
+	}
+
+	public Sequence removeSequence(String sequenceName) {
+		checkArgument(!Strings.isNullOrEmpty(sequenceName), "You must specify a 'sequenceName'");
+
+		Sequence sequence = getSequence(sequenceName);
+		sequences.remove(sequence);
+		sequence.setParent(null);
+
+		// TODO: Remove reference from all columns in catalog.
+
+		return sequence;
+	}
+
+	private Sequence getSequence(String sequenceName) {
+		checkArgument(!Strings.isNullOrEmpty(sequenceName), "You must specify a 'sequenceName'");
+
+		return sequences.stream()
+				.filter(sequence -> sequence.getName().equals(sequenceName))
+				.findFirst()
+				.orElseThrow(() -> new IllegalStateException(
+						"Catalog: " + name + " does not contain a sequence: " + sequenceName));
+	}
+
 	public ImmutableSet<Table> getTables() {
 		return ImmutableSet.copyOf(tables);
 	}
@@ -92,11 +123,10 @@ public class Catalog implements Copyable<Catalog> {
 				.toString();
 	}
 
-	public Collection<String> getTablesReferencingTable(String tableName) {
+	public Set<String> getTablesReferencingTable(String tableName) {
 		return tables.stream()
 				.filter(table -> table.referencesTable(tableName))
 				.map(Table::getName)
 				.collect(Collectors.toSet());
 	}
-
 }
