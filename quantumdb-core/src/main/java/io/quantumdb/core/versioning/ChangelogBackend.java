@@ -24,6 +24,8 @@ import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import com.google.inject.persist.Transactional;
 import com.mysema.query.jpa.impl.JPAQuery;
+import io.quantumdb.core.backends.postgresql.PostgresTypes;
+import io.quantumdb.core.schema.definitions.ColumnType;
 import io.quantumdb.core.schema.operations.SchemaOperation;
 import io.quantumdb.core.utils.RandomHasher;
 import lombok.AccessLevel;
@@ -147,10 +149,43 @@ public class ChangelogBackend {
 		Map<String, Class<? extends SchemaOperation>> operations = reflections.getSubTypesOf(SchemaOperation.class).stream()
 				.collect(Collectors.toMap(type -> type.getSimpleName(), Function.identity()));
 
-		Gson defaultSerializer = new Gson();
+		JsonDeserializer<ColumnType> columnTypeDeserializer = new JsonDeserializer<ColumnType>() {
+			@Override
+			public ColumnType deserialize(JsonElement json, Type typeOfT,
+					JsonDeserializationContext context) throws JsonParseException {
+
+				JsonObject object = json.getAsJsonObject();
+				String type = object.getAsJsonPrimitive("type").getAsString();
+				Integer length = null;
+
+				if (type.contains("(")) {
+					String part = type.substring(type.indexOf('(') + 1, type.length() - 1);
+					length = Integer.parseInt(part);
+					type = type.substring(0, type.indexOf('('));
+				}
+
+				return PostgresTypes.from(type, length);
+			}
+		};
+
+		JsonSerializer<ColumnType> columnTypeSerializer = new JsonSerializer<ColumnType>() {
+			@Override
+			public JsonElement serialize(ColumnType src, Type typeOfSrc, JsonSerializationContext context) {
+				JsonObject object = new JsonObject();
+				object.addProperty("type", src.getNotation());
+				return object;
+			}
+		};
+
+		Gson defaultSerializer = new GsonBuilder()
+				.registerTypeAdapter(ColumnType.class, columnTypeDeserializer)
+				.registerTypeAdapter(ColumnType.class, columnTypeSerializer)
+				.create();
 
 		log.trace("Creating deserializer for general type: {}", SchemaOperation.class);
 		GsonBuilder builder = new GsonBuilder()
+				.registerTypeAdapter(ColumnType.class, columnTypeDeserializer)
+				.registerTypeAdapter(ColumnType.class, columnTypeSerializer)
 				.registerTypeAdapter(SchemaOperation.class, new JsonDeserializer<SchemaOperation>() {
 					@Override
 					public SchemaOperation deserialize(JsonElement json, Type typeOfT,
