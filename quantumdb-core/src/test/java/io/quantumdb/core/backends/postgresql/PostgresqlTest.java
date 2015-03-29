@@ -5,6 +5,7 @@ import static org.junit.Assume.assumeTrue;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Optional;
 
 import io.quantumdb.core.utils.RandomHasher;
 import lombok.Getter;
@@ -22,13 +23,12 @@ public abstract class PostgresqlTest {
 
 	@Before
 	public void setUp() throws SQLException, ClassNotFoundException {
-		this.jdbcUrl = System.getProperty("jdbc.url");
-		this.jdbcUser = System.getProperty("jdbc.user");
-		this.jdbcPass = System.getProperty("jdbc.pass");
+		this.jdbcUrl = getProperty("jdbc.url").orElse("jdbc:postgresql://localhost:5432");
+		this.jdbcUser = getProperty("jdbc.user", "PG_USER").orElse(null);
+		this.jdbcPass = getProperty("jdbc.pass", "PG_PASSWORD").orElse(null);
 
-		assumeTrue("No 'jdbc.url' specified", jdbcUrl != null);
-		assumeTrue("No 'jdbc.user' specified", jdbcUser != null);
-		assumeTrue("No 'jdbc.pass' specified", jdbcPass != null);
+		assumeTrue("No 'jdbc.user' or 'PG_USER' specified", jdbcUser != null);
+		assumeTrue("No 'jdbc.pass' or 'PG_PASSWORD' specified", jdbcPass != null);
 
 		this.catalogName = "db_" + RandomHasher.generateHash();
 		try (Connection conn = DriverManager.getConnection(jdbcUrl + "/" + jdbcUser, jdbcUser, jdbcPass)) {
@@ -51,6 +51,20 @@ public abstract class PostgresqlTest {
 
 			conn.createStatement().execute("DROP DATABASE " + catalogName + ";");
 		}
+	}
+
+	public Optional<String> getProperty(String... keys) {
+		for (String key : keys) {
+			String property = System.getProperty(key);
+			if (property != null) {
+				return Optional.of(property);
+			}
+			property = System.getenv(key);
+			if (property != null) {
+				return Optional.of(property);
+			}
+		}
+		return Optional.empty();
 	}
 
 }
