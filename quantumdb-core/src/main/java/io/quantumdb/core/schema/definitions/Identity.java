@@ -14,7 +14,7 @@ public class Identity {
 	private final Map<String, Object> values;
 
 	public Identity() {
-		this.values = Maps.newHashMap();
+		this.values = Maps.newLinkedHashMap();
 	}
 
 	public Identity(String key, Object value) {

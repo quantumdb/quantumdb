@@ -19,9 +19,9 @@ public class GhostTableCreator {
 		this.nullRecordCreator = new NullRecordCreator();
 	}
 
-	public Map<String, Identity> create(Connection connection, Collection<Table> tables) throws SQLException {
+	public Map<Table, Identity> create(Connection connection, Collection<Table> tables) throws SQLException {
 		tableCreator.createTables(connection, tables);
-		Map<String, Identity> identities = nullRecordCreator.insertNullObjects(connection, Lists.newArrayList(tables));
+		Map<Table, Identity> identities = nullRecordCreator.insertNullObjects(connection, Lists.newArrayList(tables));
 		tableCreator.createForeignKeys(connection, tables);
 		return identities;
 	}

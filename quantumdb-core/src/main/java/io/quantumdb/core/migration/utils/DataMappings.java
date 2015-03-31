@@ -101,9 +101,18 @@ public class DataMappings {
 		checkArgument(table != null, "You must specify a 'table'.");
 		checkArgument(!isNullOrEmpty(columnName), "You must specify a 'columnName'.");
 
+		Set<Table> dereferenceTables = Sets.newHashSet();
 		for (Map.Entry<Table, DataMapping> entry : mappings.row(table).entrySet()) {
 			DataMapping dataMapping = entry.getValue();
 			dataMapping.drop(columnName);
+
+			if (dataMapping.getColumnMappings().isEmpty()) {
+				dereferenceTables.add(dataMapping.getTargetTable());
+			}
+		}
+
+		for (Table targetTable : dereferenceTables) {
+			mappings.remove(table, targetTable);
 		}
 
 		return this;

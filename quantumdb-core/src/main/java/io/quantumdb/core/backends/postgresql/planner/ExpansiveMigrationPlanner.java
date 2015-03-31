@@ -12,9 +12,11 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Sets.SetView;
 import io.quantumdb.core.migration.operations.SchemaOperationsMigrator;
+import io.quantumdb.core.migration.utils.DataMapping.Transformation;
 import io.quantumdb.core.migration.utils.DataMappings;
 import io.quantumdb.core.migration.utils.VersionTraverser;
 import io.quantumdb.core.schema.definitions.Catalog;
+import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.ForeignKey;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.utils.RandomHasher;
@@ -116,7 +118,7 @@ public class ExpansiveMigrationPlanner implements MigrationPlanner {
 					break;
 				}
 
-				Set<String> newGhostTables = expand(catalog, tableMapping, sourceVersion, targetVersion, tableNames, tablesToAdd, originalModifiedTables);
+				Set<String> newGhostTables = expand(catalog, tableMapping, mappings, sourceVersion, targetVersion, tableNames, tablesToAdd, originalModifiedTables);
 
 				lookForCheapMigrations = true;
 				tablesToCreateNullObjectsFor.clear();
@@ -127,8 +129,9 @@ public class ExpansiveMigrationPlanner implements MigrationPlanner {
 						.collect(Collectors.toSet()));
 
 				newGhostTables.forEach(newGhostTable -> {
-					if (!tablesToCreateNullObjectsFor.contains(newGhostTable)) {
-						tablesToCreateNullObjectsFor.add(newGhostTable);
+					String newGhostTableId = tableMapping.getTableId(targetVersion, newGhostTable);
+					if (!tablesToCreateNullObjectsFor.contains(newGhostTableId)) {
+						tablesToCreateNullObjectsFor.add(newGhostTableId);
 					}
 				});
 
@@ -140,8 +143,8 @@ public class ExpansiveMigrationPlanner implements MigrationPlanner {
 		return new MigrationPlan(Lists.reverse(steps), tablesToCreateNullObjectsFor, mappings);
 	}
 
-	private Set<String> expand(Catalog catalog, TableMapping tableMapping, Version sourceVersion,
-			Version targetVersion, Set<String> alreadyExpanded, Set<String> tablesToExpand,
+	private Set<String> expand(Catalog catalog, TableMapping tableMapping, DataMappings dataMappings,
+			Version sourceVersion, Version targetVersion, Set<String> alreadyExpanded, Set<String> tablesToExpand,
 			Set<String> originalModifiedTables) {
 
 		Set<String> createdGhostTables = Sets.newHashSet();
@@ -162,8 +165,13 @@ public class ExpansiveMigrationPlanner implements MigrationPlanner {
 
 			String newTableId = RandomHasher.generateTableId(tableMapping);
 			tableMapping.set(targetVersion, tableName, newTableId);
-			catalog.addTable(table.copy()
-					.rename(newTableId));
+			Table ghostTable = table.copy().rename(newTableId);
+			catalog.addTable(ghostTable);
+
+			for (Column column : table.getColumns()) {
+				dataMappings.drop(table, column.getName());
+				dataMappings.add(table, column.getName(), ghostTable, column.getName(), Transformation.createNop());
+			}
 
 			mirrored.add(tableName);
 			createdGhostTables.add(tableName);

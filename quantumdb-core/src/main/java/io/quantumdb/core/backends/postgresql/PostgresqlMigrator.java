@@ -5,24 +5,30 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import io.quantumdb.core.backends.DatabaseMigrator;
 import io.quantumdb.core.backends.postgresql.migrator.Expansion;
 import io.quantumdb.core.backends.postgresql.migrator.NullRecordCreator;
+import io.quantumdb.core.backends.postgresql.migrator.NullRecordPurger;
 import io.quantumdb.core.backends.postgresql.migrator.TableCreator;
 import io.quantumdb.core.backends.postgresql.planner.ExpansiveMigrationPlanner;
 import io.quantumdb.core.backends.postgresql.planner.MigrationPlan;
 import io.quantumdb.core.migration.utils.DataMapping;
 import io.quantumdb.core.migration.utils.DataMappings;
+import io.quantumdb.core.migration.utils.DataMappings.Direction;
 import io.quantumdb.core.schema.definitions.Catalog;
+import io.quantumdb.core.schema.definitions.Identity;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.utils.QueryBuilder;
 import io.quantumdb.core.utils.RandomHasher;
 import io.quantumdb.core.versioning.State;
+import io.quantumdb.core.versioning.TableMapping;
 import io.quantumdb.core.versioning.Version;
 import lombok.extern.slf4j.Slf4j;
 
@@ -39,12 +45,16 @@ class PostgresqlMigrator implements DatabaseMigrator {
 
 	public void migrate(State state, Version from, Version to) throws MigrationException {
 		Expansion expansion;
+		Map<Table, Identity> createdIdentities;
 
 		try (Connection connection = backend.connect()) {
 			expansion = expand(connection, state, from, to);
-			nullRecordCreator.insertNullObjects(connection, expansion.getCreateNullObjectsForTables().stream()
+
+			List<Table> createNullObjects = expansion.getCreateNullObjectsForTables().stream()
 					.map(expansion.getState().getCatalog()::getTable)
-					.collect(Collectors.toList()));
+					.collect(Collectors.toList());
+
+			createdIdentities = nullRecordCreator.insertNullObjects(connection, createNullObjects);
 
 			synchronizeForwards(connection, expansion);
 		}
@@ -61,7 +71,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		}
 
 		try (Connection connection = backend.connect()) {
-			removeNullObjects(connection, expansion);
+			removeNullObjects(connection, createdIdentities);
 			synchronizeBackwards(connection, expansion);
 		}
 		catch (SQLException e) {
@@ -73,13 +83,16 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		MigrationPlan plan = new ExpansiveMigrationPlanner().createPlan(state, from, to);
 
 		Catalog catalog = state.getCatalog();
-		Expansion expansion = new Expansion(plan, state);
+		Expansion expansion = new Expansion(plan, state, from, to);
 
 		Set<Table> newTables = expansion.getTableIds().stream()
 				.map(catalog::getTable)
 				.collect(Collectors.toSet());
 
 		createTables(connection, newTables);
+
+		backend.persistState(state);
+
 		return expansion;
 	}
 
@@ -101,8 +114,8 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		}
 	}
 
-	private void removeNullObjects(Connection connection, Expansion expansion) {
-
+	private void removeNullObjects(Connection connection, Map<Table, Identity> createdIdentities) throws SQLException {
+		new NullRecordPurger().purgeNullObjects(connection, createdIdentities);
 	}
 
 	private void synchronizeBackwards(Connection connection, Expansion expansion) throws SQLException {
@@ -113,11 +126,15 @@ class PostgresqlMigrator implements DatabaseMigrator {
 
 	private List<DataMapping> listDataMappings(Expansion expansion, DataMappings.Direction direction) {
 		State state = expansion.getState();
+		TableMapping tableMapping = state.getTableMapping();
+		Version version = direction == Direction.FORWARDS ? expansion.getOrigin() : expansion.getTarget();
+		ImmutableSet<String> tableIds = tableMapping.getTableIds(version);
+
 		Catalog catalog = state.getCatalog();
 		DataMappings dataMappings = expansion.getDataMappings();
 
 		List<DataMapping> results = Lists.newArrayList();
-		for (String tableId : expansion.getTableIds()) {
+		for (String tableId : tableIds) {
 			Table table = catalog.getTable(tableId);
 			Set<DataMapping> mappings = dataMappings.getTransitiveDataMappings(table, direction);
 			results.addAll(mappings);

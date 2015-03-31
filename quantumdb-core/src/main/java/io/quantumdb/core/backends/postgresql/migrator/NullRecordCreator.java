@@ -23,8 +23,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class NullRecordCreator {
 
-	public Map<String, Identity> insertNullObjects(Connection connection, List<Table> tables) throws SQLException {
-		Map<String, Identity> persisted = Maps.newHashMap();
+	public Map<Table, Identity> insertNullObjects(Connection connection, List<Table> tables) throws SQLException {
+		Map<Table, Identity> persisted = Maps.newHashMap();
 
 		ensureDeferredConstraints(connection);
 
@@ -33,7 +33,7 @@ public class NullRecordCreator {
 		for (Table table : tables) {
 			Identity identity = insertNullObject(connection, table, generatedIdentities);
 			if (identity != null) {
-				persisted.put(table.getName(), identity);
+				persisted.put(table, identity);
 			}
 		}
 

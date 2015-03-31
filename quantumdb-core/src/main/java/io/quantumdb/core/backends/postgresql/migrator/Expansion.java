@@ -9,17 +9,23 @@ import io.quantumdb.core.backends.postgresql.planner.MigrationPlan;
 import io.quantumdb.core.backends.postgresql.planner.Step;
 import io.quantumdb.core.migration.utils.DataMappings;
 import io.quantumdb.core.versioning.State;
+import io.quantumdb.core.versioning.Version;
 import lombok.Data;
 
 @Data
 public class Expansion {
+
+	private final Version origin;
+	private final Version target;
 
 	private final List<Step> migrationSteps;
 	private final DataMappings dataMappings;
 	private final List<String> createNullObjectsForTables;
 	private final State state;
 
-	public Expansion(MigrationPlan migrationPlan, State state) {
+	public Expansion(MigrationPlan migrationPlan, State state, Version origin, Version target) {
+		this.origin = origin;
+		this.target = target;
 		this.migrationSteps = migrationPlan.getSteps();
 		this.dataMappings = migrationPlan.getDataMappings();
 		this.createNullObjectsForTables = migrationPlan.getCreateNullObjectsForTables();
