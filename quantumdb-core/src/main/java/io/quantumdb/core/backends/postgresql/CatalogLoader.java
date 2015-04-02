@@ -7,16 +7,20 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import io.quantumdb.core.schema.definitions.Sequence;
-import io.quantumdb.core.utils.QueryBuilder;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
+import io.quantumdb.core.schema.definitions.Sequence;
 import io.quantumdb.core.schema.definitions.Table;
+import io.quantumdb.core.utils.QueryBuilder;
 
 class CatalogLoader {
+
+	private static final Pattern SEQUENCE_EXPRESSION = Pattern.compile("nextval\\(\\'(\\w+_id_seq)\\'::regclass\\)", Pattern.CASE_INSENSITIVE);
 
 	private final Connection connection;
 
@@ -98,9 +102,12 @@ class CatalogLoader {
 				}
 
 				Sequence sequence = null;
-				if (expression != null && expression.equals("nextval('" + tableName + "_id_seq'::regclass)")) { // TODO: fix properly!
-					hints.add(Column.Hint.AUTO_INCREMENT);
-					sequence = new Sequence(tableName + "_id_seq");
+				if (expression != null) {
+					Matcher matcher = SEQUENCE_EXPRESSION.matcher(expression);
+					if (matcher.find()) {
+						hints.add(Column.Hint.AUTO_INCREMENT);
+						sequence = new Sequence(matcher.group(1));
+					}
 				}
 
 				Column.Hint[] hintArray = hints.stream().toArray(Column.Hint[]::new);

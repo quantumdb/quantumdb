@@ -201,7 +201,7 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 
 	@Override
 	public String toString() {
-		return "Table[" + name + "]";
+		return PrettyPrinter.prettyPrint(this);
 	}
 
 }

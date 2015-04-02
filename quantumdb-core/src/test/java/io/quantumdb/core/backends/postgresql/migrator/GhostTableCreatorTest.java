@@ -28,25 +28,27 @@ import java.util.stream.Collectors;
 
 import com.google.common.collect.Sets;
 import io.quantumdb.core.backends.DatabaseMigrator;
-import io.quantumdb.core.backends.postgresql.PostgresqlTest;
+import io.quantumdb.core.backends.postgresql.PostgresqlDatabase;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Identity;
 import io.quantumdb.core.schema.definitions.Table;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 
-public class GhostTableCreatorTest extends PostgresqlTest {
+public class GhostTableCreatorTest {
+
+	@Rule
+	public PostgresqlDatabase setup;
 
 	private GhostTableCreator creator;
 	private Catalog catalog;
 
 	@Before
 	public void setUp() throws SQLException, ClassNotFoundException {
-		super.setUp();
-
 		this.creator = new GhostTableCreator();
-		this.catalog = new Catalog(getCatalogName());
+		this.catalog = new Catalog(setup.getCatalogName());
 	}
 
 	@Test
@@ -59,7 +61,7 @@ public class GhostTableCreatorTest extends PostgresqlTest {
 
 		catalog.addTable(users);
 
-		Map<Table, Identity> identities = creator.create(getConnection(), catalog.getTables());
+		Map<Table, Identity> identities = creator.create(setup.getConnection(), catalog.getTables());
 		assertIdentitiesPresent(identities, users);
 	}
 
@@ -83,7 +85,7 @@ public class GhostTableCreatorTest extends PostgresqlTest {
 
 		catalog.addTable(users);
 
-		Map<Table, Identity> identities = creator.create(getConnection(), catalog.getTables());
+		Map<Table, Identity> identities = creator.create(setup.getConnection(), catalog.getTables());
 		assertIdentitiesPresent(identities, users);
 	}
 
@@ -98,7 +100,7 @@ public class GhostTableCreatorTest extends PostgresqlTest {
 
 		catalog.addTable(users);
 
-		Map<Table, Identity> identities = creator.create(getConnection(), catalog.getTables());
+		Map<Table, Identity> identities = creator.create(setup.getConnection(), catalog.getTables());
 		assertIdentitiesPresent(identities, users);
 	}
 
@@ -113,7 +115,7 @@ public class GhostTableCreatorTest extends PostgresqlTest {
 
 		catalog.addTable(users);
 
-		Map<Table, Identity> identities = creator.create(getConnection(), catalog.getTables());
+		Map<Table, Identity> identities = creator.create(setup.getConnection(), catalog.getTables());
 		assertIdentitiesPresent(identities, users);
 	}
 
@@ -133,7 +135,7 @@ public class GhostTableCreatorTest extends PostgresqlTest {
 		catalog.addTable(users);
 		catalog.addTable(accounts);
 
-		Map<Table, Identity> identities = creator.create(getConnection(), catalog.getTables());
+		Map<Table, Identity> identities = creator.create(setup.getConnection(), catalog.getTables());
 		assertIdentitiesPresent(identities, users, accounts);
 	}
 
@@ -151,7 +153,7 @@ public class GhostTableCreatorTest extends PostgresqlTest {
 		catalog.addTable(rentals);
 		catalog.addTable(payments);
 
-		Map<Table, Identity> identities = creator.create(getConnection(), catalog.getTables());
+		Map<Table, Identity> identities = creator.create(setup.getConnection(), catalog.getTables());
 		assertIdentitiesPresent(identities, rentals, payments);
 	}
 
@@ -169,7 +171,7 @@ public class GhostTableCreatorTest extends PostgresqlTest {
 		catalog.addTable(rentals);
 		catalog.addTable(payments);
 
-		Map<Table, Identity> identities = creator.create(getConnection(), catalog.getTables());
+		Map<Table, Identity> identities = creator.create(setup.getConnection(), catalog.getTables());
 		assertIdentitiesPresent(identities, rentals, payments);
 	}
 
@@ -192,7 +194,7 @@ public class GhostTableCreatorTest extends PostgresqlTest {
 		catalog.addTable(users);
 		catalog.addTable(films);
 
-		Map<Table, Identity> identities = creator.create(getConnection(), catalog.getTables());
+		Map<Table, Identity> identities = creator.create(setup.getConnection(), catalog.getTables());
 		assertIdentitiesPresent(identities, rentals, users, films);
 	}
 
@@ -221,7 +223,7 @@ public class GhostTableCreatorTest extends PostgresqlTest {
 		catalog.addTable(films);
 		catalog.addTable(payments);
 
-		Map<Table, Identity> identities = creator.create(getConnection(), catalog.getTables());
+		Map<Table, Identity> identities = creator.create(setup.getConnection(), catalog.getTables());
 		assertIdentitiesPresent(identities, rentals, users, films, payments);
 	}
 
@@ -247,7 +249,7 @@ public class GhostTableCreatorTest extends PostgresqlTest {
 	}
 
 	private int countRows(Table table) throws SQLException {
-		Statement statement = getConnection().createStatement();
+		Statement statement = setup.getConnection().createStatement();
 		ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) as cnt FROM " + table.getName());
 		if (resultSet.next()) {
 			return resultSet.getInt("cnt");

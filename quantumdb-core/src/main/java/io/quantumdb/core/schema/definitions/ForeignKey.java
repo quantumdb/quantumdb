@@ -80,4 +80,10 @@ public class ForeignKey {
 				.map(column -> true)
 				.orElse(false);
 	}
+
+	@Override
+	public String toString() {
+		return PrettyPrinter.prettyPrint(this);
+	}
+
 }

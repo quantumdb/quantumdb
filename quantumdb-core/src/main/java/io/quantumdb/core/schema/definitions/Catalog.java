@@ -3,6 +3,7 @@ package io.quantumdb.core.schema.definitions;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -24,8 +25,8 @@ public class Catalog implements Copyable<Catalog> {
 		checkArgument(!Strings.isNullOrEmpty(name), "You must specify a 'name'");
 
 		this.name = name;
-		this.tables = Sets.newHashSet();
-		this.sequences = Sets.newHashSet();
+		this.tables = Sets.newTreeSet(Comparator.comparing(Table::getName));
+		this.sequences = Sets.newTreeSet(Comparator.comparing(Sequence::getName));
 	}
 
 	public Catalog addTable(Table table) {
@@ -113,14 +114,7 @@ public class Catalog implements Copyable<Catalog> {
 
 	@Override
 	public String toString() {
-		return new PrettyStringWriter()
-				.append("Catalog [" + name + "] {\n")
-				.modifyIndent(1)
-				.append(tables.stream().map(table -> table.toString() ).collect(Collectors.joining(",\n")))
-				.append("\n")
-				.modifyIndent(-1)
-				.append("}")
-				.toString();
+		return PrettyPrinter.prettyPrint(this);
 	}
 
 	public Set<String> getTablesReferencingTable(String tableName) {

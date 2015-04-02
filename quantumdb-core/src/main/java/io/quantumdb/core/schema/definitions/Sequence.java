@@ -26,4 +26,8 @@ public class Sequence {
 		return this;
 	}
 
+	public String toString() {
+		return PrettyPrinter.prettyPrint(this);
+	}
+
 }

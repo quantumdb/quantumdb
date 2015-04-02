@@ -15,8 +15,9 @@ import com.google.common.collect.Sets;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import io.quantumdb.core.backends.Backend;
+import io.quantumdb.core.backends.DatabaseMigrator.MigrationException;
 import io.quantumdb.core.backends.guice.PersistenceModule;
-import io.quantumdb.core.backends.postgresql.PostgresqlTest;
+import io.quantumdb.core.backends.postgresql.PostgresqlDatabase;
 import io.quantumdb.core.backends.postgresql.migrator.TableCreator;
 import io.quantumdb.core.migration.Migrator;
 import io.quantumdb.core.schema.definitions.Catalog;
@@ -26,10 +27,9 @@ import io.quantumdb.core.versioning.Changelog;
 import io.quantumdb.core.versioning.State;
 import io.quantumdb.core.versioning.TableMapping;
 import lombok.Getter;
-import org.junit.Before;
 
 @Getter
-public class PostgresqlBaseScenarioTest extends PostgresqlTest {
+public class PostgresqlBaseScenario extends PostgresqlDatabase {
 
 	private Backend backend;
 	private Catalog catalog;
@@ -39,8 +39,10 @@ public class PostgresqlBaseScenarioTest extends PostgresqlTest {
 	private TableMapping tableMapping;
 	private State state;
 
-	@Before
-	public void setup() throws SQLException {
+	@Override
+	public void before() throws SQLException, MigrationException, ClassNotFoundException {
+		super.before();
+
 		TableCreator tableCreator = new TableCreator();
 
 		Table stores = new Table("stores")
@@ -116,7 +118,13 @@ public class PostgresqlBaseScenarioTest extends PostgresqlTest {
 
 		tableCreator.create(getConnection(), tables);
 
-		injector = Guice.createInjector(new PersistenceModule(getJdbcUrl(), getCatalogName(), getJdbcUser(), getJdbcPass()));
+		String jdbcUrl = getJdbcUrl();
+		String catalogName = getCatalogName();
+		String jdbcUser = getJdbcUser();
+		String jdbcPass = getJdbcPass();
+		PersistenceModule module = new PersistenceModule(jdbcUrl, catalogName, jdbcUser, jdbcPass);
+
+		injector = Guice.createInjector(module);
 		backend = injector.getInstance(Backend.class);
 
 		state = backend.loadState();

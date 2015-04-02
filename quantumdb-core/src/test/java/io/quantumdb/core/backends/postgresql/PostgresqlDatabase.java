@@ -7,13 +7,14 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Optional;
 
+import io.quantumdb.core.backends.DatabaseMigrator.MigrationException;
 import io.quantumdb.core.utils.RandomHasher;
 import lombok.Getter;
-import org.junit.After;
-import org.junit.Before;
+import lombok.SneakyThrows;
+import org.junit.rules.ExternalResource;
 
 @Getter
-public abstract class PostgresqlTest {
+public abstract class PostgresqlDatabase extends ExternalResource {
 
 	private Connection connection;
 	private String catalogName;
@@ -21,8 +22,8 @@ public abstract class PostgresqlTest {
 	private String jdbcUser;
 	private String jdbcPass;
 
-	@Before
-	public void setUp() throws SQLException, ClassNotFoundException {
+	@Override
+	public void before() throws SQLException, ClassNotFoundException, MigrationException {
 		this.jdbcUrl = getProperty("jdbc.url").orElse("jdbc:postgresql://localhost:5432");
 		this.jdbcUser = getProperty("jdbc.user", "PG_USER").orElse(null);
 		this.jdbcPass = getProperty("jdbc.pass", "PG_PASSWORD").orElse(null);
@@ -39,8 +40,9 @@ public abstract class PostgresqlTest {
 		this.connection = DriverManager.getConnection(jdbcUrl + "/" + catalogName, jdbcUser, jdbcPass);
 	}
 
-	@After
-	public void tearDown() throws SQLException {
+	@Override
+	@SneakyThrows
+	public void after() {
 		connection.close();
 		try (Connection conn = DriverManager.getConnection(jdbcUrl + "/" + jdbcUser, jdbcUser, jdbcPass)) {
 			conn.createStatement().execute("SELECT COUNT(pg_terminate_backend(pg_stat_activity.pid))"

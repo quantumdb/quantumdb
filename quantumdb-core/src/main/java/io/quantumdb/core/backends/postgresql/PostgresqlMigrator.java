@@ -73,6 +73,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		try (Connection connection = backend.connect()) {
 			removeNullObjects(connection, createdIdentities);
 			synchronizeBackwards(connection, expansion);
+			backend.persistState(state);
 		}
 		catch (SQLException e) {
 			throw new MigrationException(e);

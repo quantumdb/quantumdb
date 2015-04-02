@@ -130,14 +130,7 @@ public class Column implements Copyable<Column> {
 
 	@Override
 	public String toString() {
-		StringBuilder builder = new StringBuilder().append("Column ").append("[" + name + "] " + type);
-		if (!Strings.isNullOrEmpty(defaultValue)) {
-			builder.append(" default: '" + defaultValue + "'");
-		}
-		for (Hint hint : hints) {
-			builder.append(" " + hint.name());
-		}
-		return builder.toString();
+		return PrettyPrinter.prettyPrint(this);
 	}
 
 }
