@@ -14,7 +14,7 @@ import lombok.SneakyThrows;
 import org.junit.rules.ExternalResource;
 
 @Getter
-public abstract class PostgresqlDatabase extends ExternalResource {
+public class PostgresqlDatabase extends ExternalResource {
 
 	private Connection connection;
 	private String catalogName;

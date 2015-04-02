@@ -40,7 +40,7 @@ import org.junit.Test;
 public class GhostTableCreatorTest {
 
 	@Rule
-	public PostgresqlDatabase setup;
+	public PostgresqlDatabase setup = new PostgresqlDatabase();
 
 	private GhostTableCreator creator;
 	private Catalog catalog;
