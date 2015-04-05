@@ -16,7 +16,7 @@ class CreateTableMigrator implements SchemaOperationMigrator<CreateTable> {
 		String tableName = operation.getTableName();
 
 		tableMapping.copyMappingFromParent(version);
-		tableMapping.set(version, tableName, tableId);
+		tableMapping.add(version, tableName, tableId);
 		dataMappings.copy(version);
 
 		Table table = new Table(tableId);

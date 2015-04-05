@@ -1,9 +1,9 @@
 package io.quantumdb.core.migration.operations;
 
 import io.quantumdb.core.migration.utils.DataMappings;
-import io.quantumdb.core.versioning.TableMapping;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.operations.RenameTable;
+import io.quantumdb.core.versioning.TableMapping;
 import io.quantumdb.core.versioning.Version;
 
 /**
@@ -17,9 +17,7 @@ public class RenameTableMigrator implements SchemaOperationMigrator<RenameTable>
 		String targetTableName = operation.getNewTableName();
 
 		tableMapping.copyMappingFromParent(version);
-
-		tableMapping.remove(version, sourceTableName);
-		tableMapping.set(version, targetTableName, sourceTableName);
+		tableMapping.rename(version, sourceTableName, targetTableName);
 	}
 
 	@Override

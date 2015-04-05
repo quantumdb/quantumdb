@@ -5,8 +5,6 @@ import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.Sets;
 import io.quantumdb.core.utils.RandomHasher;
-import io.quantumdb.core.versioning.TableMapping;
-import io.quantumdb.core.versioning.Version;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -31,7 +29,7 @@ public class TableMappingTest {
 		String tableName = "users";
 		String alias = RandomHasher.generateHash();
 
-		tableMapping.set(version, tableName, alias);
+		tableMapping.add(version, tableName, alias);
 
 		assertEquals(alias, tableMapping.getTableId(version, tableName));
 		assertEquals(tableName, tableMapping.getTableName(version, alias));
@@ -44,7 +42,7 @@ public class TableMappingTest {
 		String alias = RandomHasher.generateHash();
 
 		Version version = new Version(RandomHasher.generateHash(), null);
-		tableMapping.set(version, tableName, alias);
+		tableMapping.add(version, tableName, alias);
 
 		Version child = new Version(RandomHasher.generateHash(), version);
 		tableMapping.copyMappingFromParent(child);

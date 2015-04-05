@@ -58,7 +58,7 @@ public class AddColumnToCustomersTable {
 	 * There should be no foreign key linking tables from the old schema to the new schema or vice-versa.
 	 */
 	@Test
-	public void verifyStoresTableStructure() {
+	public void verifyTableStructure() {
 		TableMapping mapping = state.getTableMapping();
 
 		// Original tables and foreign keys.
@@ -203,8 +203,10 @@ public class AddColumnToCustomersTable {
 		Set<String> targetTableIds = tableMapping.getTableIds(target);
 
 		Set<String> expectedOriginTableIds = Sets.newHashSet(
-				"stores", "staff", "customers", "films",
-				"inventory", "paychecks", "payments", "rentals");
+				PostgresqlBaseScenario.STORES_ID, PostgresqlBaseScenario.STAFF_ID,
+				PostgresqlBaseScenario.CUSTOMERS_ID, PostgresqlBaseScenario.FILMS_ID,
+				PostgresqlBaseScenario.INVENTORY_ID, PostgresqlBaseScenario.PAYCHECKS_ID,
+				PostgresqlBaseScenario.PAYMENTS_ID, PostgresqlBaseScenario.RENTALS_ID);
 
 		Set<String> expectedTargetTableIds = expectedOriginTableIds.stream()
 				.map(tableId -> {

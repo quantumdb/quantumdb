@@ -35,7 +35,7 @@ class TransitiveTableMirrorer {
 			Table table = catalog.getTable(tableId);
 
 			String newTableId = RandomHasher.generateTableId(tableMapping);
-			tableMapping.set(version, tableName, newTableId);
+			tableMapping.ghost(version, tableName, newTableId);
 			catalog.addTable(table.copy()
 					.rename(newTableId));
 

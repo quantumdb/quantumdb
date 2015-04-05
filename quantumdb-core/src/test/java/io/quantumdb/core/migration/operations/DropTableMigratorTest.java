@@ -48,7 +48,7 @@ public class DropTableMigratorTest {
 		migrator.expand(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
 
 		assertEquals(1, catalog.getTables().size());
-		assertFalse(!tableMapping.getTableIds(changelog.getLastAdded()).contains("users"));
+		assertFalse(tableMapping.getTableIds(changelog.getLastAdded()).contains("users"));
 	}
 
 }

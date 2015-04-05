@@ -39,7 +39,7 @@ public class RandomHasherTest {
 	public void testGeneratingUniqueTableIdWithFilledTableMapping() {
 		TableMapping tableMapping = new TableMapping();
 		Version version = new Version(RandomHasher.generateHash(), null);
-		tableMapping.set(version, "users", "users");
+		tableMapping.add(version, "users", "users");
 
 		String tableId = RandomHasher.generateTableId(tableMapping);
 		assertFalse(isNullOrEmpty(tableId));
