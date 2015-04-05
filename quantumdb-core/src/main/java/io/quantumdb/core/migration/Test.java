@@ -35,7 +35,7 @@ public class Test {
 		Catalog catalog = state.getCatalog();
 		TableMapping mapping = state.getTableMapping();
 		for (Table table : catalog.getTables()) {
-			mapping.set(changelog.getRoot(), table.getName(), table.getName());
+			mapping.add(changelog.getRoot(), table.getName(), table.getName());
 		}
 
 		// Add schema change.

@@ -36,8 +36,7 @@ class CopyTableMigrator implements SchemaOperationMigrator<CopyTable> {
 		}
 
 		catalog.addTable(copy);
-		tableMapping.remove(version, sourceTableName);
-		tableMapping.set(version, targetTableName, tableId);
+		tableMapping.copy(version, sourceTableName, targetTableName, tableId);
 
 		// TODO: Add pipeline mappings...
 	}

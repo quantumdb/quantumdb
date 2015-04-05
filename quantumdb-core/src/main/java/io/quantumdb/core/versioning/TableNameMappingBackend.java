@@ -40,7 +40,9 @@ public class TableNameMappingBackend {
 					String tableId = mapping.getTableId();
 
 					Version version = changelog.getVersion(versionId);
-					tableMapping.set(version, tableName, tableId);
+
+					// TODO: Also store and retrieve the "based on" table Ids for each individual mapping.
+					tableMapping.add(version, tableName, tableId);
 				});
 
 		return tableMapping;

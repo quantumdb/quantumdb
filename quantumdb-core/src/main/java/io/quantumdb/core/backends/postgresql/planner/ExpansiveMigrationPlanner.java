@@ -2,6 +2,7 @@ package io.quantumdb.core.backends.postgresql.planner;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -9,6 +10,7 @@ import java.util.stream.Collectors;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Sets.SetView;
 import io.quantumdb.core.migration.operations.SchemaOperationsMigrator;
@@ -43,18 +45,19 @@ public class ExpansiveMigrationPlanner implements MigrationPlanner {
 
 		Set<String> preTableIds = tableMapping.getTableIds(from);
 		Set<String> postTableIds = tableMapping.getTableIds(to);
-		Set<String> newTables = Sets.difference(postTableIds, preTableIds);
+		Set<String> newTableIds = Sets.difference(postTableIds, preTableIds);
 
-		log.debug("The following new tables will be created: " + newTables.stream().collect(Collectors.toMap(Function.identity(), (id) -> tableMapping.getTableName(to, id))));
+		log.debug("The following new tables will be created: " + newTableIds.stream()
+				.collect(Collectors.toMap(Function.identity(), (id) -> tableMapping.getTableName(to, id))));
 
-		return determinePlan(catalog, tableMapping, from, to, newTables, migrator.getDataMappings());
+		return determinePlan(catalog, tableMapping, from, to, newTableIds, migrator.getDataMappings());
 	}
 
 	private MigrationPlan determinePlan(Catalog catalog, TableMapping tableMapping, Version sourceVersion,
-			Version targetVersion, Set<String> tableNames, DataMappings mappings) {
+			Version targetVersion, Set<String> newTableIds, DataMappings mappings) {
 
-		Set<String> originalModifiedTables = Sets.newHashSet(tableNames);
-		Map<String, TableNode> graph = constructGraph(catalog, tableNames);
+		Set<String> originalModifiedTableIds = Sets.newHashSet(newTableIds);
+		Map<String, TableNode> graph = constructGraph(catalog, newTableIds);
 		List<String> tablesToCreateNullObjectsFor = Lists.newArrayList();
 		List<Step> steps = Lists.newArrayList();
 		boolean lookForCheapMigrations = true;
@@ -118,25 +121,26 @@ public class ExpansiveMigrationPlanner implements MigrationPlanner {
 					break;
 				}
 
-				Set<String> newGhostTables = expand(catalog, tableMapping, mappings, sourceVersion, targetVersion, tableNames, tablesToAdd, originalModifiedTables);
+				Set<String> tableIdsToAdd = tablesToAdd.stream()
+						.map(tableName -> tableMapping.getTableId(targetVersion, tableName))
+						.collect(Collectors.toSet());
+
+				Set<String> newGhostTableIds = expand(catalog, tableMapping, mappings, sourceVersion, targetVersion, /* newTableIds, */ tableIdsToAdd, originalModifiedTableIds);
 
 				lookForCheapMigrations = true;
 				tablesToCreateNullObjectsFor.clear();
 				steps.clear();
 
-				tableNames = Sets.union(tableNames, newGhostTables.stream()
-						.map(tableName -> tableMapping.getTableId(targetVersion, tableName))
-						.collect(Collectors.toSet()));
+				newTableIds = Sets.union(newTableIds, newGhostTableIds);
 
-				newGhostTables.forEach(newGhostTable -> {
-					String newGhostTableId = tableMapping.getTableId(targetVersion, newGhostTable);
+				newGhostTableIds.forEach(newGhostTableId -> {
 					if (!tablesToCreateNullObjectsFor.contains(newGhostTableId)) {
 						tablesToCreateNullObjectsFor.add(newGhostTableId);
 					}
 				});
 
 				graph.clear();
-				graph.putAll(constructGraph(catalog, tableNames));
+				graph.putAll(constructGraph(catalog, newTableIds));
 			}
 		}
 
@@ -144,27 +148,25 @@ public class ExpansiveMigrationPlanner implements MigrationPlanner {
 	}
 
 	private Set<String> expand(Catalog catalog, TableMapping tableMapping, DataMappings dataMappings,
-			Version sourceVersion, Version targetVersion, Set<String> alreadyExpanded, Set<String> tablesToExpand,
+			Version sourceVersion, Version targetVersion, /* Map<String, String> createdGhostTableIds, */
+			Set<String> tableIdsToExpand,
 			Set<String> originalModifiedTables) {
 
-		Set<String> createdGhostTables = Sets.newHashSet();
-		Set<String> mirrored = alreadyExpanded.stream()
-				.map(tableId -> tableMapping.getTableName(targetVersion, tableId))
-				.collect(Collectors.toSet());
+		List<String> tableIdsToMirror = Lists.newArrayList(tableIdsToExpand);
+		Multimap<String, String> ghostedTableIds = tableMapping.getGhostTableIdMapping(sourceVersion, targetVersion);
+		Set<String> createdGhostTableIds = Sets.newHashSet();
 
-		List<String> tablesToMirror = Lists.newArrayList(tablesToExpand);
-
-		while(!tablesToMirror.isEmpty()) {
-			String tableName = tablesToMirror.remove(0);
-			String tableId = tableMapping.getTableId(targetVersion, tableName);
-			if (mirrored.contains(tableName)) {
+		while(!tableIdsToMirror.isEmpty()) {
+			String tableId = tableIdsToMirror.remove(0);
+			if (ghostedTableIds.containsKey(tableId)) {
 				continue;
 			}
 
+			String tableName = tableMapping.getTableName(targetVersion, tableId);
 			Table table = catalog.getTable(tableId);
 
 			String newTableId = RandomHasher.generateTableId(tableMapping);
-			tableMapping.set(targetVersion, tableName, newTableId);
+			tableMapping.ghost(targetVersion, tableName, newTableId);
 			Table ghostTable = table.copy().rename(newTableId);
 			catalog.addTable(ghostTable);
 
@@ -173,32 +175,34 @@ public class ExpansiveMigrationPlanner implements MigrationPlanner {
 				dataMappings.add(table, column.getName(), ghostTable, column.getName(), Transformation.createNop());
 			}
 
-			mirrored.add(tableName);
-			createdGhostTables.add(tableName);
+			createdGhostTableIds.add(newTableId);
+			ghostedTableIds.put(tableId, newTableId);
 
 			log.debug("Planned creation of ghost table: {} for source table: {}", newTableId, tableName);
 
 			// Traverse incoming foreign keys
 			String oldTableId = tableMapping.getTableId(sourceVersion, tableName);
 			catalog.getTablesReferencingTable(oldTableId).stream()
-					.map(referencingTableId -> tableMapping.getTableName(referencingTableId).get())
-					.filter(referencingTableName -> !mirrored.contains(referencingTableName))
+					.filter(tableMapping.getTableIds(sourceVersion)::contains)
+					.filter(referencingTableId -> !ghostedTableIds.containsKey(referencingTableId)
+							&& !tableIdsToMirror.contains(referencingTableId))
 					.distinct()
-					.forEach(tablesToMirror::add);
+					.forEach(tableIdsToMirror::add);
 
 			// Traverse outgoing non-nullable foreign keys
 			table.getForeignKeys().stream()
 					.filter(ForeignKey::containsNonNullableColumns)
 					.map(ForeignKey::getReferredTableName)
 					.distinct()
-					.filter(referencedTableName -> !tablesToMirror.contains(referencedTableName))
-					.forEach(tablesToMirror::add);
+					.filter(referencedTableId -> !ghostedTableIds.containsKey(referencedTableId)
+							&& !tableIdsToMirror.contains(referencedTableId))
+					.forEach(tableIdsToMirror::add);
 		}
 
 		// Copying foreign keys for each affected table.
-		for (String tableName : mirrored) {
-			String oldTableId = tableMapping.getTableId(sourceVersion, tableName);
-			String newTableId = tableMapping.getTableId(targetVersion, tableName);
+		for (Entry<String, String> entry : ghostedTableIds.entries()) {
+			String oldTableId = entry.getKey();
+			String newTableId = entry.getValue();
 
 			Table oldTable = catalog.getTable(oldTableId);
 			Table newTable = catalog.getTable(newTableId);
@@ -235,7 +239,7 @@ public class ExpansiveMigrationPlanner implements MigrationPlanner {
 			}
 		}
 
-		return createdGhostTables;
+		return createdGhostTableIds;
 	}
 
 	private static Map<String, TableNode> constructGraph(Catalog catalog, Set<String> tableNames) {
