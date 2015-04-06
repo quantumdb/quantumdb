@@ -125,11 +125,14 @@ public class DataMappings {
 
 		Map<Table, DataMapping> currentMappings = Maps.newHashMap();
 		Set<Table> intermediateTables = Sets.newHashSet();
+		Set<DataMapping> processed = Sets.newHashSet();
 
 		List<DataMapping> toProcess = Lists.newArrayList();
 		toProcess.addAll(getMappings(table, direction));
 		while (!toProcess.isEmpty()) {
 			DataMapping dataMapping = toProcess.remove(0);
+			processed.add(dataMapping);
+
 			Table sourceTable = dataMapping.getSourceTable(direction);
 			boolean isFirstDegreeMapping = sourceTable.equals(table);
 
@@ -165,7 +168,9 @@ public class DataMappings {
 			}
 
 			Table targetTable = dataMapping.getTargetTable(direction);
-			toProcess.addAll(getMappings(targetTable, direction));
+			getMappings(targetTable, direction).stream()
+					.filter(mapping -> !processed.contains(mapping))
+					.forEach(toProcess::add);
 		}
 
 		intermediateTables.forEach(currentMappings::remove);
