@@ -1,106 +1,72 @@
 package io.quantumdb.core.versioning;
 
-import static io.quantumdb.core.versioning.QRawVersion.rawVersion;
-import static io.quantumdb.core.versioning.QTableNameMapping.tableNameMapping;
-
-import javax.inject.Provider;
-import javax.persistence.EntityManager;
-
-import java.util.List;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.Map.Entry;
+import java.util.Set;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.RowSortedTable;
-import com.google.common.collect.TreeBasedTable;
-import com.google.inject.Inject;
-import com.google.inject.persist.Transactional;
-import com.mysema.query.jpa.impl.JPAQuery;
+import com.google.common.collect.Sets;
+import io.quantumdb.core.backends.Backend;
+import io.quantumdb.core.versioning.TableNameMappingDataBackend.TableMappingEntry;
+import io.quantumdb.core.versioning.TableNameMappingDataBackend.TableMappingKey;
 
 public class TableNameMappingBackend {
 
-	private final Provider<EntityManager> entityManagerProvider;
+	public TableMapping load(Backend backend, Changelog changelog) throws SQLException {
+		try (Connection connection = backend.connect()) {
+			BackendUtils.ensureQuantumDbTablesExist(backend, connection);
+			return BackendUtils.inTransaction(connection, () -> {
+				TableNameMappingDataBackend tableNameMappingDataBackend = new TableNameMappingDataBackend();
+				Map<TableMappingKey, TableMappingEntry> tableMappingEntries = tableNameMappingDataBackend.load(backend, connection);
 
-	@Inject
-	TableNameMappingBackend(Provider<EntityManager> entityManagerProvider) {
-		this.entityManagerProvider = entityManagerProvider;
+				TableMapping tableMapping = new TableMapping();
+				for (TableMappingEntry entry : tableMappingEntries.values()) {
+					Version version = changelog.getVersion(entry.getVersionId());
+					tableMapping.add(version, entry.getTableName(), entry.getTableId());
+				}
+
+				return tableMapping;
+			});
+		}
 	}
 
-	@Transactional
-	public TableMapping load(Changelog changelog) {
-		TableMapping tableMapping = new TableMapping();
+	public void persist(Backend backend, TableMapping mapping) throws SQLException {
+		try (Connection connection = backend.connect()) {
+			BackendUtils.ensureQuantumDbTablesExist(backend, connection);
+			BackendUtils.inTransaction(connection, () -> {
+				TableNameMappingDataBackend tableNameMappingDataBackend = new TableNameMappingDataBackend();
+				Map<TableMappingKey, TableMappingEntry> tableMappingEntries = tableNameMappingDataBackend.load(backend,
+						connection);
 
-		EntityManager entityManager = entityManagerProvider.get();
-		new JPAQuery(entityManager).from(tableNameMapping)
-				.list(tableNameMapping)
-				.forEach(mapping -> {
-					String tableName = mapping.getTableName();
-					String versionId = mapping.getVersion().getId();
-					String tableId = mapping.getTableId();
+				Set<TableMappingKey> keys = Sets.newHashSet();
+				for (Version version : mapping.getVersions()) {
+					Map<String, String> internalMapping = mapping.getTableMapping(version);
+					for (Entry<String, String> entry : internalMapping.entrySet()) {
+						TableMappingKey key = new TableMappingKey(entry.getValue(), version.getId());
+						TableMappingEntry tableMappingEntry;
+						if (tableMappingEntries.containsKey(key)) {
+							tableMappingEntry = tableMappingEntries.get(key);
+						}
+						else {
+							tableMappingEntry = tableNameMappingDataBackend.create(key);
+						}
+						tableMappingEntry.setTableId(entry.getKey());
+						tableMappingEntry.persist();
 
-					Version version = changelog.getVersion(versionId);
-
-					// TODO: Also store and retrieve the "based on" table Ids for each individual mapping.
-					tableMapping.add(version, tableName, tableId);
-				});
-
-		return tableMapping;
-	}
-
-	@Transactional
-	public void persist(Changelog changelog, TableMapping tableMapping) {
-		EntityManager entityManager = entityManagerProvider.get();
-		Map<String, RawVersion> versions = new JPAQuery(entityManager).from(rawVersion)
-				.list(rawVersion).stream()
-				.collect(Collectors.toMap(RawVersion::getId, Function.identity()));
-
-		RowSortedTable<Version, String, TableNameMapping> versionMapping = TreeBasedTable.create();
-
-		new JPAQuery(entityManager).from(tableNameMapping)
-				.list(tableNameMapping).stream()
-				.forEach(mapping -> {
-					String versionId = mapping.getVersion().getId();
-					String tableName = mapping.getTableName();
-					Version version = changelog.getVersion(versionId);
-
-					versionMapping.put(version, tableName, mapping);
-				});
-
-		List<TableNameMapping> toPersist = Lists.newArrayList();
-		List<TableNameMapping> toUpdate = Lists.newArrayList();
-		List<TableNameMapping> toDelete = Lists.newArrayList();
-
-		for (Version version : tableMapping.getVersions()) {
-			for (String tableName : tableMapping.getTableNames(version)) {
-				String tableId = tableMapping.getTableId(version, tableName);
-
-				if (versionMapping.contains(version, tableName)) {
-					TableNameMapping mapping = versionMapping.remove(version, tableName);
-					if (!mapping.getTableId().equals(tableId)) {
-						mapping.setTableId(tableId);
-						toUpdate.add(mapping);
+						keys.add(key);
 					}
 				}
-				else {
-					TableNameMapping mapping = new TableNameMapping();
-					mapping.setVersion(versions.get(version.getId()));
-					mapping.setTableName(tableName);
-					mapping.setTableId(tableId);
-					toPersist.add(mapping);
+
+				for (TableMappingKey key : tableMappingEntries.keySet()) {
+					if (!keys.contains(key)) {
+						tableNameMappingDataBackend.delete(key);
+					}
 				}
-			}
-		}
 
-		versionMapping.rowKeySet().forEach(version -> {
-			versionMapping.row(version).forEach((tableName, mapping) -> {
-				toDelete.add(mapping);
+				return null;
 			});
-		});
-
-		toDelete.forEach(entityManager::remove);
-		toUpdate.forEach(entityManager::merge);
-		toPersist.forEach(entityManager::persist);
+		}
 	}
 
 }

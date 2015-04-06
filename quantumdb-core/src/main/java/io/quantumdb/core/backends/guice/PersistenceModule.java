@@ -5,7 +5,6 @@ import java.util.Properties;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.name.Names;
-import com.google.inject.persist.jpa.JpaPersistModule;
 import io.quantumdb.core.backends.Backend;
 import io.quantumdb.core.backends.postgresql.PostgresqlBackend;
 import lombok.Data;
@@ -49,17 +48,7 @@ public class PersistenceModule extends AbstractModule {
 
 		Names.bindProperties(binder(), properties);
 
-		// Only log WARN and up for C3P0.
-		System.setProperty("com.mchange.v2.log.MLog", "com.mchange.v2.log.FallbackMLog");
-		System.setProperty("com.mchange.v2.log.FallbackMLog.DEFAULT_CUTOFF_LEVEL", "WARNING");
-
-		bind(Backend.class).to(selectBackend(properties.getProperty("hibernate.connection.driver_class")));
-
-		JpaPersistModule jpaModule = new JpaPersistModule("quantumdb");
-		jpaModule.properties(properties);
-		install(jpaModule);
-
-		bind(PersistServiceStarter.class).asEagerSingleton();
+		bind(Backend.class).to(selectBackend(properties.getProperty("javax.persistence.jdbc.driver")));
 	}
 
 	private Properties loadProperties() {

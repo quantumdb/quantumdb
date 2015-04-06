@@ -14,8 +14,8 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.rules.ExternalResource;
 
-@Getter
 @Slf4j
+@Getter
 public class PostgresqlDatabase extends ExternalResource {
 
 	private Connection connection;

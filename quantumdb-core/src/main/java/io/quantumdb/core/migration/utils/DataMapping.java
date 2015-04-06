@@ -3,8 +3,6 @@ package io.quantumdb.core.migration.utils;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Strings.isNullOrEmpty;
 
-import javax.annotation.Nullable;
-
 import java.util.LinkedHashMap;
 
 import com.google.common.base.Joiner;
@@ -57,7 +55,7 @@ public class DataMapping {
 		}
 	}
 
-	public Table getSourceTable(@Nullable DataMappings.Direction direction) {
+	public Table getSourceTable(DataMappings.Direction direction) {
 		switch (direction) {
 			case FORWARDS:
 				return sourceTable;

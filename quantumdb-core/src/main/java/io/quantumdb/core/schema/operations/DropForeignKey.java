@@ -3,12 +3,11 @@ package io.quantumdb.core.schema.operations;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.common.base.Strings;
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.Setter;
+import lombok.experimental.Accessors;
 
 @Data
-@Setter(AccessLevel.NONE)
+@Accessors(chain = true)
 public class DropForeignKey implements SchemaOperation {
 
 	private final String tableName;
