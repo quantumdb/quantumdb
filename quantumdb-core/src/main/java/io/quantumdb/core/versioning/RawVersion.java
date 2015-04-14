@@ -13,9 +13,9 @@ import java.io.Serializable;
 
 import com.google.gson.Gson;
 import io.quantumdb.core.schema.operations.SchemaOperation;
-import io.quantumdb.core.schema.operations.SchemaOperations;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Type;
 
 @Data
 @Entity
@@ -34,6 +34,7 @@ public class RawVersion implements Serializable {
 	@OneToOne(fetch = FetchType.LAZY, mappedBy = "version")
 	private RawChangeSet changeSet;
 
+	@Type(type = "text")
 	@Column(name = "schema_operation", nullable = false)
 	private String schemaOperation;
 

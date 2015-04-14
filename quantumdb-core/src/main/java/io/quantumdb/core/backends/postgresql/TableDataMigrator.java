@@ -11,16 +11,22 @@ import java.util.stream.Collectors;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Maps;
 import io.quantumdb.core.backends.Backend;
+import io.quantumdb.core.backends.postgresql.MigratorFunction.Stage;
 import io.quantumdb.core.migration.utils.DataMapping;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.ColumnType;
+import io.quantumdb.core.schema.definitions.Identity;
 import io.quantumdb.core.utils.QueryBuilder;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 class TableDataMigrator {
 
-	private static final long BATCH_SIZE = 2_000;
+	public static enum Data {
+		BASE, RELATIONAL;
+	}
+
+	private static final long BATCH_SIZE = 1_000;
 	private static final long WAIT_TIME = 50;
 
 	private final DataMapping mapping;
@@ -31,15 +37,32 @@ class TableDataMigrator {
 		this.mapping = mapping;
 	}
 
-	void migrateData() throws SQLException, InterruptedException {
+	void migrateData(Map<String, Identity> nullRecords, Data data) throws SQLException, InterruptedException {
 		Map<String, Object> highestId = queryHighestId();
 		if (highestId == null) {
 			log.info("Table: {} is empty -> nothing to migrate...", mapping.getSourceTable().getName());
 			return;
 		}
 
-		MigratorFunction initialMigratorFunction = MigratorFunction.create(mapping, BATCH_SIZE, true);
-		MigratorFunction successiveMigratorFunction = MigratorFunction.create(mapping, BATCH_SIZE, false);
+		MigratorFunction initialMigratorFunction;
+		MigratorFunction successiveMigratorFunction;
+
+		switch (data) {
+			case BASE:
+				initialMigratorFunction = BaseMigratorFunction.create(nullRecords, mapping, BATCH_SIZE, Stage.INITIAL);
+				successiveMigratorFunction = BaseMigratorFunction.create(nullRecords, mapping, BATCH_SIZE, Stage.CONSECUTIVE);
+				break;
+			case RELATIONAL:
+				initialMigratorFunction = RelationalMigratorFunction.create(nullRecords, mapping, BATCH_SIZE, Stage.INITIAL);
+				successiveMigratorFunction = RelationalMigratorFunction.create(nullRecords, mapping, BATCH_SIZE, Stage.CONSECUTIVE);
+				break;
+			default:
+				throw new RuntimeException("Type: " + data + " is not supported!");
+		}
+
+		if (initialMigratorFunction == null) {
+			return;
+		}
 
 		try (Connection connection = backend.connect()) {
 			execute(connection, initialMigratorFunction.getCreateStatement());
@@ -92,8 +115,6 @@ class TableDataMigrator {
 
 				Thread.sleep(WAIT_TIME);
 			}
-
-			connection.close();
 
 			long end = System.currentTimeMillis();
 			log.info("Migrating data from: {} to: {} took: {} ms", new Object[] {

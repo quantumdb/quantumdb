@@ -159,6 +159,10 @@ public class DataMappings {
 				}
 
 				DataMapping.ColumnMapping currentColumnMapping = columnMappings.get(currentColumnName);
+				if (currentColumnMapping == null) {
+					continue;
+				}
+
 				String newColumnName = currentColumnMapping.getColumnName();
 				DataMapping.Transformation transformation = currentColumnMapping.getTransformation();
 

@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -11,6 +12,7 @@ import java.util.stream.Collectors;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -50,7 +52,7 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 	private String name;
 	private Catalog parent;
 
-	private final List<Column> columns = Lists.newArrayList();
+	private final LinkedHashSet<Column> columns = Sets.newLinkedHashSet();
 	private final List<ForeignKey> foreignKeys = Lists.newArrayList();
 
 	public Table(String name) {

@@ -10,11 +10,11 @@ import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
 import static org.junit.Assert.assertEquals;
 
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Sets;
+import com.google.common.collect.Lists;
 import io.quantumdb.core.backends.DatabaseMigrator.MigrationException;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
@@ -51,12 +51,6 @@ public class RenameCustomersTable {
 		state = setup.getBackend().loadState();
 	}
 
-	/*
-	 * Using the expansive method of forking the schema, this test should result in two completely separated
-	 * database schemas. The schema associated with the original version, should contain all original tables,
-	 * while the schema associated with the new version, should contain ghost tables of all original tables.
-	 * There should be no foreign key linking tables from the old schema to the new schema or vice-versa.
-	 */
 	@Test
 	public void verifyTableStructure() {
 		TableMapping mapping = state.getTableMapping();
@@ -121,7 +115,7 @@ public class RenameCustomersTable {
 		rentals.addForeignKey("customer_id").referencing(customers, "id");
 		rentals.addForeignKey("inventory_id").referencing(inventory, "id");
 
-		Set<Table> tables = Sets.newHashSet(stores, staff, customers, films, inventory, paychecks, payments, rentals);
+		List<Table> tables = Lists.newArrayList(stores, staff, customers, films, inventory, paychecks, payments, rentals);
 
 		Catalog expected = new Catalog(setup.getCatalogName());
 		tables.forEach(expected::addTable);

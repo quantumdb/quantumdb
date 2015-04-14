@@ -11,9 +11,11 @@ import io.quantumdb.core.backends.DatabaseMigrator.MigrationException;
 import io.quantumdb.core.utils.RandomHasher;
 import lombok.Getter;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.rules.ExternalResource;
 
 @Getter
+@Slf4j
 public class PostgresqlDatabase extends ExternalResource {
 
 	private Connection connection;
@@ -35,6 +37,7 @@ public class PostgresqlDatabase extends ExternalResource {
 		try (Connection conn = DriverManager.getConnection(jdbcUrl + "/" + jdbcUser, jdbcUser, jdbcPass)) {
 			conn.createStatement().execute("DROP DATABASE IF EXISTS " + catalogName + ";");
 			conn.createStatement().execute("CREATE DATABASE " + catalogName + ";");
+			log.info("Running test on database: " + catalogName);
 		}
 
 		this.connection = DriverManager.getConnection(jdbcUrl + "/" + catalogName, jdbcUser, jdbcPass);

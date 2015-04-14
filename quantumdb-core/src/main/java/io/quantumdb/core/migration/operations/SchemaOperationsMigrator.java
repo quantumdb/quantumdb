@@ -4,7 +4,6 @@ import java.util.Map;
 
 import com.google.common.collect.ImmutableMap;
 import io.quantumdb.core.migration.utils.DataMappings;
-import io.quantumdb.core.versioning.TableMapping;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.operations.AddColumn;
 import io.quantumdb.core.schema.operations.AddForeignKey;
@@ -15,6 +14,7 @@ import io.quantumdb.core.schema.operations.DropColumn;
 import io.quantumdb.core.schema.operations.DropTable;
 import io.quantumdb.core.schema.operations.RenameTable;
 import io.quantumdb.core.schema.operations.SchemaOperation;
+import io.quantumdb.core.versioning.TableMapping;
 import io.quantumdb.core.versioning.Version;
 
 public class SchemaOperationsMigrator {
@@ -37,6 +37,7 @@ public class SchemaOperationsMigrator {
 				.put(CreateTable.class, new CreateTableMigrator())
 				.put(DropTable.class, new DropTableMigrator())
 				.put(DropColumn.class, new DropColumnMigrator())
+//				.put(JoinTable.class, new JoinTableMigrator())
 				.put(RenameTable.class, new RenameTableMigrator())
 				.build();
 	}

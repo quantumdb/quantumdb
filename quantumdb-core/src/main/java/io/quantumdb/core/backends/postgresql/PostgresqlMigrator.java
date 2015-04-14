@@ -4,8 +4,11 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -13,12 +16,15 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import io.quantumdb.core.backends.DatabaseMigrator;
+import io.quantumdb.core.backends.postgresql.TableDataMigrator.Data;
 import io.quantumdb.core.backends.postgresql.migrator.Expansion;
 import io.quantumdb.core.backends.postgresql.migrator.NullRecordCreator;
 import io.quantumdb.core.backends.postgresql.migrator.NullRecordPurger;
 import io.quantumdb.core.backends.postgresql.migrator.TableCreator;
 import io.quantumdb.core.backends.postgresql.planner.ExpansiveMigrationPlanner;
+import io.quantumdb.core.backends.postgresql.planner.Migration;
 import io.quantumdb.core.backends.postgresql.planner.MigrationPlan;
+import io.quantumdb.core.backends.postgresql.planner.Step;
 import io.quantumdb.core.migration.utils.DataMapping;
 import io.quantumdb.core.migration.utils.DataMappings;
 import io.quantumdb.core.migration.utils.DataMappings.Direction;
@@ -50,7 +56,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		try (Connection connection = backend.connect()) {
 			expansion = expand(connection, state, from, to);
 
-			List<Table> createNullObjects = expansion.getCreateNullObjectsForTables().stream()
+			List<Table> createNullObjects = expansion.getTableIdsWithNullRecords().stream()
 					.map(expansion.getState().getCatalog()::getTable)
 					.collect(Collectors.toList());
 
@@ -63,8 +69,8 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		}
 
 		try {
-			migrateBaseData(expansion);
-//		    migrateRelationalData(expansion);
+			migrateBaseData(createdIdentities, expansion);
+		    migrateRelationalData(createdIdentities, expansion);
 		}
 		catch (SQLException | InterruptedException e) {
 			throw new MigrationException(e);
@@ -103,15 +109,25 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		}
 	}
 
-	private void migrateBaseData(Expansion expansion) throws SQLException, InterruptedException {
-		for (DataMapping dataMapping : listDataMappings(expansion, DataMappings.Direction.FORWARDS)) {
-			new TableDataMigrator(backend, dataMapping).migrateData();
+	private void migrateBaseData(Map<Table, Identity> createdIdentities, Expansion expansion) throws SQLException, InterruptedException {
+		List<DataMapping> dataMappings = listDataMappings(expansion, Direction.FORWARDS);
+
+		Map<String, Identity> nullRecordIdentities = createdIdentities.entrySet().stream()
+				.collect(Collectors.toMap(entry -> entry.getKey().getName(), Entry::getValue));
+
+		for (DataMapping dataMapping : dataMappings) {
+			new TableDataMigrator(backend, dataMapping).migrateData(nullRecordIdentities, Data.BASE);
 		}
 	}
 
-	private void migrateRelationalData(Expansion expansion) throws SQLException, InterruptedException {
-		for (DataMapping dataMapping : listDataMappings(expansion, DataMappings.Direction.FORWARDS)) {
-//			new TableDataMigrator(backend, dataMapping).migrateData();
+	private void migrateRelationalData(Map<Table, Identity> createdIdentities, Expansion expansion) throws SQLException, InterruptedException {
+		List<DataMapping> dataMappings = listDataMappings(expansion, Direction.FORWARDS);
+
+		Map<String, Identity> nullRecordIdentities = createdIdentities.entrySet().stream()
+				.collect(Collectors.toMap(entry -> entry.getKey().getName(), Entry::getValue));
+
+		for (DataMapping dataMapping : dataMappings) {
+			new TableDataMigrator(backend, dataMapping).migrateData(nullRecordIdentities, Data.RELATIONAL);
 		}
 	}
 
@@ -140,6 +156,36 @@ class PostgresqlMigrator implements DatabaseMigrator {
 			Set<DataMapping> mappings = dataMappings.getTransitiveDataMappings(table, direction);
 			results.addAll(mappings);
 		}
+
+		Collections.sort(results, new Comparator<DataMapping>() {
+			@Override
+			public int compare(DataMapping o1, DataMapping o2) {
+				String t1 = o1.getTargetTable().getName();
+				String t2 = o2.getTargetTable().getName();
+
+				List<Step> migrationSteps = expansion.getMigrationSteps();
+				for (Step step : migrationSteps) {
+					Set<String> tableNames = step.getTableMigrations().stream()
+							.map(Migration::getTableName)
+							.collect(Collectors.toSet());
+
+					if (tableNames.contains(t1)) {
+						if (tableNames.contains(t2)) {
+							return 0;
+						}
+						else {
+							return -1;
+						}
+					}
+					else {
+						if (tableNames.contains(t2)) {
+							return 1;
+						}
+					}
+				}
+				return 0;
+			}
+		});
 
 		return results;
 	}

@@ -8,13 +8,12 @@ import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
 import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotEquals;
 
 import java.sql.SQLException;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.List;
 
-import com.google.common.collect.Sets;
+import com.google.common.collect.Lists;
 import io.quantumdb.core.backends.DatabaseMigrator.MigrationException;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
@@ -38,6 +37,8 @@ public class AddColumnToCustomersTable {
 
 	@BeforeClass
 	public static void performEvolution() throws SQLException, MigrationException {
+		setup.insertTestData();
+
 		origin = setup.getChangelog().getLastAdded();
 
 		setup.getChangelog().addChangeSet("Michael de Jong",
@@ -51,12 +52,6 @@ public class AddColumnToCustomersTable {
 		state = setup.getBackend().loadState();
 	}
 
-	/*
-	 * Using the expansive method of forking the schema, this test should result in two completely separated
-	 * database schemas. The schema associated with the original version, should contain all original tables,
-	 * while the schema associated with the new version, should contain ghost tables of all original tables.
-	 * There should be no foreign key linking tables from the old schema to the new schema or vice-versa.
-	 */
 	@Test
 	public void verifyTableStructure() {
 		TableMapping mapping = state.getTableMapping();
@@ -125,37 +120,12 @@ public class AddColumnToCustomersTable {
 
 		// New tables and foreign keys.
 
-		Table newStores = new Table(mapping.getTableId(target, "stores"))
-				.addColumn(new Column("id", integer(), stores.getColumn("id").getSequence(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
-				.addColumn(new Column("name", varchar(255), NOT_NULL))
-				.addColumn(new Column("manager_id", integer(), NOT_NULL));
-
-		Table newStaff = new Table(mapping.getTableId(target, "staff"))
-				.addColumn(new Column("id", integer(), staff.getColumn("id").getSequence(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
-				.addColumn(new Column("name", varchar(255), NOT_NULL))
-				.addColumn(new Column("store_id", integer(), NOT_NULL));
-
 		Table newCustomers = new Table(mapping.getTableId(target, "customers"))
 				.addColumn(new Column("id", integer(), customers.getColumn("id").getSequence(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL))
 				.addColumn(new Column("store_id", integer(), NOT_NULL))
 				.addColumn(new Column("referred_by", integer()))
 				.addColumn(new Column("date_of_birth", date()));
-
-		Table newFilms = new Table(mapping.getTableId(target, "films"))
-				.addColumn(new Column("id", integer(), films.getColumn("id").getSequence(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
-				.addColumn(new Column("name", varchar(255), NOT_NULL));
-
-		Table newInventory = new Table(mapping.getTableId(target, "inventory"))
-				.addColumn(new Column("id", integer(), inventory.getColumn("id").getSequence(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
-				.addColumn(new Column("store_id", integer(), NOT_NULL))
-				.addColumn(new Column("film_id", integer(), NOT_NULL));
-
-		Table newPaychecks = new Table(mapping.getTableId(target, "paychecks"))
-				.addColumn(new Column("id", integer(), paychecks.getColumn("id").getSequence(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
-				.addColumn(new Column("staff_id", integer(), NOT_NULL))
-				.addColumn(new Column("date", date(), NOT_NULL))
-				.addColumn(new Column("amount", floats(), NOT_NULL));
 
 		Table newPayments = new Table(mapping.getTableId(target, "payments"))
 				.addColumn(new Column("id", integer(), payments.getColumn("id").getSequence(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
@@ -172,22 +142,17 @@ public class AddColumnToCustomersTable {
 				.addColumn(new Column("inventory_id", integer(), NOT_NULL))
 				.addColumn(new Column("date", date(), NOT_NULL));
 
-		newStores.addForeignKey("manager_id").referencing(newStaff, "id");
-		newStaff.addForeignKey("store_id").referencing(newStores, "id");
 		newCustomers.addForeignKey("referred_by").referencing(newCustomers, "id");
-		newCustomers.addForeignKey("store_id").referencing(newStores, "id");
-		newInventory.addForeignKey("store_id").referencing(newStores, "id");
-		newInventory.addForeignKey("film_id").referencing(newFilms, "id");
-		newPaychecks.addForeignKey("staff_id").referencing(newStaff, "id");
-		newPayments.addForeignKey("staff_id").referencing(newStaff, "id");
+		newCustomers.addForeignKey("store_id").referencing(stores, "id");
+		newPayments.addForeignKey("staff_id").referencing(staff, "id");
 		newPayments.addForeignKey("customer_id").referencing(newCustomers, "id");
 		newPayments.addForeignKey("rental_id").referencing(newRentals, "id");
-		newRentals.addForeignKey("staff_id").referencing(newStaff, "id");
+		newRentals.addForeignKey("staff_id").referencing(staff, "id");
 		newRentals.addForeignKey("customer_id").referencing(newCustomers, "id");
-		newRentals.addForeignKey("inventory_id").referencing(newInventory, "id");
+		newRentals.addForeignKey("inventory_id").referencing(inventory, "id");
 
-		Set<Table> tables = Sets.newHashSet(stores, staff, customers, films, inventory, paychecks, payments, rentals,
-				newStores, newStaff, newCustomers, newFilms, newInventory, newPaychecks, newPayments, newRentals);
+		List<Table> tables = Lists.newArrayList(stores, staff, customers, films, inventory, paychecks, payments, rentals,
+				newCustomers, newPayments, newRentals);
 
 		Catalog expected = new Catalog(setup.getCatalogName());
 		tables.forEach(expected::addTable);
@@ -199,25 +164,17 @@ public class AddColumnToCustomersTable {
 	public void verifyTableMappings() {
 		TableMapping tableMapping = state.getTableMapping();
 
-		Set<String> originTableIds = tableMapping.getTableIds(origin);
-		Set<String> targetTableIds = tableMapping.getTableIds(target);
+		// Unchanged tables
+		assertEquals(PostgresqlBaseScenario.STORES_ID, tableMapping.getTableId(target, "stores"));
+		assertEquals(PostgresqlBaseScenario.STAFF_ID, tableMapping.getTableId(target, "staff"));
+		assertEquals(PostgresqlBaseScenario.FILMS_ID, tableMapping.getTableId(target, "films"));
+		assertEquals(PostgresqlBaseScenario.INVENTORY_ID, tableMapping.getTableId(target, "inventory"));
+		assertEquals(PostgresqlBaseScenario.PAYCHECKS_ID, tableMapping.getTableId(target, "paychecks"));
 
-		Set<String> expectedOriginTableIds = Sets.newHashSet(
-				PostgresqlBaseScenario.STORES_ID, PostgresqlBaseScenario.STAFF_ID,
-				PostgresqlBaseScenario.CUSTOMERS_ID, PostgresqlBaseScenario.FILMS_ID,
-				PostgresqlBaseScenario.INVENTORY_ID, PostgresqlBaseScenario.PAYCHECKS_ID,
-				PostgresqlBaseScenario.PAYMENTS_ID, PostgresqlBaseScenario.RENTALS_ID);
-
-		Set<String> expectedTargetTableIds = expectedOriginTableIds.stream()
-				.map(tableId -> {
-					String tableName = tableMapping.getTableName(origin, tableId);
-					return tableMapping.getTableId(target, tableName);
-				})
-				.collect(Collectors.toSet());
-
-		assertEquals(expectedOriginTableIds, originTableIds);
-		assertEquals(expectedTargetTableIds, targetTableIds);
-		assertTrue(Sets.intersection(originTableIds, targetTableIds).isEmpty());
+		// Ghosted tables
+		assertNotEquals(PostgresqlBaseScenario.CUSTOMERS_ID, tableMapping.getTableId(target, "customers"));
+		assertNotEquals(PostgresqlBaseScenario.PAYMENTS_ID, tableMapping.getTableId(target, "payments"));
+		assertNotEquals(PostgresqlBaseScenario.RENTALS_ID, tableMapping.getTableId(target, "rentals"));
 	}
 
 }

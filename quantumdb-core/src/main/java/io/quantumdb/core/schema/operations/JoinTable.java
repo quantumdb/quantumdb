@@ -2,15 +2,13 @@ package io.quantumdb.core.schema.operations;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMultimap;
-import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Setter;
@@ -21,7 +19,7 @@ import lombok.experimental.Accessors;
 public class JoinTable implements SchemaOperation {
 
 	private final Map<String, String> sourceTables;
-	private final Multimap<String, String> sourceColumns;
+	private final Map<String, List<String>> sourceColumns;
 	private final Map<String, String> joinConditions;
 
 	@Setter(AccessLevel.NONE)
@@ -32,19 +30,19 @@ public class JoinTable implements SchemaOperation {
 		checkArgument(!Strings.isNullOrEmpty(alias), "You must specify a 'alias'.");
 
 		this.sourceTables = Maps.newLinkedHashMap();
-		this.sourceColumns = LinkedHashMultimap.create();
+		this.sourceColumns = Maps.newLinkedHashMap();
 		this.joinConditions = Maps.newLinkedHashMap();
 
 		sourceTables.put(alias, sourceTable);
-		sourceColumns.putAll(alias, Arrays.asList(columns));
+		sourceColumns.put(alias, ImmutableList.copyOf(columns));
 	}
 
 	public ImmutableMap<String, String> getSourceTables() {
 		return ImmutableMap.copyOf(sourceTables);
 	}
 
-	public ImmutableMultimap<String, String> getSourceColumns() {
-		return ImmutableMultimap.copyOf(sourceColumns);
+	public ImmutableMap<String, List<String>> getSourceColumns() {
+		return ImmutableMap.copyOf(sourceColumns);
 	}
 
 	public ImmutableMap<String, String> getJoinConditions() {
@@ -58,7 +56,7 @@ public class JoinTable implements SchemaOperation {
 		checkArgument(!sourceTables.containsKey(alias), "You have ambiguously used the alias: '" + alias + "'.");
 
 		this.sourceTables.put(alias, sourceTable);
-		this.sourceColumns.putAll(alias, Arrays.asList(columns));
+		this.sourceColumns.put(alias, ImmutableList.copyOf(columns));
 		this.joinConditions.put(alias, joinCondition);
 		return this;
 	}

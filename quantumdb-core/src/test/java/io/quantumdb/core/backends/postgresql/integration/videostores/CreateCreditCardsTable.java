@@ -1,6 +1,5 @@
 package io.quantumdb.core.backends.postgresql.integration.videostores;
 
-import static io.quantumdb.core.backends.postgresql.PostgresTypes.bool;
 import static io.quantumdb.core.backends.postgresql.PostgresTypes.date;
 import static io.quantumdb.core.backends.postgresql.PostgresTypes.floats;
 import static io.quantumdb.core.backends.postgresql.PostgresTypes.integer;
@@ -9,7 +8,7 @@ import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
 import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -27,7 +26,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-public class AddColumnToPaymentsTable {
+public class CreateCreditCardsTable {
 
 	@ClassRule
 	public static PostgresqlBaseScenario setup = new PostgresqlBaseScenario();
@@ -38,10 +37,15 @@ public class AddColumnToPaymentsTable {
 
 	@BeforeClass
 	public static void performEvolution() throws SQLException, MigrationException {
+		setup.insertTestData();
+
 		origin = setup.getChangelog().getLastAdded();
 
 		setup.getChangelog().addChangeSet("Michael de Jong",
-				SchemaOperations.addColumn("payments", "verified", bool(), "'false'", NOT_NULL));
+				SchemaOperations.createTable("credit_cards")
+						.with("credit_card_number", varchar(255), IDENTITY, NOT_NULL)
+						.with("card_holder_name", varchar(255), NOT_NULL)
+						.with("expiration_date", date(), NOT_NULL));
 
 		target = setup.getChangelog().getLastAdded();
 		setup.getBackend().persistState(setup.getState());
@@ -119,21 +123,13 @@ public class AddColumnToPaymentsTable {
 
 		// New tables and foreign keys.
 
-		Table newPayments = new Table(mapping.getTableId(target, "payments"))
-				.addColumn(new Column("id", integer(), payments.getColumn("id").getSequence(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
-				.addColumn(new Column("staff_id", integer()))
-				.addColumn(new Column("customer_id", integer(), NOT_NULL))
-				.addColumn(new Column("rental_id", integer(), NOT_NULL))
-				.addColumn(new Column("date", date(), NOT_NULL))
-				.addColumn(new Column("amount", floats(), NOT_NULL))
-				.addColumn(new Column("verified", bool(), "false", NOT_NULL));
-
-		newPayments.addForeignKey("staff_id").referencing(staff, "id");
-		newPayments.addForeignKey("customer_id").referencing(customers, "id");
-		newPayments.addForeignKey("rental_id").referencing(rentals, "id");
+		Table creditCards = new Table(mapping.getTableId(target, "credit_cards"))
+				.addColumn(new Column("credit_card_number", varchar(255), IDENTITY, NOT_NULL))
+				.addColumn(new Column("card_holder_name", varchar(255), NOT_NULL))
+				.addColumn(new Column("expiration_date", date(), NOT_NULL));
 
 		List<Table> tables = Lists.newArrayList(stores, staff, customers, films, inventory, paychecks, payments, rentals,
-				newPayments);
+				creditCards);
 
 		Catalog expected = new Catalog(setup.getCatalogName());
 		tables.forEach(expected::addTable);
@@ -146,16 +142,17 @@ public class AddColumnToPaymentsTable {
 		TableMapping tableMapping = state.getTableMapping();
 
 		// Unchanged tables
+		assertEquals(PostgresqlBaseScenario.FILMS_ID, tableMapping.getTableId(target, "films"));
+		assertEquals(PostgresqlBaseScenario.CUSTOMERS_ID, tableMapping.getTableId(target, "customers"));
+		assertEquals(PostgresqlBaseScenario.PAYMENTS_ID, tableMapping.getTableId(target, "payments"));
+		assertEquals(PostgresqlBaseScenario.RENTALS_ID, tableMapping.getTableId(target, "rentals"));
 		assertEquals(PostgresqlBaseScenario.STORES_ID, tableMapping.getTableId(target, "stores"));
 		assertEquals(PostgresqlBaseScenario.STAFF_ID, tableMapping.getTableId(target, "staff"));
-		assertEquals(PostgresqlBaseScenario.CUSTOMERS_ID, tableMapping.getTableId(target, "customers"));
-		assertEquals(PostgresqlBaseScenario.PAYCHECKS_ID, tableMapping.getTableId(target, "paychecks"));
-		assertEquals(PostgresqlBaseScenario.FILMS_ID, tableMapping.getTableId(target, "films"));
 		assertEquals(PostgresqlBaseScenario.INVENTORY_ID, tableMapping.getTableId(target, "inventory"));
-		assertEquals(PostgresqlBaseScenario.RENTALS_ID, tableMapping.getTableId(target, "rentals"));
+		assertEquals(PostgresqlBaseScenario.PAYCHECKS_ID, tableMapping.getTableId(target, "paychecks"));
 
-		// Ghosted tables
-		assertNotEquals(PostgresqlBaseScenario.PAYMENTS_ID, tableMapping.getTableId(target, "payments"));
+		// New tables
+		assertNotNull(tableMapping.getTableId(target, "credit_cards"));
 	}
 
 }

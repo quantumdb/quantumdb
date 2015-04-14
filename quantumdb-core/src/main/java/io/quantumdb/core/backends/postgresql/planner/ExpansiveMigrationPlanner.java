@@ -58,13 +58,13 @@ public class ExpansiveMigrationPlanner implements MigrationPlanner {
 
 		Set<String> originalModifiedTableIds = Sets.newHashSet(newTableIds);
 		Map<String, TableNode> graph = constructGraph(catalog, newTableIds);
-		List<String> tablesToCreateNullObjectsFor = Lists.newArrayList();
+		List<String> tableIdsWithNullRecords = Lists.newArrayList();
 		List<Step> steps = Lists.newArrayList();
 		boolean lookForCheapMigrations = true;
 
 		while (!graph.isEmpty()) {
 			if (lookForCheapMigrations) {
-				Map<String, Integer> selectedTables = selectTablesWithLowestNumberOfIncomingForeignKeys(graph);
+				Map<String, Integer> selectedTables = selectTablesWithLowestNumberOfNonNullableIncomingForeignKeys(graph);
 				Set<Migration> migrations = Sets.newHashSet();
 				Set<String> tablesToRemoveFromGraph = Sets.newHashSet();
 				for (Map.Entry<String, Integer> entry : selectedTables.entrySet()) {
@@ -89,10 +89,10 @@ public class ExpansiveMigrationPlanner implements MigrationPlanner {
 				selectAllTables(graph).forEach((tableName, incomingForeignKeys) -> {
 					TableNode node = graph.get(tableName);
 					Set<String> columnNames = Sets.newHashSet();
-					node.getForeignKeys().forEach((columnNamesList, targetNode) -> {
-						columnNames.addAll(columnNamesList);
-						if (!tablesToCreateNullObjectsFor.contains(targetNode.getTableName())) {
-							tablesToCreateNullObjectsFor.add(targetNode.getTableName());
+					node.getForeignKeys().forEach(foreignKey -> {
+						columnNames.addAll(foreignKey.getReferencingColumns());
+						if (!tableIdsWithNullRecords.contains(foreignKey.getReferredTableName())) {
+							tableIdsWithNullRecords.add(foreignKey.getReferredTableName());
 						}
 					});
 					migrations.add(new Migration(tableName, columnNames));
@@ -128,14 +128,14 @@ public class ExpansiveMigrationPlanner implements MigrationPlanner {
 				Set<String> newGhostTableIds = expand(catalog, tableMapping, mappings, sourceVersion, targetVersion, /* newTableIds, */ tableIdsToAdd, originalModifiedTableIds);
 
 				lookForCheapMigrations = true;
-				tablesToCreateNullObjectsFor.clear();
+				tableIdsWithNullRecords.clear();
 				steps.clear();
 
 				newTableIds = Sets.union(newTableIds, newGhostTableIds);
 
 				newGhostTableIds.forEach(newGhostTableId -> {
-					if (!tablesToCreateNullObjectsFor.contains(newGhostTableId)) {
-						tablesToCreateNullObjectsFor.add(newGhostTableId);
+					if (!tableIdsWithNullRecords.contains(newGhostTableId)) {
+						tableIdsWithNullRecords.add(newGhostTableId);
 					}
 				});
 
@@ -144,7 +144,7 @@ public class ExpansiveMigrationPlanner implements MigrationPlanner {
 			}
 		}
 
-		return new MigrationPlan(Lists.reverse(steps), tablesToCreateNullObjectsFor, mappings);
+		return new MigrationPlan(Lists.reverse(steps), tableIdsWithNullRecords, mappings);
 	}
 
 	private Set<String> expand(Catalog catalog, TableMapping tableMapping, DataMappings dataMappings,
@@ -245,7 +245,7 @@ public class ExpansiveMigrationPlanner implements MigrationPlanner {
 	private static Map<String, TableNode> constructGraph(Catalog catalog, Set<String> tableNames) {
 		Map<String, TableNode> nodes = Maps.newHashMap();
 		for (String tableName : tableNames) {
-			nodes.put(tableName, new TableNode(tableName, Maps.newHashMap()));
+			nodes.put(tableName, new TableNode(tableName, Lists.newArrayList()));
 		}
 
 		for (String tableName : tableNames) {
@@ -254,10 +254,8 @@ public class ExpansiveMigrationPlanner implements MigrationPlanner {
 			Table table = catalog.getTable(tableName);
 			table.getForeignKeys().forEach(foreignKey -> {
 				String referredTableName = foreignKey.getReferredTableName();
-				TableNode referredNode = nodes.get(referredTableName);
-
 				if (tableNames.contains(referredTableName)) {
-					node.getForeignKeys().put(foreignKey.getReferencingColumns(), referredNode);
+					node.getForeignKeys().add(foreignKey);
 				}
 			});
 		}
@@ -269,10 +267,10 @@ public class ExpansiveMigrationPlanner implements MigrationPlanner {
 		TableNode removed = graph.remove(tableName);
 		if (removed != null) {
 			graph.values().forEach(node -> {
-				Set<List<String>> toRemoved = Sets.newHashSet();
-				node.getForeignKeys().forEach((key, value) -> {
-					if (tableName.equals(value.getTableName())) {
-						toRemoved.add(key);
+				Set<ForeignKey> toRemoved = Sets.newHashSet();
+				node.getForeignKeys().forEach(foreignKey -> {
+					if (tableName.equals(foreignKey.getReferredTableName())) {
+						toRemoved.add(foreignKey);
 					}
 				});
 
@@ -281,12 +279,12 @@ public class ExpansiveMigrationPlanner implements MigrationPlanner {
 		}
 	}
 
-	private static Map<String, Integer> selectTablesWithLowestNumberOfIncomingForeignKeys(Map<String, TableNode> graph) {
+	private static Map<String, Integer> selectTablesWithLowestNumberOfNonNullableIncomingForeignKeys(Map<String, TableNode> graph) {
 		Set<String> tableNames = Sets.newHashSet();
 		int lowestAmountOfIncomingForeignKeys = Integer.MAX_VALUE;
 
 		for (TableNode node : graph.values()) {
-			int incomingForeignKeys = countIncomingForeignKeys(graph, node);
+			int incomingForeignKeys = countIncomingNonNullableForeignKeys(graph, node);
 			if (incomingForeignKeys < lowestAmountOfIncomingForeignKeys) {
 				tableNames.clear();
 				tableNames.add(node.getTableName());
@@ -304,18 +302,34 @@ public class ExpansiveMigrationPlanner implements MigrationPlanner {
 
 	private static Map<String, Integer> selectAllTables(Map<String, TableNode> graph) {
 		return graph.values().stream()
-				.collect(Collectors.toMap(TableNode::getTableName, node -> countIncomingForeignKeys(graph, node)));
+				.collect(Collectors.toMap(TableNode::getTableName, node -> countIncomingNonNullableForeignKeys(graph, node)));
 	}
 
-	private static int countIncomingForeignKeys(Map<String, TableNode> graph, TableNode target) {
-		int counter = 0;
+	private static int countIncomingNonNullableForeignKeys(Map<String, TableNode> graph, TableNode target) {
+		Set<Table> referencingTables = Sets.newHashSet();
 		for (TableNode node : graph.values()) {
-			if (node.getForeignKeys().containsValue(target)) {
-				counter++;
+			List<ForeignKey> foreignKeys = node.getForeignKeys();
+			boolean referencesTargetTable = foreignKeys.stream()
+					.map(ForeignKey::getReferredTableName)
+					.anyMatch(target.getTableName()::equals);
+
+			if (!referencesTargetTable) {
+				continue;
+			}
+
+			for (ForeignKey foreignKey : foreignKeys) {
+				Table referencingTable = foreignKey.getReferencingTable();
+				boolean notNullable = foreignKey.getReferencingColumns().stream()
+					.map(referencingTable::getColumn)
+					.anyMatch(Column::isNotNull);
+
+				if (notNullable) {
+					referencingTables.add(referencingTable);
+				}
 			}
 		}
 
-		return counter;
+		return referencingTables.size();
 	}
 
 }

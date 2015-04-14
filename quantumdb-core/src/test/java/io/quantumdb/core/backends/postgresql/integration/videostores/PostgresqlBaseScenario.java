@@ -8,6 +8,7 @@ import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
 import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
 
+import java.sql.Date;
 import java.sql.SQLException;
 import java.util.Set;
 
@@ -23,6 +24,7 @@ import io.quantumdb.core.migration.Migrator;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Table;
+import io.quantumdb.core.utils.BatchInserter;
 import io.quantumdb.core.versioning.Changelog;
 import io.quantumdb.core.versioning.State;
 import io.quantumdb.core.versioning.TableMapping;
@@ -153,6 +155,70 @@ public class PostgresqlBaseScenario extends PostgresqlDatabase {
 
 		backend.persistState(state);
 		migrator = injector.getInstance(Migrator.class);
+	}
+
+	void insertTestData() throws SQLException {
+		getConnection().setAutoCommit(false);
+		getConnection().createStatement().execute("SET CONSTRAINTS ALL DEFERRED");
+
+		BatchInserter.insertInto(getConnection(), STORES_ID, "name", "manager_id")
+				.values("Delft", 1)
+				.values("Amsterdam", 2)
+				.insert();
+
+		BatchInserter.insertInto(getConnection(), STAFF_ID, "name", "store_id")
+				.values("Arend Paulissen", 1)
+				.values("Alfred Wauters", 2)
+				.values("Damian Roijakkers", 1)
+				.values("Anika De Witte", 2)
+				.insert();
+
+		BatchInserter.insertInto(getConnection(), PAYCHECKS_ID, "staff_id", "date", "amount")
+				.values(1, new Date(System.currentTimeMillis()), 1500f)
+				.values(2, new Date(System.currentTimeMillis()), 1500f)
+				.values(3, new Date(System.currentTimeMillis()), 1400f)
+				.values(4, new Date(System.currentTimeMillis()), 1400f)
+				.insert();
+
+		BatchInserter.insertInto(getConnection(), CUSTOMERS_ID, "name", "store_id")
+				.values("Johanneke Schoorl", 1)
+				.values("Maikel Haanraadts", 1)
+				.values("Hubrecht Houtkooper", 2)
+				.values("Alex Van Der Aart", 2)
+				.insert();
+
+		BatchInserter.insertInto(getConnection(), FILMS_ID, "name")
+				.values("Intersteller")
+				.values("Gravity")
+				.values("Apollo 13")
+				.values("Space Odyssey")
+				.insert();
+
+		BatchInserter.insertInto(getConnection(), INVENTORY_ID, "store_id", "film_id")
+				.values(1, 1)
+				.values(1, 2)
+				.values(1, 3)
+				.values(1, 4)
+				.values(2, 1)
+				.values(2, 2)
+				.values(2, 3)
+				.insert();
+
+		BatchInserter.insertInto(getConnection(), RENTALS_ID, "staff_id", "customer_id", "inventory_id", "date")
+				.values(1, 1, 1, new Date(System.currentTimeMillis()))
+				.values(2, 2, 2, new Date(System.currentTimeMillis()))
+				.values(3, 3, 5, new Date(System.currentTimeMillis()))
+				.values(null, 4, 6, new Date(System.currentTimeMillis()))
+				.insert();
+
+		BatchInserter.insertInto(getConnection(), PAYMENTS_ID, "staff_id", "customer_id", "rental_id", "date", "amount")
+				.values(1, 1, 1, new Date(System.currentTimeMillis()), 5f)
+				.values(2, 2, 2, new Date(System.currentTimeMillis()), 5f)
+				.values(3, 3, 3, new Date(System.currentTimeMillis()), 5f)
+				.values(null, 4, 4, new Date(System.currentTimeMillis()), 5f)
+				.insert();
+
+		getConnection().setAutoCommit(true);
 	}
 
 }

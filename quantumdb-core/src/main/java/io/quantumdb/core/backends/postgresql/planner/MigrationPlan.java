@@ -10,12 +10,12 @@ import lombok.Data;
 public class MigrationPlan {
 
 	private final ImmutableList<Step> steps;
-	private final ImmutableList<String> createNullObjectsForTables;
+	private final ImmutableList<String> tableIdsWithNullRecords;
 	private final DataMappings dataMappings;
 
-	MigrationPlan(List<Step> steps, List<String> createNullObjectsForTables, DataMappings dataMappings) {
+	MigrationPlan(List<Step> steps, List<String> tableIdsWithNullRecords, DataMappings dataMappings) {
 		this.steps = ImmutableList.copyOf(steps);
-		this.createNullObjectsForTables = ImmutableList.copyOf(createNullObjectsForTables);
+		this.tableIdsWithNullRecords = ImmutableList.copyOf(tableIdsWithNullRecords);
 		this.dataMappings = dataMappings;
 	}
 

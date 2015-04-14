@@ -1,6 +1,5 @@
 package io.quantumdb.core.backends.postgresql.integration.videostores;
 
-import static io.quantumdb.core.backends.postgresql.PostgresTypes.bool;
 import static io.quantumdb.core.backends.postgresql.PostgresTypes.date;
 import static io.quantumdb.core.backends.postgresql.PostgresTypes.floats;
 import static io.quantumdb.core.backends.postgresql.PostgresTypes.integer;
@@ -27,7 +26,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-public class AddColumnToPaymentsTable {
+public class AddForeignKeyToPaymentsTable {
 
 	@ClassRule
 	public static PostgresqlBaseScenario setup = new PostgresqlBaseScenario();
@@ -38,10 +37,13 @@ public class AddColumnToPaymentsTable {
 
 	@BeforeClass
 	public static void performEvolution() throws SQLException, MigrationException {
+		setup.insertTestData();
+
 		origin = setup.getChangelog().getLastAdded();
 
 		setup.getChangelog().addChangeSet("Michael de Jong",
-				SchemaOperations.addColumn("payments", "verified", bool(), "'false'", NOT_NULL));
+				SchemaOperations.addColumn("payments", "store_id", integer(), "'1'", NOT_NULL),
+				SchemaOperations.addForeignKey("payments", "store_id").referencing("stores", "id"));
 
 		target = setup.getChangelog().getLastAdded();
 		setup.getBackend().persistState(setup.getState());
@@ -126,14 +128,15 @@ public class AddColumnToPaymentsTable {
 				.addColumn(new Column("rental_id", integer(), NOT_NULL))
 				.addColumn(new Column("date", date(), NOT_NULL))
 				.addColumn(new Column("amount", floats(), NOT_NULL))
-				.addColumn(new Column("verified", bool(), "false", NOT_NULL));
+				.addColumn(new Column("store_id", integer(), "1", NOT_NULL));
 
 		newPayments.addForeignKey("staff_id").referencing(staff, "id");
 		newPayments.addForeignKey("customer_id").referencing(customers, "id");
 		newPayments.addForeignKey("rental_id").referencing(rentals, "id");
+		newPayments.addForeignKey("store_id").referencing(stores, "id");
 
 		List<Table> tables = Lists.newArrayList(stores, staff, customers, films, inventory, paychecks, payments, rentals,
-				newPayments);
+						newPayments);
 
 		Catalog expected = new Catalog(setup.getCatalogName());
 		tables.forEach(expected::addTable);
@@ -146,11 +149,11 @@ public class AddColumnToPaymentsTable {
 		TableMapping tableMapping = state.getTableMapping();
 
 		// Unchanged tables
+		assertEquals(PostgresqlBaseScenario.FILMS_ID, tableMapping.getTableId(target, "films"));
 		assertEquals(PostgresqlBaseScenario.STORES_ID, tableMapping.getTableId(target, "stores"));
 		assertEquals(PostgresqlBaseScenario.STAFF_ID, tableMapping.getTableId(target, "staff"));
 		assertEquals(PostgresqlBaseScenario.CUSTOMERS_ID, tableMapping.getTableId(target, "customers"));
 		assertEquals(PostgresqlBaseScenario.PAYCHECKS_ID, tableMapping.getTableId(target, "paychecks"));
-		assertEquals(PostgresqlBaseScenario.FILMS_ID, tableMapping.getTableId(target, "films"));
 		assertEquals(PostgresqlBaseScenario.INVENTORY_ID, tableMapping.getTableId(target, "inventory"));
 		assertEquals(PostgresqlBaseScenario.RENTALS_ID, tableMapping.getTableId(target, "rentals"));
 

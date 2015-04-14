@@ -26,6 +26,7 @@ public class PostgresTypes {
 			case "bool":
 			case "boolean":
 				return PostgresTypes.bool();
+			case "varchar":
 			case "character varying":
 				return PostgresTypes.varchar(length);
 			case "character":

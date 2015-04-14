@@ -154,21 +154,12 @@ public class ExpansiveMigrationPlannerTest {
 
 		List<Step> expectedSteps = Lists.newArrayList();
 		expectedSteps.add(new Step(
-				new Migration(getTableId("stores"), Sets.newHashSet("manager_id")),
-				new Migration(getTableId("staff"), Sets.newHashSet("store_id")),
-				new Migration(getTableId("customers"), Sets.newHashSet("store_id", "referred_by"))
-		));
-		expectedSteps.add(new Step(
-				new Migration(getTableId("films"), Sets.newHashSet())
-		));
-		expectedSteps.add(new Step(
-				new Migration(getTableId("inventory"), Sets.newHashSet())
+				new Migration(getTableId("customers"), Sets.newHashSet())
 		));
 		expectedSteps.add(new Step(
 				new Migration(getTableId("rentals"), Sets.newHashSet())
 		));
 		expectedSteps.add(new Step(
-				new Migration(getTableId("paychecks"), Sets.newHashSet()),
 				new Migration(getTableId("payments"), Sets.newHashSet())
 		));
 

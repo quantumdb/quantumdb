@@ -20,7 +20,7 @@ public class Expansion {
 
 	private final List<Step> migrationSteps;
 	private final DataMappings dataMappings;
-	private final List<String> createNullObjectsForTables;
+	private final List<String> tableIdsWithNullRecords;
 	private final State state;
 
 	public Expansion(MigrationPlan migrationPlan, State state, Version origin, Version target) {
@@ -28,7 +28,7 @@ public class Expansion {
 		this.target = target;
 		this.migrationSteps = migrationPlan.getSteps();
 		this.dataMappings = migrationPlan.getDataMappings();
-		this.createNullObjectsForTables = migrationPlan.getCreateNullObjectsForTables();
+		this.tableIdsWithNullRecords = migrationPlan.getTableIdsWithNullRecords();
 		this.state = state;
 	}
 

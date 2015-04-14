@@ -1,6 +1,5 @@
 package io.quantumdb.core.backends.postgresql.integration.videostores;
 
-import static io.quantumdb.core.backends.postgresql.PostgresTypes.bool;
 import static io.quantumdb.core.backends.postgresql.PostgresTypes.date;
 import static io.quantumdb.core.backends.postgresql.PostgresTypes.floats;
 import static io.quantumdb.core.backends.postgresql.PostgresTypes.integer;
@@ -27,7 +26,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-public class AddColumnToPaymentsTable {
+public class MakeStoreFieldInStaffTableNullable {
 
 	@ClassRule
 	public static PostgresqlBaseScenario setup = new PostgresqlBaseScenario();
@@ -38,10 +37,14 @@ public class AddColumnToPaymentsTable {
 
 	@BeforeClass
 	public static void performEvolution() throws SQLException, MigrationException {
+		setup.insertTestData();
+
 		origin = setup.getChangelog().getLastAdded();
 
 		setup.getChangelog().addChangeSet("Michael de Jong",
-				SchemaOperations.addColumn("payments", "verified", bool(), "'false'", NOT_NULL));
+				SchemaOperations.alterColumn("staff", "store_id")
+						.modifyDefaultExpression("NULL")
+						.dropHint(NOT_NULL));
 
 		target = setup.getChangelog().getLastAdded();
 		setup.getBackend().persistState(setup.getState());
@@ -119,21 +122,64 @@ public class AddColumnToPaymentsTable {
 
 		// New tables and foreign keys.
 
+		Table newStores = new Table(mapping.getTableId(target, "stores"))
+				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("name", varchar(255), NOT_NULL))
+				.addColumn(new Column("manager_id", integer(), NOT_NULL));
+
+		Table newStaff = new Table(mapping.getTableId(target, "staff"))
+				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("name", varchar(255), NOT_NULL))
+				.addColumn(new Column("store_id", integer()));
+
+		Table newCustomers = new Table(mapping.getTableId(target, "customers"))
+				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("name", varchar(255), NOT_NULL))
+				.addColumn(new Column("store_id", integer(), NOT_NULL))
+				.addColumn(new Column("referred_by", integer()));
+
+		Table newInventory = new Table(mapping.getTableId(target, "inventory"))
+				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("store_id", integer(), NOT_NULL))
+				.addColumn(new Column("film_id", integer(), NOT_NULL));
+
+		Table newPaychecks = new Table(mapping.getTableId(target, "paychecks"))
+				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("staff_id", integer(), NOT_NULL))
+				.addColumn(new Column("date", date(), NOT_NULL))
+				.addColumn(new Column("amount", floats(), NOT_NULL));
+
 		Table newPayments = new Table(mapping.getTableId(target, "payments"))
-				.addColumn(new Column("id", integer(), payments.getColumn("id").getSequence(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("staff_id", integer()))
 				.addColumn(new Column("customer_id", integer(), NOT_NULL))
 				.addColumn(new Column("rental_id", integer(), NOT_NULL))
 				.addColumn(new Column("date", date(), NOT_NULL))
-				.addColumn(new Column("amount", floats(), NOT_NULL))
-				.addColumn(new Column("verified", bool(), "false", NOT_NULL));
+				.addColumn(new Column("amount", floats(), NOT_NULL));
 
-		newPayments.addForeignKey("staff_id").referencing(staff, "id");
-		newPayments.addForeignKey("customer_id").referencing(customers, "id");
-		newPayments.addForeignKey("rental_id").referencing(rentals, "id");
+		Table newRentals = new Table(mapping.getTableId(target, "rentals"))
+				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("staff_id", integer()))
+				.addColumn(new Column("customer_id", integer(), NOT_NULL))
+				.addColumn(new Column("inventory_id", integer(), NOT_NULL))
+				.addColumn(new Column("date", date(), NOT_NULL));
+
+		newStores.addForeignKey("manager_id").referencing(newStaff, "id");
+		newStaff.addForeignKey("store_id").referencing(newStores, "id");
+		newCustomers.addForeignKey("referred_by").referencing(newCustomers, "id");
+		newCustomers.addForeignKey("store_id").referencing(newStores, "id");
+		newInventory.addForeignKey("store_id").referencing(newStores, "id");
+		newInventory.addForeignKey("film_id").referencing(films, "id");
+		newPaychecks.addForeignKey("staff_id").referencing(newStaff, "id");
+		newPayments.addForeignKey("staff_id").referencing(newStaff, "id");
+		newPayments.addForeignKey("customer_id").referencing(newCustomers, "id");
+		newPayments.addForeignKey("rental_id").referencing(newRentals, "id");
+		newRentals.addForeignKey("staff_id").referencing(newStaff, "id");
+		newRentals.addForeignKey("customer_id").referencing(newCustomers, "id");
+		newRentals.addForeignKey("inventory_id").referencing(newInventory, "id");
 
 		List<Table> tables = Lists.newArrayList(stores, staff, customers, films, inventory, paychecks, payments, rentals,
-				newPayments);
+				newStores, newStaff, newCustomers, newInventory, newPaychecks, newPayments, newRentals);
 
 		Catalog expected = new Catalog(setup.getCatalogName());
 		tables.forEach(expected::addTable);
@@ -146,16 +192,16 @@ public class AddColumnToPaymentsTable {
 		TableMapping tableMapping = state.getTableMapping();
 
 		// Unchanged tables
-		assertEquals(PostgresqlBaseScenario.STORES_ID, tableMapping.getTableId(target, "stores"));
-		assertEquals(PostgresqlBaseScenario.STAFF_ID, tableMapping.getTableId(target, "staff"));
-		assertEquals(PostgresqlBaseScenario.CUSTOMERS_ID, tableMapping.getTableId(target, "customers"));
-		assertEquals(PostgresqlBaseScenario.PAYCHECKS_ID, tableMapping.getTableId(target, "paychecks"));
 		assertEquals(PostgresqlBaseScenario.FILMS_ID, tableMapping.getTableId(target, "films"));
-		assertEquals(PostgresqlBaseScenario.INVENTORY_ID, tableMapping.getTableId(target, "inventory"));
-		assertEquals(PostgresqlBaseScenario.RENTALS_ID, tableMapping.getTableId(target, "rentals"));
 
 		// Ghosted tables
+		assertNotEquals(PostgresqlBaseScenario.CUSTOMERS_ID, tableMapping.getTableId(target, "customers"));
 		assertNotEquals(PostgresqlBaseScenario.PAYMENTS_ID, tableMapping.getTableId(target, "payments"));
+		assertNotEquals(PostgresqlBaseScenario.RENTALS_ID, tableMapping.getTableId(target, "rentals"));
+		assertNotEquals(PostgresqlBaseScenario.STORES_ID, tableMapping.getTableId(target, "stores"));
+		assertNotEquals(PostgresqlBaseScenario.STAFF_ID, tableMapping.getTableId(target, "staff"));
+		assertNotEquals(PostgresqlBaseScenario.INVENTORY_ID, tableMapping.getTableId(target, "inventory"));
+		assertNotEquals(PostgresqlBaseScenario.PAYCHECKS_ID, tableMapping.getTableId(target, "paychecks"));
 	}
 
 }
