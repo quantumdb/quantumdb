@@ -40,7 +40,11 @@ public class PostgresqlDatabase extends ExternalResource {
 			log.info("Running test on database: " + catalogName);
 		}
 
-		this.connection = DriverManager.getConnection(jdbcUrl + "/" + catalogName, jdbcUser, jdbcPass);
+		this.connection = createConnection();
+	}
+
+	public Connection createConnection() throws SQLException {
+		return DriverManager.getConnection(jdbcUrl + "/" + catalogName, jdbcUser, jdbcPass);
 	}
 
 	@Override
