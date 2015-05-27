@@ -3,8 +3,6 @@ package io.quantumdb.core.schema.operations;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.ColumnType;
 import lombok.AccessLevel;
-import lombok.Data;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -61,6 +59,10 @@ public class SchemaOperations {
 
 	public static AddForeignKey addForeignKey(String table, String... columns) {
 		return new AddForeignKey(table, columns);
+	}
+
+	public static DropForeignKey dropForeignKey(String tableName, String... columns) {
+		return new DropForeignKey(tableName, columns);
 	}
 
 }

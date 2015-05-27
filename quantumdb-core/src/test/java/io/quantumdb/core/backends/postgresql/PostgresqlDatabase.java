@@ -14,8 +14,8 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.rules.ExternalResource;
 
-@Getter
 @Slf4j
+@Getter
 public class PostgresqlDatabase extends ExternalResource {
 
 	private Connection connection;
@@ -40,7 +40,11 @@ public class PostgresqlDatabase extends ExternalResource {
 			log.info("Running test on database: " + catalogName);
 		}
 
-		this.connection = DriverManager.getConnection(jdbcUrl + "/" + catalogName, jdbcUser, jdbcPass);
+		this.connection = createConnection();
+	}
+
+	public Connection createConnection() throws SQLException {
+		return DriverManager.getConnection(jdbcUrl + "/" + catalogName, jdbcUser, jdbcPass);
 	}
 
 	@Override

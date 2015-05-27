@@ -11,6 +11,7 @@ import io.quantumdb.core.schema.operations.AlterColumn;
 import io.quantumdb.core.schema.operations.CopyTable;
 import io.quantumdb.core.schema.operations.CreateTable;
 import io.quantumdb.core.schema.operations.DropColumn;
+import io.quantumdb.core.schema.operations.DropForeignKey;
 import io.quantumdb.core.schema.operations.DropTable;
 import io.quantumdb.core.schema.operations.RenameTable;
 import io.quantumdb.core.schema.operations.SchemaOperation;
@@ -37,6 +38,7 @@ public class SchemaOperationsMigrator {
 				.put(CreateTable.class, new CreateTableMigrator())
 				.put(DropTable.class, new DropTableMigrator())
 				.put(DropColumn.class, new DropColumnMigrator())
+				.put(DropForeignKey.class, new DropForeignKeyMigrator())
 //				.put(JoinTable.class, new JoinTableMigrator())
 				.put(RenameTable.class, new RenameTableMigrator())
 				.build();

@@ -43,9 +43,20 @@ public class Changelog {
 	 * Creates a new Changelog object with a new root Version object with the specified id.
 	 */
 	public Changelog(String rootVersionId) {
-		this.root = new Version(rootVersionId, null);
+		this(rootVersionId, null);
+	}
+
+	/**
+	 * Creates a new Changelog object with a new root Version object with the specified id.
+	 */
+	public Changelog(String rootVersionId, ChangeSet changeSet) {
+		this.root = new Version(rootVersionId, null, changeSet, null);
 		this.idGenerator = new VersionIdGenerator(root);
 		this.lastAdded = root;
+
+		if (changeSet != null && changeSet.getVersion() == null) {
+			changeSet.setVersion(root);
+		}
 	}
 
 	public Changelog addChangeSet(String author, Collection<SchemaOperation> operations) {

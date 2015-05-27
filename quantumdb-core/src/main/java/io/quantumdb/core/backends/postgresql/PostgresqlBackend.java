@@ -7,8 +7,8 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 import com.google.inject.name.Named;
-import com.google.inject.persist.Transactional;
 import io.quantumdb.core.backends.Backend;
+import io.quantumdb.core.backends.postgresql.migrator.TableCreator;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.versioning.Changelog;
 import io.quantumdb.core.versioning.ChangelogBackend;
@@ -45,30 +45,33 @@ public class PostgresqlBackend implements Backend {
 	}
 
 	@Override
-	@Transactional
 	public State loadState() throws SQLException {
 		log.trace("Loading state from database...");
 		try (Connection connection = connect()) {
-			Changelog changelog = changelogBackend.load();
+			Changelog changelog = changelogBackend.load(this);
 			Catalog catalog = new CatalogLoader(connection).load(jdbcCatalog);
-			TableMapping tableMapping = tableNameMappingBackend.load(changelog);
+			TableMapping tableMapping = tableNameMappingBackend.load(this, changelog);
 
 			return new State(catalog, tableMapping, changelog);
 		}
 	}
 
 	@Override
-	@Transactional
 	public void persistState(State state) throws SQLException {
 		log.info("Persisting state to database...");
 
-		changelogBackend.persist(state.getChangelog());
-		tableNameMappingBackend.persist(state.getChangelog(), state.getTableMapping());
+		changelogBackend.persist(this, state.getChangelog());
+		tableNameMappingBackend.persist(this, state.getTableMapping());
 	}
 
 	@Override
 	public PostgresqlMigrator getMigrator() {
 		return new PostgresqlMigrator(this);
+	}
+
+	@Override
+	public TableCreator getTableCreator() {
+		return new TableCreator();
 	}
 
 	@Override
