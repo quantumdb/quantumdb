@@ -41,6 +41,17 @@ public class Driver implements java.sql.Driver {
 		}
 
 		String version = parseVersion(url);
+		if (version != null) {
+			String applicationName = info.getProperty("ApplicationName");
+			if (applicationName != null && !applicationName.equals("")) {
+				applicationName += " - " + version;
+			}
+			else {
+				applicationName = version;
+			}
+			info.setProperty("ApplicationName", applicationName);
+		}
+
 		this.delegate = DriverManager.getDriver(url);
 		Connection connection = delegate.connect(url, info);
 		QueryRewriter queryRewriter = new PostgresqlQueryRewriter(true);
