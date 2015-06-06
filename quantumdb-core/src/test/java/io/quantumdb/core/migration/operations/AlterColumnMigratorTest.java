@@ -49,7 +49,7 @@ public class AlterColumnMigratorTest {
 	public void testExpandForRenamingColumn() {
 		AlterColumn operation = SchemaOperations.alterColumn("users", "name").rename("full_name");
 		changelog.addChangeSet("Michael de Jong", "Renaming 'name' column to 'full_name' column.", operation);
-		migrator.expand(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
+		migrator.migrate(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
 
 		Table originalTable = catalog.getTable("users");
 		Table ghostTable = getGhostTable(originalTable);
@@ -65,7 +65,7 @@ public class AlterColumnMigratorTest {
 	public void testExpandForChangingTypeOfColumn() {
 		AlterColumn operation = SchemaOperations.alterColumn("users", "name").modifyDataType(PostgresTypes.text());
 		changelog.addChangeSet("Michael de Jong", "Set type of 'name' column to 'text'.", operation);
-		migrator.expand(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
+		migrator.migrate(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
 
 		Table originalTable = catalog.getTable("users");
 		Table ghostTable = getGhostTable(originalTable);
@@ -81,7 +81,7 @@ public class AlterColumnMigratorTest {
 	public void testExpandForSettingDefaultValue() {
 		AlterColumn operation = SchemaOperations.alterColumn("users", "name").modifyDefaultExpression("'Unknown'");
 		changelog.addChangeSet("Michael de Jong", "Set default of 'name' column to 'Unknown'.", operation);
-		migrator.expand(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
+		migrator.migrate(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
 
 		Table originalTable = catalog.getTable("users");
 		Table ghostTable = getGhostTable(originalTable);
@@ -99,7 +99,7 @@ public class AlterColumnMigratorTest {
 
 		AlterColumn operation = SchemaOperations.alterColumn("users", "name").modifyDefaultExpression("'John Smith'");
 		changelog.addChangeSet("Michael de Jong", "Set default of 'name' column to 'John Smith'.", operation);
-		migrator.expand(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
+		migrator.migrate(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
 
 		Table originalTable = catalog.getTable("users");
 		Table ghostTable = getGhostTable(originalTable);
@@ -117,7 +117,7 @@ public class AlterColumnMigratorTest {
 
 		AlterColumn operation = SchemaOperations.alterColumn("users", "name").dropDefaultExpression();
 		changelog.addChangeSet("Michael de Jong", "Set default of 'name' column to 'John Smith'.", operation);
-		migrator.expand(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
+		migrator.migrate(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
 
 		Table originalTable = catalog.getTable("users");
 		Table ghostTable = getGhostTable(originalTable);
@@ -133,7 +133,7 @@ public class AlterColumnMigratorTest {
 	public void testExpandForAddingNotNullHint() {
 		AlterColumn operation = SchemaOperations.alterColumn("referrals", "invited_by_id").addHint(NOT_NULL);
 		changelog.addChangeSet("Michael de Jong", "Added NOT_NULL constraint to 'invited_by_id' column.", operation);
-		migrator.expand(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
+		migrator.migrate(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
 
 		Table originalTable = catalog.getTable("referrals");
 		Table ghostTable = getGhostTable(originalTable);
@@ -149,7 +149,7 @@ public class AlterColumnMigratorTest {
 	public void testExpandForRemovingNotNullHint() {
 		AlterColumn operation = SchemaOperations.alterColumn("referrals", "invitee_id").dropHint(NOT_NULL);
 		changelog.addChangeSet("Michael de Jong", "Dropped NOT_NULL constraint of 'invitee_id' column.", operation);
-		migrator.expand(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
+		migrator.migrate(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
 
 		Table originalTable = catalog.getTable("referrals");
 		Table ghostTable = getGhostTable(originalTable);
@@ -165,7 +165,7 @@ public class AlterColumnMigratorTest {
 	public void testExpandForAddingAutoIncrementHint() {
 		AlterColumn operation = SchemaOperations.alterColumn("referrals", "invited_by_id").addHint(AUTO_INCREMENT);
 		changelog.addChangeSet("Michael de Jong", "Added AUTO_INCREMENT constraint to 'invited_by_id' column.", operation);
-		migrator.expand(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
+		migrator.migrate(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
 
 		Table originalTable = catalog.getTable("referrals");
 		Table ghostTable = getGhostTable(originalTable);
@@ -181,7 +181,7 @@ public class AlterColumnMigratorTest {
 	public void testExpandForRemovingAutoIncrementHint() {
 		AlterColumn operation = SchemaOperations.alterColumn("referrals", "invitee_id").dropHint(AUTO_INCREMENT);
 		changelog.addChangeSet("Michael de Jong", "Dropped NOT_NULL constraint of 'invitee_id' column.", operation);
-		migrator.expand(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
+		migrator.migrate(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
 
 		Table originalTable = catalog.getTable("referrals");
 		Table ghostTable = getGhostTable(originalTable);
@@ -197,7 +197,7 @@ public class AlterColumnMigratorTest {
 	public void testExpandForAddingIdentityHint() {
 		AlterColumn operation = SchemaOperations.alterColumn("referrals", "invited_by_id").addHint(IDENTITY);
 		changelog.addChangeSet("Michael de Jong", "Added IDENTITY constraint to 'invited_by_id' column.", operation);
-		migrator.expand(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
+		migrator.migrate(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
 
 		Table originalTable = catalog.getTable("referrals");
 		Table ghostTable = getGhostTable(originalTable);
@@ -215,7 +215,7 @@ public class AlterColumnMigratorTest {
 
 		AlterColumn operation = SchemaOperations.alterColumn("referrals", "invitee_id").dropHint(IDENTITY);
 		changelog.addChangeSet("Michael de Jong", "Dropped IDENTITY constraint of 'invitee_id' column.", operation);
-		migrator.expand(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
+		migrator.migrate(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
 
 		Table originalTable = catalog.getTable("referrals");
 		Table ghostTable = getGhostTable(originalTable);

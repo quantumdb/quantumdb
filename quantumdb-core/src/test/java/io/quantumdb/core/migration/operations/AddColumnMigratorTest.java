@@ -46,7 +46,7 @@ public class AddColumnMigratorTest {
 	public void testExpandForAddingSingleColumn() {
 		AddColumn operation = SchemaOperations.addColumn("users", "date_of_birth", date(), "NULL");
 		changelog.addChangeSet("Michael de Jong", "Added 'date_of_birth' column to 'users' table.", operation);
-		migrator.expand(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
+		migrator.migrate(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
 
 		Table originalTable = catalog.getTable("users");
 		Table ghostTable = getGhostTable(originalTable);
@@ -63,11 +63,11 @@ public class AddColumnMigratorTest {
 	public void testExpandForAddingMultipleColumns() {
 		AddColumn operation1 = SchemaOperations.addColumn("users", "date_of_birth", date(), "NULL");
 		changelog.addChangeSet("Michael de Jong", "Added 'date_of_birth' column to 'users' table.", operation1);
-		migrator.expand(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation1);
+		migrator.migrate(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation1);
 
 		AddColumn operation2 = SchemaOperations.addColumn("users", "activated", bool(), "TRUE");
 		changelog.addChangeSet("Michael de Jong", "Added 'activated' column to 'users' table.", operation2);
-		migrator.expand(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation2);
+		migrator.migrate(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation2);
 
 		Table originalTable = catalog.getTable("users");
 		Table ghostTable = getGhostTable(originalTable);
