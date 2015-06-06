@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import io.quantumdb.core.backends.Backend;
-import io.quantumdb.core.backends.DatabaseMigrator;
+import io.quantumdb.core.backends.DatabaseMigrator.MigrationException;
 import io.quantumdb.core.migration.utils.VersionTraverser;
 import io.quantumdb.core.versioning.Changelog;
 import io.quantumdb.core.versioning.State;
@@ -27,7 +27,7 @@ public class Migrator {
 		this.backend = backend;
 	}
 
-	public void migrate(String sourceVersionId, String targetVersionId) throws DatabaseMigrator.MigrationException {
+	public void migrate(String sourceVersionId, String targetVersionId) throws MigrationException {
 		log.info("Migrating database structure from version: {} to version: {}", sourceVersionId, targetVersionId);
 
 		State state = loadState();
@@ -60,12 +60,12 @@ public class Migrator {
 		backend.getMigrator().migrate(state, from, to);
 	}
 
-	private State loadState() throws DatabaseMigrator.MigrationException {
+	private State loadState() throws MigrationException {
 		try {
 			return backend.loadState();
 		}
 		catch (SQLException e) {
-			throw new DatabaseMigrator.MigrationException("Could not load current state: " + e.getMessage(), e);
+			throw new MigrationException("Could not load current state: " + e.getMessage(), e);
 		}
 	}
 

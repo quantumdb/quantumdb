@@ -38,7 +38,7 @@ public class SchemaOperationInterpreterTest {
 						.with("id", bigint(), NOT_NULL, AUTO_INCREMENT, IDENTITY));
 
 		Version current = changelog.getLastAdded();
-		migrator.expand(current, current.getSchemaOperation());
+		migrator.migrate(current, current.getSchemaOperation());
 
 		String tableId = tableMapping.getTableId(current, "users");
 

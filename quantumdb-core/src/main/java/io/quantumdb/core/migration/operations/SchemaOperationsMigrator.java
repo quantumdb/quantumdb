@@ -48,13 +48,13 @@ public class SchemaOperationsMigrator {
 		return dataMappings;
 	}
 
-	public <T extends SchemaOperation> void expand(Version version, T operation) {
+	public <T extends SchemaOperation> void migrate(Version version, T operation) {
 		Class<?> type = operation.getClass();
 		SchemaOperationMigrator<T> migrator = (SchemaOperationMigrator<T>) migrators.get(type);
 		if (migrator == null) {
 			throw new UnsupportedOperationException("The operation: " + type + " is not (yet) supported!");
 		}
-		migrator.expand(catalog, tableMapping, dataMappings, version, operation);
+		migrator.migrate(catalog, tableMapping, dataMappings, version, operation);
 	}
 
 }

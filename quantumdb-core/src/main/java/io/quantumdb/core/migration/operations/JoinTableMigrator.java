@@ -14,7 +14,8 @@ import io.quantumdb.core.versioning.Version;
 class JoinTableMigrator implements SchemaOperationMigrator<JoinTable> {
 
 	@Override
-	public void expand(Catalog catalog, TableMapping tableMapping, DataMappings dataMappings, Version version, JoinTable operation) {
+	public void migrate(Catalog catalog, TableMapping tableMapping, DataMappings dataMappings, Version version,
+			JoinTable operation) {
 		String targetTableId = RandomHasher.generateTableId(tableMapping);
 		String targetTableName = operation.getTargetTableName();
 
@@ -38,11 +39,6 @@ class JoinTableMigrator implements SchemaOperationMigrator<JoinTable> {
 		});
 
 		catalog.addTable(targetTable);
-	}
-
-	@Override
-	public void contract(Catalog catalog, TableMapping tableMapping, Version version, JoinTable operation) {
-		throw new UnsupportedOperationException();
 	}
 
 }

@@ -47,7 +47,7 @@ public class AddForeignKeyMigratorTest {
 	public void testExpandForAddingSingleColumn() {
 		AddForeignKey operation = SchemaOperations.addForeignKey("posts", "author").referencing("users", "id");
 		changelog.addChangeSet("Michael de Jong", "Added 'date_of_birth' column to 'users' table.", operation);
-		migrator.expand(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
+		migrator.migrate(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
 
 		Table usersTable = catalog.getTable("users");
 		Table originalTable = catalog.getTable("posts");

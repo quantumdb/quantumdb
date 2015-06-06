@@ -44,7 +44,7 @@ public class DropColumnMigratorTest {
 	public void testExpandForDroppingSingleColumn() {
 		DropColumn operation = SchemaOperations.dropColumn("users", "name");
 		changelog.addChangeSet("Michael de Jong", "Dropped 'name' column from 'users' table.", operation);
-		migrator.expand(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
+		migrator.migrate(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
 
 		Table originalTable = catalog.getTable("users");
 		Table ghostTable = getGhostTable(originalTable);
@@ -59,7 +59,7 @@ public class DropColumnMigratorTest {
 	public void testExpandForDroppingIdentityColumn() {
 		DropColumn operation = SchemaOperations.dropColumn("users", "id");
 		changelog.addChangeSet("Michael de Jong", "Dropped 'id' column from 'users' table.", operation);
-		migrator.expand(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
+		migrator.migrate(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
 	}
 
 	private Table getGhostTable(Table table) {

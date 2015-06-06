@@ -43,7 +43,7 @@ public class CreateTableMigratorTest {
 				.with("name", varchar(255), NOT_NULL);
 
 		changelog.addChangeSet("Michael de Jong", "Creating 'users' table.", operation);
-		migrator.expand(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
+		migrator.migrate(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
 
 		String tableId = tableMapping.getTableId(changelog.getLastAdded(), "users");
 		Table ghostTable = catalog.getTable(tableId);

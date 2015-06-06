@@ -45,7 +45,7 @@ public class DropTableMigratorTest {
 	public void testExpandForDroppingTable() {
 		DropTable operation = SchemaOperations.dropTable("users");
 		changelog.addChangeSet("Michael de Jong", "Dropped 'users' table.", operation);
-		migrator.expand(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
+		migrator.migrate(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
 
 		assertEquals(1, catalog.getTables().size());
 		assertFalse(tableMapping.getTableIds(changelog.getLastAdded()).contains("users"));

@@ -12,7 +12,8 @@ import io.quantumdb.core.versioning.Version;
 class CopyTableMigrator implements SchemaOperationMigrator<CopyTable> {
 
 	@Override
-	public void expand(Catalog catalog, TableMapping tableMapping, DataMappings dataMappings, Version version, CopyTable operation) {
+	public void migrate(Catalog catalog, TableMapping tableMapping, DataMappings dataMappings, Version version,
+			CopyTable operation) {
 		String tableId = RandomHasher.generateTableId(tableMapping);
 		String sourceTableName = operation.getSourceTableName();
 		String targetTableName = operation.getTargetTableName();
@@ -40,11 +41,6 @@ class CopyTableMigrator implements SchemaOperationMigrator<CopyTable> {
 		tableMapping.copy(version, sourceTableName, targetTableName, tableId);
 
 		// TODO: Add pipeline mappings...
-	}
-
-	@Override
-	public void contract(Catalog catalog, TableMapping tableMapping, Version version, CopyTable operation) {
-		throw new UnsupportedOperationException();
 	}
 
 }

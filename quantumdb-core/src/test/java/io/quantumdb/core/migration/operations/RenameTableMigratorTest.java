@@ -45,7 +45,7 @@ public class RenameTableMigratorTest {
 	public void testExpandForRenamingTable() {
 		RenameTable operation = SchemaOperations.renameTable("users", "customers");
 		changelog.addChangeSet("Michael de Jong", "Renaming 'users' table to 'customers'.", operation);
-		migrator.expand(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
+		migrator.migrate(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
 
 		String tableId = tableMapping.getTableId(changelog.getLastAdded(), "customers");
 		Table ghostTable = catalog.getTable(tableId);

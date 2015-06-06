@@ -12,7 +12,8 @@ import lombok.NoArgsConstructor;
 class AddColumnMigrator implements SchemaOperationMigrator<AddColumn> {
 
 	@Override
-	public void expand(Catalog catalog, TableMapping tableMapping, DataMappings dataMappings, Version version, AddColumn operation) {
+	public void migrate(Catalog catalog, TableMapping tableMapping, DataMappings dataMappings, Version version,
+			AddColumn operation) {
 		String tableName = operation.getTableName();
 		TransitiveTableMirrorer.mirror(catalog, tableMapping, version, tableName);
 		dataMappings.copy(version);
@@ -20,11 +21,6 @@ class AddColumnMigrator implements SchemaOperationMigrator<AddColumn> {
 		String tableId = tableMapping.getTableId(version, tableName);
 		catalog.getTable(tableId)
 				.addColumn(operation.getColumnDefinition().createColumn());
-	}
-
-	@Override
-	public void contract(Catalog catalog, TableMapping tableMapping, Version version, AddColumn operation) {
-		throw new UnsupportedOperationException();
 	}
 
 }

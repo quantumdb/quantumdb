@@ -48,7 +48,7 @@ public class CopyTableMigratorTest {
 	public void testExpandForCopyingTable() {
 		CopyTable operation = SchemaOperations.copyTable("users", "customers");
 		changelog.addChangeSet("Michael de Jong", "Copying 'users' table to 'customers'.", operation);
-		migrator.expand(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
+		migrator.migrate(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
 
 		String tableId = tableMapping.getTableId(changelog.getLastAdded(), "customers");
 		Table ghostTable = catalog.getTable(tableId);

@@ -41,7 +41,7 @@ public class ExpansiveMigrationPlanner implements MigrationPlanner {
 		migrationPath.remove(from);
 		migrationPath.stream()
 				.filter(version -> version.getParent() != null)
-				.forEachOrdered(version -> migrator.expand(version, version.getSchemaOperation()));
+				.forEachOrdered(version -> migrator.migrate(version, version.getSchemaOperation()));
 
 		Set<String> preTableIds = tableMapping.getTableIds(from);
 		Set<String> postTableIds = tableMapping.getTableIds(to);
