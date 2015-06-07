@@ -54,7 +54,7 @@ public class Changelog {
 		this.idGenerator = new VersionIdGenerator(root);
 		this.lastAdded = root;
 
-		if (changeSet != null && changeSet.getVersion() == null) {
+		if (changeSet != null) {
 			changeSet.setVersion(root);
 		}
 	}

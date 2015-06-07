@@ -3,9 +3,11 @@ package io.quantumdb.core.migration.operations;
 import java.util.Optional;
 
 import com.google.common.base.Strings;
+import io.quantumdb.core.migration.utils.DataMapping.Transformation;
 import io.quantumdb.core.migration.utils.DataMappings;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
+import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.schema.operations.AlterColumn;
 import io.quantumdb.core.versioning.TableMapping;
 import io.quantumdb.core.versioning.Version;
@@ -18,13 +20,17 @@ class AlterColumnMigrator implements SchemaOperationMigrator<AlterColumn> {
 
 		String tableName = operation.getTableName();
 		TransitiveTableMirrorer.mirror(catalog, tableMapping, version, tableName);
-		dataMappings.copy(version);
+		DataMappings mapping = dataMappings.copy(version);
 
 		String tableId = tableMapping.getTableId(version, tableName);
-		Column column = catalog.getTable(tableId)
-				.getColumn(operation.getColumnName());
+		Table table = catalog.getTable(tableId);
+		Column column = table.getColumn(operation.getColumnName());
 
 		operation.getNewColumnName().ifPresent(columnName -> {
+			String oldTableId = tableMapping.getTableId(version.getParent(), tableName);
+			Table oldTable = catalog.getTable(oldTableId);
+			mapping.drop(oldTable, operation.getColumnName());
+			mapping.add(oldTable, operation.getColumnName(), table, columnName, Transformation.createNop());
 			column.rename(columnName);
 		});
 

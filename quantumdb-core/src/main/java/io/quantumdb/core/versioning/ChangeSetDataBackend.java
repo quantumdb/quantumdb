@@ -65,7 +65,7 @@ class ChangeSetDataBackend implements DataBackend<String, ChangeSetEntry> {
 			this.isChanged = true;
 		}
 
-		public String getDecription() throws SQLException {
+		public String getDescription() throws SQLException {
 			return description;
 		}
 
@@ -92,6 +92,7 @@ class ChangeSetDataBackend implements DataBackend<String, ChangeSetEntry> {
 			resultSet.updateString("version_id", versionId);
 			resultSet.updateString("author", author);
 			resultSet.updateDate("created", created);
+			resultSet.updateString("description", description);
 
 			if (isDeleted) {
 				resultSet.deleteRow();

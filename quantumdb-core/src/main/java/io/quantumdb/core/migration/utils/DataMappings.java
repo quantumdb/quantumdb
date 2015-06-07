@@ -6,6 +6,7 @@ import static com.google.common.base.Strings.isNullOrEmpty;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -14,7 +15,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.collect.Table.Cell;
 import com.google.common.collect.TreeBasedTable;
+import io.quantumdb.core.migration.utils.DataMapping.Transformation;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Table;
@@ -102,7 +105,12 @@ public class DataMappings {
 		checkArgument(!isNullOrEmpty(columnName), "You must specify a 'columnName'.");
 
 		Set<Table> dereferenceTables = Sets.newHashSet();
-		for (Map.Entry<Table, DataMapping> entry : mappings.row(table).entrySet()) {
+		Set<Entry<Table, DataMapping>> entries = ImmutableSet.<Entry<Table, DataMapping>>builder()
+				.addAll(mappings.column(table).entrySet())
+				.addAll(mappings.row(table).entrySet())
+				.build();
+
+		for (Map.Entry<Table, DataMapping> entry : entries) {
 			DataMapping dataMapping = entry.getValue();
 			dataMapping.drop(columnName);
 
@@ -113,6 +121,7 @@ public class DataMappings {
 
 		for (Table targetTable : dereferenceTables) {
 			mappings.remove(table, targetTable);
+			mappings.remove(targetTable, table);
 		}
 
 		return this;
@@ -133,7 +142,7 @@ public class DataMappings {
 			DataMapping dataMapping = toProcess.remove(0);
 			processed.add(dataMapping);
 
-			Table sourceTable = dataMapping.getSourceTable(direction);
+			Table sourceTable = dataMapping.getSourceTable();
 			boolean isFirstDegreeMapping = sourceTable.equals(table);
 
 			DataMapping currentMapping = dataMapping;
@@ -142,36 +151,37 @@ public class DataMappings {
 				currentMapping = currentMappings.get(sourceTable);
 			}
 
-			DataMapping newMapping = currentMappings.get(dataMapping.getTargetTable(direction));
+			DataMapping newMapping = currentMappings.get(dataMapping.getTargetTable());
 			if (newMapping == null) {
-				newMapping = new DataMapping(table, dataMapping.getTargetTable(direction));
-				currentMappings.put(dataMapping.getTargetTable(direction), newMapping);
+				newMapping = new DataMapping(table, dataMapping.getTargetTable());
+				currentMappings.put(dataMapping.getTargetTable(), newMapping);
 			}
 
-			Map<String, DataMapping.ColumnMapping> newColumnMappings = newMapping.getColumnMappings();
-			Map<String, DataMapping.ColumnMapping> columnMappings = dataMapping.getColumnMappings();
+			com.google.common.collect.Table<String, String, Transformation> newColumnMappings = newMapping.getColumnMappings();
+			com.google.common.collect.Table<String, String, Transformation> columnMappings = dataMapping.getColumnMappings();
 
-			Map<String, DataMapping.ColumnMapping> currentColumnMappings = currentMapping.getColumnMappings();
-			for (Map.Entry<String, DataMapping.ColumnMapping> entry : currentColumnMappings.entrySet()) {
-				String currentColumnName = entry.getKey();
+			com.google.common.collect.Table<String, String, Transformation> currentColumnMappings = currentMapping.getColumnMappings();
+			for (Cell<String, String, Transformation> entry : currentColumnMappings.cellSet()) {
+				String currentColumnName = entry.getRowKey();
 				if (!isFirstDegreeMapping) {
-					currentColumnName = currentColumnMappings.get(currentColumnName).getColumnName();
+					currentColumnName = entry.getColumnKey();
 				}
 
-				DataMapping.ColumnMapping currentColumnMapping = columnMappings.get(currentColumnName);
+				Map<String, Transformation> currentColumnMapping = columnMappings.row(currentColumnName);
 				if (currentColumnMapping == null) {
 					continue;
 				}
 
-				String newColumnName = currentColumnMapping.getColumnName();
-				DataMapping.Transformation transformation = currentColumnMapping.getTransformation();
+				for (Entry<String, Transformation> mapping : currentColumnMapping.entrySet()) {
+					String newColumnName = mapping.getKey();
+					DataMapping.Transformation transformation = mapping.getValue();
 
-				DataMapping.Transformation newTransformation = entry.getValue().getTransformation().apply(transformation);
-				DataMapping.ColumnMapping columnMapping = new DataMapping.ColumnMapping(newColumnName, newTransformation);
-				newColumnMappings.put(entry.getKey(), columnMapping);
+					DataMapping.Transformation newTransformation = entry.getValue().apply(transformation);
+					newColumnMappings.put(entry.getRowKey(), newColumnName, newTransformation);
+				}
 			}
 
-			Table targetTable = dataMapping.getTargetTable(direction);
+			Table targetTable = dataMapping.getTargetTable();
 			getMappings(targetTable, direction).stream()
 					.filter(mapping -> !processed.contains(mapping))
 					.forEach(toProcess::add);
@@ -189,7 +199,9 @@ public class DataMappings {
 			case FORWARDS:
 				return mappings.row(table).values();
 			case BACKWARDS:
-				return mappings.column(table).values();
+				return mappings.column(table).values().stream()
+						.map(DataMapping::copyAndInverse)
+						.collect(Collectors.toList());
 			default:
 				String supportedDirections = Joiner.on(", ").join(new Direction[] {
 						Direction.FORWARDS, Direction.BACKWARDS });

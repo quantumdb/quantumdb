@@ -28,16 +28,51 @@ public class BaseMigratorFunction {
 		}
 
 		List<String> identityColumnNames = identityColumns.stream()
-				.map(Column::getName)
+				.map(column -> "\"" + column.getName() + "\"")
 				.collect(Collectors.toList());
 
 		List<String> functionParameters = identityColumns.stream()
 				.map(column -> functionParameterMapping.get(column.getName()) + " " + column.getType().toString())
 				.collect(Collectors.toList());
 
-		List<String> targetColumnNames = mapping.getColumnMappings().values().stream()
-				.map(DataMapping.ColumnMapping::getColumnName)
-				.collect(Collectors.toList());
+		Map<String, String> values = mapping.getColumnMappings().cellSet().stream()
+				.filter(entry -> {
+					Table targetTable = mapping.getTargetTable();
+					Column targetColumn = targetTable.getColumn(entry.getColumnKey());
+					Column sourceColumn = mapping.getSourceTable().getColumn(entry.getRowKey());
+
+					// Exclude fields which are made non-nullable
+					return !(!sourceColumn.isNotNull() && targetColumn.isNotNull());
+				})
+				.collect(Collectors.toMap(entry -> "\"" + entry.getRowKey() + "\"",
+						entry -> {
+							String newColumnName = entry.getColumnKey();
+							Table newTable = mapping.getTargetTable();
+							Column newColumn = newTable.getColumn(newColumnName);
+
+							ForeignKey outgoingForeignKey = newColumn.getOutgoingForeignKey();
+							if (outgoingForeignKey != null) {
+								String referredTableId = outgoingForeignKey.getReferredTable().getName();
+								if (nullRecords.containsKey(referredTableId)) {
+									Map<String, String> foreignKeyColumns = outgoingForeignKey.getColumns();
+									String foreignColumnName = foreignKeyColumns.get(newColumnName);
+
+									Identity identity = nullRecords.get(referredTableId);
+									String value = identity.getValue(foreignColumnName).toString();
+
+									if (newColumn.getType().isRequireQuotes()) {
+										value = "'" + value + "'";
+									}
+									return value;
+								}
+							}
+
+							return "r.\"" + entry.getRowKey() + "\"";
+						},
+						(u, v) -> {
+							throw new IllegalStateException(String.format("Duplicate key %s", u));
+						},
+						Maps::newLinkedHashMap));
 
 		String functionName = "migrator_" + RandomHasher.generateHash();
 
@@ -91,40 +126,13 @@ public class BaseMigratorFunction {
 			}
 		}
 
-		String values = mapping.getColumnMappings().entrySet().stream()
-				.map(entry -> {
-					String newColumnName = entry.getValue().getColumnName();
-					Table newTable = mapping.getTargetTable();
-					Column newColumn = newTable.getColumn(newColumnName);
-
-					ForeignKey outgoingForeignKey = newColumn.getOutgoingForeignKey();
-					if (outgoingForeignKey != null) {
-						String referredTableId = outgoingForeignKey.getReferredTable().getName();
-						if (nullRecords.containsKey(referredTableId)) {
-							Map<String, String> foreignKeyColumns = outgoingForeignKey.getColumns();
-							String foreignColumnName = foreignKeyColumns.get(newColumnName);
-
-							Identity identity = nullRecords.get(referredTableId);
-							String value = identity.getValue(foreignColumnName).toString();
-
-							if (newColumn.getType().isRequireQuotes()) {
-								value = "'" + value + "'";
-							}
-							return value;
-						}
-					}
-
-					return "r." + entry.getKey();
-				})
-				.collect(Collectors.joining(", "));
-
 		createStatement.append("        ORDER BY " + Joiner.on(" ASC, ").join(identityColumnNames) + " ASC");
 		createStatement.append("        LIMIT " + batchSize);
 		createStatement.append("    LOOP");
 		createStatement.append("      BEGIN");
 		createStatement.append("        INSERT INTO " + mapping.getTargetTable().getName());
-		createStatement.append("          (" + Joiner.on(", ").join(targetColumnNames) + ")");
-		createStatement.append("          VALUES (" + values + ");");
+		createStatement.append("          (" + Joiner.on(", ").join(values.keySet()) + ")");
+		createStatement.append("          VALUES (" + Joiner.on(", ").join(values.values()) + ");");
 		createStatement.append("      EXCEPTION WHEN unique_violation THEN END;");
 		createStatement.append("    END LOOP;");
 		createStatement.append("  RETURN r." + Joiner.on(",r.").join(identityColumnNames) + ";");

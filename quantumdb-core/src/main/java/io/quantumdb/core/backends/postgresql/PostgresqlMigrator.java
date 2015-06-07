@@ -15,6 +15,8 @@ import java.util.stream.Collectors;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Table.Cell;
 import io.quantumdb.core.backends.DatabaseMigrator;
 import io.quantumdb.core.backends.postgresql.TableDataMigrator.Data;
 import io.quantumdb.core.backends.postgresql.migrator.Expansion;
@@ -26,9 +28,11 @@ import io.quantumdb.core.backends.postgresql.planner.Migration;
 import io.quantumdb.core.backends.postgresql.planner.MigrationPlan;
 import io.quantumdb.core.backends.postgresql.planner.Step;
 import io.quantumdb.core.migration.utils.DataMapping;
+import io.quantumdb.core.migration.utils.DataMapping.Transformation;
 import io.quantumdb.core.migration.utils.DataMappings;
 import io.quantumdb.core.migration.utils.DataMappings.Direction;
 import io.quantumdb.core.schema.definitions.Catalog;
+import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Identity;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.utils.QueryBuilder;
@@ -198,29 +202,41 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		Table sourceTable = dataMapping.getSourceTable();
 		String sourceTableName = sourceTable.getName();
 
-		List<String> sourceColumnNames = Lists.newArrayList(dataMapping.getColumnMappings().keySet());
+		List<Cell<String, String, Transformation>> entries = Lists.newArrayList(
+				dataMapping.getColumnMappings().cellSet());
 
-		List<String> targetColumnNames = sourceColumnNames.stream()
-				.map(dataMapping.getColumnMappings()::get)
-				.map(DataMapping.ColumnMapping::getColumnName)
-				.collect(Collectors.toList());
+		Map<String, String> mapping = entries.stream()
+				.filter(entry -> {
+					Table targetTable = dataMapping.getTargetTable();
+					Column targetColumn = targetTable.getColumn(entry.getColumnKey());
+					Column sourceColumn = sourceTable.getColumn(entry.getRowKey());
 
-		List<String> prefixedSourceColumnNames = sourceColumnNames.stream()
-				.map(columnName -> "NEW." + columnName)
-				.collect(Collectors.toList());
+					// Exclude fields which are made non-nullable
+					return !(!sourceColumn.isNotNull() && targetColumn.isNotNull());
+				})
+				.collect(Collectors.toMap(cell -> "\"" + cell.getRowKey() + "\"", cell -> "\"" + cell.getColumnKey() + "\"",
+						(u, v) -> {
+							throw new IllegalStateException(String.format("Duplicate key %s", u));
+						},
+						Maps::newLinkedHashMap));
 
-		String setClause = dataMapping.getColumnMappings().entrySet().stream()
-				.map(entry -> entry.getValue().getColumnName() + " = NEW." + entry.getKey())
+		Map<String, String> withPrefixedSourceColumn = mapping.entrySet().stream()
+				.collect(Collectors.toMap(entry -> "NEW." + entry.getKey(), Entry::getValue,
+				(u, v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
+				Maps::newLinkedHashMap));
+
+		String setClause = withPrefixedSourceColumn.entrySet().stream()
+				.map(entry -> entry.getValue() + " = " + entry.getKey())
 				.reduce((l, r) -> l + ", " + r)
 				.orElseThrow(() -> new IllegalArgumentException("Cannot map 0 columns!"));
 
 		String prefixedIdClass = dataMapping.getTargetTable().getIdentityColumns().stream()
-				.map(column -> column.getName() + " = " + prefixedSourceColumnNames.get(targetColumnNames.indexOf(column.getName())))
+				.map(column -> column.getName() + " = NEW." + mapping.get(column.getName()))
 				.reduce((l, r) -> l + " AND " + r)
 				.orElseThrow(() -> new IllegalArgumentException("Cannot update table without identity columns!"));
 
 		String idClausePrefixWithNew = dataMapping.getTargetTable().getIdentityColumns().stream()
-				.map(column -> column.getName() + " = OLD." + sourceColumnNames.get(targetColumnNames.indexOf(column.getName())))
+				.map(column -> column.getName() + " = OLD." + mapping.get(column.getName()))
 				.reduce((l, r) -> l + " AND " + r)
 				.orElseThrow(() -> new IllegalArgumentException("Cannot update table without identity columns!"));
 
@@ -237,8 +253,8 @@ class PostgresqlMigrator implements DatabaseMigrator {
 				.append("           IF found THEN EXIT; END IF;")
 				.append("           BEGIN")
 				.append("               INSERT INTO " + dataMapping.getTargetTable().getName())
-				.append("                   (" + Joiner.on(", ").join(targetColumnNames) + ") VALUES")
-				.append("                   (" + Joiner.on(", ").join(prefixedSourceColumnNames) + ");")
+				.append("                   (" + Joiner.on(", ").join(withPrefixedSourceColumn.values()) + ") VALUES")
+				.append("                   (" + Joiner.on(", ").join(withPrefixedSourceColumn.keySet()) + ");")
 				.append("               EXIT;")
 				.append("           EXCEPTION WHEN unique_violation THEN")
 				.append("           END;")
@@ -251,8 +267,8 @@ class PostgresqlMigrator implements DatabaseMigrator {
 				.append("           IF found THEN EXIT; END IF;")
 				.append("           BEGIN")
 				.append("               INSERT INTO " + dataMapping.getTargetTable().getName())
-				.append("                   (" + Joiner.on(", ").join(targetColumnNames) + ") VALUES")
-				.append("                   (" + Joiner.on(", ").join(prefixedSourceColumnNames) + ");")
+				.append("                   (" + Joiner.on(", ").join(withPrefixedSourceColumn.values()) + ") VALUES")
+				.append("                   (" + Joiner.on(", ").join(withPrefixedSourceColumn.keySet()) + ");")
 				.append("               EXIT;")
 				.append("           EXCEPTION WHEN unique_violation THEN")
 				.append("           END;")

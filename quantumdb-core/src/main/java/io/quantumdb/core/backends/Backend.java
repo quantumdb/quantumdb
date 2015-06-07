@@ -26,11 +26,20 @@ public interface Backend {
 	 */
 	void persistState(State state) throws SQLException;
 
-
 	TableCreator getTableCreator();
 
+	/**
+	 * Creates a connection to the database.
+	 *
+	 * @return A database Connection object.
+	 *
+	 * @throws SQLException In case no connection to the database could be established.
+	 */
 	Connection connect() throws SQLException;
 
+	/**
+	 * @return The DatabaseMigrator implementation for this particular database.
+	 */
 	DatabaseMigrator getMigrator();
 
 }

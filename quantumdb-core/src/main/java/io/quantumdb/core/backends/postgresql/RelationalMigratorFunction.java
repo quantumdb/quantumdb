@@ -3,13 +3,14 @@ package io.quantumdb.core.backends.postgresql;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Maps;
 import io.quantumdb.core.backends.postgresql.MigratorFunction.Stage;
 import io.quantumdb.core.migration.utils.DataMapping;
+import io.quantumdb.core.migration.utils.DataMapping.Transformation;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.ForeignKey;
 import io.quantumdb.core.schema.definitions.Identity;
@@ -30,7 +31,7 @@ public class RelationalMigratorFunction {
 		}
 
 		List<String> identityColumnNames = identityColumns.stream()
-				.map(Column::getName)
+				.map(column -> "\"" + column.getName() + "\"")
 				.collect(Collectors.toList());
 
 		List<String> functionParameters = identityColumns.stream()
@@ -89,12 +90,12 @@ public class RelationalMigratorFunction {
 			}
 		}
 
-		Map<String, String> columnsToMigrate = mapping.getColumnMappings().entrySet().stream()
+		Map<String, String> columnsToMigrate = mapping.getColumnMappings().cellSet().stream()
 				.map(entry -> {
-					String newColumnName = entry.getValue().getColumnName();
+					String newColumnName = entry.getColumnKey();
 					Table newTable = mapping.getTargetTable();
 					Column newColumn = newTable.getColumn(newColumnName);
-					return new SimpleImmutableEntry<>(newColumn, entry.getKey());
+					return new SimpleImmutableEntry<>(newColumn, entry.getRowKey());
 				})
 				.filter(entry -> {
 					ForeignKey outgoingForeignKey = entry.getKey().getOutgoingForeignKey();
@@ -105,7 +106,7 @@ public class RelationalMigratorFunction {
 					String referredTableName = outgoingForeignKey.getReferredTableName();
 					return nullRecords.containsKey(referredTableName);
 				})
-				.collect(Collectors.toMap(entry -> entry.getKey().getName(), Entry::getValue));
+				.collect(Collectors.toMap(entry -> "\"" + entry.getKey().getName() + "\"", entry -> "\"" + entry.getValue() + "\""));
 
 		if (columnsToMigrate.isEmpty()) {
 			return null;
@@ -119,7 +120,12 @@ public class RelationalMigratorFunction {
 				.collect(Collectors.joining(", "));
 
 		String identityCondition = mapping.getSourceTable().getIdentityColumns().stream()
-				.map(column -> mapping.getColumnMappings().get(column.getName()).getColumnName() + " = r." + column.getName())
+				.map(column -> {
+					com.google.common.collect.Table<String, String, Transformation> columnMappings = mapping.getColumnMappings();
+					Set<String> mappedColumnNames = columnMappings.row(column.getName()).keySet();
+					String mappedColumnName = mappedColumnNames.iterator().next();
+					return "\"" + mappedColumnName + "\" = r.\"" + column.getName() + "\"";
+				})
 				.collect(Collectors.joining(" AND "));
 
 		createStatement.append("        ORDER BY " + Joiner.on(" ASC, ").join(identityColumnNames) + " ASC");

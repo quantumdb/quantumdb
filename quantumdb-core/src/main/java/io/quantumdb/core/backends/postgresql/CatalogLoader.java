@@ -59,7 +59,13 @@ class CatalogLoader {
 		}
 
 		for (String tableName : tableNames) {
-			catalog.addTable(createTable(tableName));
+			Table table = createTable(tableName);
+			catalog.addTable(table);
+
+			table.getColumns().stream()
+					.map(Column::getSequence)
+					.filter(seq -> seq != null)
+					.forEach(catalog::addSequence);
 		}
 
 		for (String tableName : tableNames) {
