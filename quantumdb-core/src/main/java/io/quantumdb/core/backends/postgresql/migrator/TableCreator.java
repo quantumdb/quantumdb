@@ -46,6 +46,7 @@ public class TableCreator {
 		QueryBuilder queryBuilder = new QueryBuilder();
 		queryBuilder.append("CREATE TABLE " + table.getName() + " (");
 
+		boolean shouldOwnSequence = false;
 		boolean columnAdded = false;
 		for (Column column : table.getColumns()) {
 			if (columnAdded) {
@@ -65,6 +66,7 @@ public class TableCreator {
 					table.getParent().addSequence(sequence);
 					column.modifyDefaultValue(sequence);
 
+					shouldOwnSequence = true;
 					execute(connection, new QueryBuilder("CREATE SEQUENCE " + sequenceName + ";"));
 				}
 
@@ -90,10 +92,12 @@ public class TableCreator {
 
 		execute(connection, queryBuilder);
 
-		for (Map.Entry<String, String> sequence : sequences.entrySet()) {
-			execute(connection, new QueryBuilder()
-					.append("ALTER SEQUENCE " + sequence.getKey())
-					.append("OWNED BY " + table.getName() + "." + sequence.getValue()));
+		if (shouldOwnSequence) {
+			for (Map.Entry<String, String> sequence : sequences.entrySet()) {
+				execute(connection, new QueryBuilder()
+						.append("ALTER SEQUENCE " + sequence.getKey())
+						.append("OWNED BY " + table.getName() + "." + sequence.getValue()));
+			}
 		}
 	}
 
