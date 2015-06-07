@@ -38,7 +38,7 @@ public class ChangelogBackend {
 					ChangeSet changeSet;
 					if (changeSetEntry != null) {
 						changeSet = new ChangeSet(changeSetEntry.getAuthor(), changeSetEntry.getCreated(),
-								changeSetEntry.getDecription());
+								changeSetEntry.getDescription());
 					}
 					else {
 						Version parent = log.getVersion(entry.getParentVersionId());
@@ -99,8 +99,8 @@ public class ChangelogBackend {
 					}
 
 					changeLogEntry.setSchemaOperation(schemaOperation);
-					changeLogEntry.setParentVersionId(version.getParent() != null ? version.getParent().getId() :
-							null);
+					Version parent = version.getParent();
+					changeLogEntry.setParentVersionId(parent != null ? parent.getId() : null);
 
 					ChangeSet changeSet = version.getChangeSet();
 					if (changeSet != null && !updateChangeSets.contains(changeSet.getVersion().getId())) {
