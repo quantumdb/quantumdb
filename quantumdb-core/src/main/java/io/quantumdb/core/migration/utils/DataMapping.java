@@ -3,25 +3,15 @@ package io.quantumdb.core.migration.utils;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Strings.isNullOrEmpty;
 
-import java.util.LinkedHashMap;
-
-import com.google.common.base.Joiner;
-import com.google.common.collect.Maps;
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Table.Cell;
 import io.quantumdb.core.schema.definitions.Table;
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 public class DataMapping {
-
-	@Data
-	@AllArgsConstructor
-	public static class ColumnMapping {
-		private final String columnName;
-		private final Transformation transformation;
-	}
 
 	@Data
 	@NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -39,48 +29,32 @@ public class DataMapping {
 
 	private final Table sourceTable;
 	private final Table targetTable;
-	private final LinkedHashMap<String, ColumnMapping> columnMappings = Maps.newLinkedHashMap();
-
-	public Table getTargetTable(DataMappings.Direction direction) {
-		switch (direction) {
-			case FORWARDS:
-				return targetTable;
-			case BACKWARDS:
-				return sourceTable;
-			default:
-				String supportedDirections = Joiner.on(", ").join(new DataMappings.Direction[] {
-						DataMappings.Direction.FORWARDS, DataMappings.Direction.BACKWARDS });
-
-				throw new IllegalArgumentException("Only directions: " + supportedDirections + " are supported!");
-		}
-	}
-
-	public Table getSourceTable(DataMappings.Direction direction) {
-		switch (direction) {
-			case FORWARDS:
-				return sourceTable;
-			case BACKWARDS:
-				return targetTable;
-			default:
-				String supportedDirections = Joiner.on(", ").join(new DataMappings.Direction[] {
-						DataMappings.Direction.FORWARDS, DataMappings.Direction.BACKWARDS });
-
-				throw new IllegalArgumentException("Only directions: " + supportedDirections + " are supported!");
-		}
-	}
+	private final com.google.common.collect.Table<String, String, Transformation> columnMappings = HashBasedTable.create();
 
 	public DataMapping setColumnMapping(String sourceColumnName, String targetColumnName, Transformation transformation) {
 		checkArgument(!isNullOrEmpty(sourceColumnName), "You must specify a 'sourceColumnName'.");
 		checkArgument(!isNullOrEmpty(targetColumnName), "You must specify a 'targetColumnName'.");
 		checkArgument(transformation != null, "You must specify a 'transformation'.");
 
-		columnMappings.put(sourceColumnName, new ColumnMapping(targetColumnName, transformation));
+		columnMappings.put(sourceColumnName, targetColumnName, transformation);
 		return this;
 	}
 
 	public boolean drop(String columnName) {
 		checkArgument(!isNullOrEmpty(columnName), "You must specify a 'columnName'.");
-		return columnMappings.remove(columnName) != null;
+
+		return columnMappings.row(columnName).keySet().stream()
+				.map(other -> columnMappings.remove(columnName, other) != null)
+				.reduce((left, right) -> left || right)
+				.orElse(false);
+	}
+
+	public static DataMapping copyAndInverse(DataMapping input) {
+		DataMapping dataMapping = new DataMapping(input.getTargetTable(), input.getSourceTable());
+		for (Cell<String, String, Transformation> entry : input.getColumnMappings().cellSet()) {
+			dataMapping.columnMappings.put(entry.getColumnKey(), entry.getRowKey(), entry.getValue());
+		}
+		return dataMapping;
 	}
 
 }
