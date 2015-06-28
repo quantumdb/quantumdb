@@ -167,4 +167,16 @@ public class TableMapping {
 		return ghosts;
 	}
 
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		getVersions().forEach(version -> {
+			builder.append(version.getId() + "\n");
+			getTableMapping(version).forEach((tableId, tableName) -> {
+				builder.append("\t" + tableId + " -> " + tableName + "\n");
+			});
+		});
+		return builder.toString();
+	}
+
 }
