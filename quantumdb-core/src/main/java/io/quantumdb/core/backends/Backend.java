@@ -5,6 +5,7 @@ import java.sql.SQLException;
 
 import io.quantumdb.core.backends.postgresql.migrator.TableCreator;
 import io.quantumdb.core.versioning.State;
+import io.quantumdb.core.versioning.Version;
 
 public interface Backend {
 
@@ -41,5 +42,7 @@ public interface Backend {
 	 * @return The DatabaseMigrator implementation for this particular database.
 	 */
 	DatabaseMigrator getMigrator();
+
+	int countClientsConnectedToVersion(Version version) throws SQLException;
 
 }
