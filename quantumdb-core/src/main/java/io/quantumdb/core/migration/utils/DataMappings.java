@@ -142,11 +142,14 @@ public class DataMappings {
 			processed.add(dataMapping);
 
 			Table sourceTable = dataMapping.getSourceTable();
+			Table targetTable = dataMapping.getTargetTable();
 			boolean isFirstDegreeMapping = sourceTable.equals(table);
 
 			DataMapping currentMapping = dataMapping;
 			if (!isFirstDegreeMapping) {
-				intermediateTables.add(sourceTable);
+				if (!sourceTable.equals(targetTable)) {
+					intermediateTables.add(sourceTable);
+				}
 				currentMapping = currentMappings.get(sourceTable);
 			}
 
@@ -180,7 +183,6 @@ public class DataMappings {
 				}
 			}
 
-			Table targetTable = dataMapping.getTargetTable();
 			getMappings(targetTable, direction).stream()
 					.filter(mapping -> !processed.contains(mapping))
 					.forEach(toProcess::add);
