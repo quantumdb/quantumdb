@@ -4,13 +4,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Strings.emptyToNull;
 import static com.google.common.base.Strings.isNullOrEmpty;
 
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.List;
 
-import com.google.common.collect.ImmutableList;
-import io.quantumdb.core.schema.operations.SchemaOperation;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Setter;

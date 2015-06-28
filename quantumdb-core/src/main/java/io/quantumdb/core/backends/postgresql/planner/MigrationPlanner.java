@@ -5,6 +5,5 @@ import io.quantumdb.core.versioning.Version;
 
 public interface MigrationPlanner {
 
-	MigrationPlan createPlan(State state, Version from, Version to);
 
 }
