@@ -6,11 +6,13 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
@@ -163,17 +165,31 @@ class CatalogLoader {
 	private void addForeignKeys(Catalog catalog, String tableName) throws SQLException {
 		String query = new QueryBuilder()
 				.append("SELECT")
-				.append("  tc.constraint_name AS constraint_name,")
-				.append("  kcu.column_name AS referring_column_name, ")
-				.append("  ccu.table_name AS referenced_table_name,")
-				.append("  ccu.column_name AS referenced_column_name")
-				.append("FROM information_schema.table_constraints tc")
-				.append("JOIN information_schema.key_column_usage kcu")
-				.append("  ON tc.constraint_name = kcu.constraint_name")
-				.append("JOIN information_schema.constraint_column_usage ccu")
-				.append("  ON ccu.constraint_name = tc.constraint_name")
-				.append("WHERE constraint_type = 'FOREIGN KEY'")
-				.append("  AND kcu.table_schema = ? AND kcu.table_name = ?")
+				.append("  att2.attname AS referencing_column,")
+				.append("  cl.relname AS referred_table,")
+				.append("  att.attname AS referred_column,")
+				.append("  con.conname AS constraint_name")
+				.append("FROM")
+				.append("   (SELECT")
+				.append("        unnest(con1.conkey) AS parent,")
+				.append("        unnest(con1.confkey) AS child,")
+				.append("        con1.conname,")
+				.append("        con1.confrelid,")
+				.append("        con1.conrelid")
+				.append("    FROM")
+				.append("        pg_class cl")
+				.append("        JOIN pg_namespace ns ON cl.relnamespace = ns.oid")
+				.append("        JOIN pg_constraint con1 ON con1.conrelid = cl.oid")
+				.append("    WHERE")
+				.append("        ns.nspname = ? AND cl.relname = ? AND con1.contype = 'f'")
+				.append("   ) con")
+				.append("   JOIN pg_attribute att ON")
+				.append("       att.attrelid = con.confrelid AND att.attnum = con.child")
+				.append("   JOIN pg_class cl ON")
+				.append("       cl.oid = con.confrelid")
+				.append("   JOIN pg_attribute att2 ON")
+				.append("       att2.attrelid = con.conrelid AND att2.attnum = con.parent")
+				.append("ORDER BY con.conname ASC, parent ASC;")
 				.toString();
 
 		try (PreparedStatement statement = connection.prepareStatement(query)) {
@@ -181,17 +197,37 @@ class CatalogLoader {
 			statement.setString(2, tableName);
 			ResultSet resultSet = statement.executeQuery();
 
+			String prevConstraintName = null;
+			String prevReferredTable = null;
+			Map<String, String> mapping = Maps.newLinkedHashMap();
+
 			while (resultSet.next()) {
-//				String constraintName = resultSet.getString("constraint_name");
-				String referringColumnName = resultSet.getString("referring_column_name");
-				String referencedTableName = resultSet.getString("referenced_table_name");
-				String referencedColumnName = resultSet.getString("referenced_column_name");
+				String referencingColumn = resultSet.getString("referencing_column");
+				String referredTable = resultSet.getString("referred_table");
+				String referredColumn = resultSet.getString("referred_column");
+				String constraintName = resultSet.getString("constraint_name");
 
-				Table referringTable = catalog.getTable(tableName);
-				Table referencedTable = catalog.getTable(referencedTableName);
+				if (prevConstraintName != null && !constraintName.equals(prevConstraintName)) {
+					Table source = catalog.getTable(tableName);
+					Table target = catalog.getTable(prevReferredTable);
 
-				referringTable.addForeignKey(referringColumnName)
-						.referencing(referencedTable, referencedColumnName);
+					source.addForeignKey(Lists.newArrayList(mapping.keySet()))
+							.referencing(target, Lists.newArrayList(mapping.values()));
+
+					mapping.clear();
+				}
+
+				prevReferredTable = referredTable;
+				prevConstraintName = constraintName;
+				mapping.put(referencingColumn, referredColumn);
+			}
+
+			if (prevConstraintName != null) {
+				Table source = catalog.getTable(tableName);
+				Table target = catalog.getTable(prevReferredTable);
+
+				source.addForeignKey(Lists.newArrayList(mapping.keySet()))
+						.referencing(target, Lists.newArrayList(mapping.values()));
 			}
 		}
 	}
