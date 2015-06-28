@@ -42,9 +42,9 @@ class TransitiveTableMirrorer {
 			mirrored.add(tableName);
 
 			// Traverse incoming foreign keys
-			catalog.getTablesReferencingTable(tableId).stream()
-					.map(referencingTableId -> tableMapping.getTableName(parentVersion, referencingTableId))
-					.forEach(tablesToMirror::add);
+			for (String referencingTableId : catalog.getTablesReferencingTable(tableId)) {
+				tableMapping.getTableName(referencingTableId).ifPresent(tablesToMirror::add);
+			}
 		}
 
 		// Copying foreign keys for each affected table.
