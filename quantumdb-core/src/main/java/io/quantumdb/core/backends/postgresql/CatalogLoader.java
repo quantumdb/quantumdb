@@ -39,8 +39,8 @@ class CatalogLoader {
 	private void loadTables(Catalog catalog) throws SQLException {
 		String query = new QueryBuilder()
 				.append("SELECT DISTINCT(table_name) AS table_name ")
-				.append("FROM information_schema.columns ")
-				.append("WHERE table_schema = ? ")
+				.append("FROM information_schema.tables ")
+				.append("WHERE table_schema = ? AND table_type != 'VIEW'")
 				.append("ORDER BY table_name ASC")
 				.toString();
 
@@ -55,7 +55,6 @@ class CatalogLoader {
 					// Skip quantumdb related tables, since these are versioned internally...
 					continue;
 				}
-
 				tableNames.add(tableName);
 			}
 		}
