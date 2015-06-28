@@ -4,29 +4,31 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.quantumdb.core.backends.Backend;
 import io.quantumdb.core.backends.postgresql.MigratorFunction.Stage;
+import io.quantumdb.core.backends.postgresql.migrator.NullRecords;
 import io.quantumdb.core.migration.utils.DataMapping;
 import io.quantumdb.core.schema.definitions.Column;
-import io.quantumdb.core.schema.definitions.ColumnType;
-import io.quantumdb.core.schema.definitions.Identity;
+import io.quantumdb.core.schema.definitions.ColumnType.Type;
 import io.quantumdb.core.utils.QueryBuilder;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 class TableDataMigrator {
 
-	public static enum Data {
-		BASE, RELATIONAL;
-	}
-
-	private static final long BATCH_SIZE = 1_000;
+	private static final long BATCH_SIZE = 2_000;
 	private static final long WAIT_TIME = 50;
 
 	private final DataMapping mapping;
@@ -37,37 +39,28 @@ class TableDataMigrator {
 		this.mapping = mapping;
 	}
 
-	void migrateData(Map<String, Identity> nullRecords, Data data) throws SQLException, InterruptedException {
+	void migrateData(NullRecords nullRecords, Set<String> migratedColumns, Set<String> columnsToMigrate)
+			throws SQLException, InterruptedException {
+
 		Map<String, Object> highestId = queryHighestId();
 		if (highestId == null) {
 			log.info("Table: {} is empty -> nothing to migrate...", mapping.getSourceTable().getName());
 			return;
 		}
+		log.info("Migrating data in table: {} to: {}", mapping.getSourceTable().getName(), mapping.getTargetTable().getName());
 
-		MigratorFunction initialMigratorFunction;
-		MigratorFunction successiveMigratorFunction;
+		MigratorFunction initialMigrator = SelectiveMigratorFunction.createMigrator(nullRecords, mapping,
+				BATCH_SIZE, Stage.INITIAL, migratedColumns, columnsToMigrate);
+		MigratorFunction successiveMigrator = SelectiveMigratorFunction.createMigrator(nullRecords, mapping,
+				BATCH_SIZE, Stage.CONSECUTIVE, migratedColumns, columnsToMigrate);
 
-		switch (data) {
-			case BASE:
-				initialMigratorFunction = BaseMigratorFunction.create(nullRecords, mapping, BATCH_SIZE, Stage.INITIAL);
-				successiveMigratorFunction = BaseMigratorFunction.create(nullRecords, mapping, BATCH_SIZE, Stage.CONSECUTIVE);
-				break;
-			case RELATIONAL:
-				initialMigratorFunction = RelationalMigratorFunction.create(nullRecords, mapping, BATCH_SIZE, Stage.INITIAL);
-				successiveMigratorFunction = RelationalMigratorFunction.create(nullRecords, mapping, BATCH_SIZE, Stage.CONSECUTIVE);
-				break;
-			default:
-				throw new RuntimeException("Type: " + data + " is not supported!");
-		}
-
-		if (initialMigratorFunction == null) {
+		if (initialMigrator == null) {
 			return;
 		}
 
 		try (Connection connection = backend.connect()) {
-			execute(connection, initialMigratorFunction.getCreateStatement());
-			execute(connection, successiveMigratorFunction.getCreateStatement());
-			execute(connection, "SET synchronous_commit TO off;");
+			execute(connection, initialMigrator.getCreateStatement());
+			execute(connection, successiveMigrator.getCreateStatement());
 
 			long start = System.currentTimeMillis();
 			Map<String, Object> lastProcessedId = Maps.newHashMap();
@@ -77,14 +70,14 @@ class TableDataMigrator {
 
 				QueryBuilder migrator = new QueryBuilder();
 				if (lastProcessedId.isEmpty()) {
-					migrator.append("SELECT * FROM " + initialMigratorFunction.getName() + "();");
+					migrator.append("SELECT * FROM " + initialMigrator.getName() + "();");
 				}
 				else {
-					List<String> values = successiveMigratorFunction.getParameters().stream()
-							.map(parameterName -> asExpression(lastProcessedId.get(parameterName)))
+					List<String> values = successiveMigrator.getParameters().stream()
+							.map(parameterName -> asExpression(lastProcessedId.get(stripEscaping(parameterName))))
 							.collect(Collectors.toList());
 
-					migrator.append("SELECT * FROM " + successiveMigratorFunction.getName() + "(")
+					migrator.append("SELECT * FROM " + successiveMigrator.getName() + "(")
 							.append(Joiner.on(", ").join(values) + ");");
 				}
 
@@ -92,14 +85,7 @@ class TableDataMigrator {
 					ResultSet resultSet = statement.executeQuery(migrator.toString());
 
 					if (resultSet.next()) {
-						List<Column> identityColumns = mapping.getSourceTable().getIdentityColumns();
-						for (int i = 0; i < identityColumns.size(); i++) {
-							Column column = identityColumns.get(i);
-							String columnName = column.getName();
-							Object value = readValue(resultSet, i + 1, column.getType().getType());
-							lastProcessedId.put(columnName, value);
-						}
-
+						lastProcessedId.putAll(readIdentity(resultSet));
 						if (greaterThanOrEqualsTo(lastProcessedId, highestId)) {
 							break;
 						}
@@ -111,21 +97,33 @@ class TableDataMigrator {
 				}
 
 				long innerEnd = System.currentTimeMillis();
-				log.info("Migration up to id: {} took: {} ms", lastProcessedId, innerEnd - innerStart);
+				log.info("Migration data from: {} to: {}, now at identity: {}, took: {} ms", new Object[] {
+						mapping.getSourceTable().getName(),
+						mapping.getTargetTable().getName(),
+						lastProcessedId,
+						innerEnd - innerStart
+				});
 
 				Thread.sleep(WAIT_TIME);
 			}
 
 			long end = System.currentTimeMillis();
-			log.info("Migrating data from: {} to: {} took: {} ms", new Object[] {
+			log.info("Migrating records from: {} to: {} took: {} ms", new Object[] {
 					mapping.getSourceTable().getName(),
 					mapping.getTargetTable().getName(),
 					end - start
 			});
 
-			execute(connection, initialMigratorFunction.getDropStatement());
-			execute(connection, successiveMigratorFunction.getDropStatement());
+			execute(connection, initialMigrator.getDropStatement());
+			execute(connection, successiveMigrator.getDropStatement());
 		}
+	}
+
+	private String stripEscaping(String parameterName) {
+		if (parameterName.startsWith("\"") && parameterName.endsWith("\"")) {
+			return parameterName.substring(1, parameterName.length() - 1);
+		}
+		return parameterName;
 	}
 
 	private Map<String, Object> queryHighestId() throws SQLException {
@@ -174,6 +172,14 @@ class TableDataMigrator {
 				right = right.toString();
 			}
 
+			if (left instanceof UUID) {
+				left = left.toString().toLowerCase();
+			}
+
+			if (right instanceof UUID) {
+				right = right.toString().toLowerCase();
+			}
+
 			Comparable leftComparable = (Comparable) left;
 			Comparable rightComparable = (Comparable) right;
 
@@ -185,29 +191,73 @@ class TableDataMigrator {
 		return true;
 	}
 
-	private Object readValue(ResultSet resultSet, int index, ColumnType.Type type) throws SQLException {
+	private Map<String, Object> readIdentity(ResultSet resultSet) throws SQLException {
+		String result = resultSet.getString(1);
+		result = result.substring(1, result.length() - 1);
+
+		List<String> parts = Lists.newArrayList();
+		StringBuilder currentPart = new StringBuilder();
+
+		boolean quoted = false;
+		char prev = ' ';
+		for (int i = 0; i < result.length(); i++) {
+			char c = result.charAt(i);
+			if (c == ',' && !quoted) {
+				parts.add(currentPart.toString());
+				currentPart = new StringBuilder();
+			}
+			else if (c == '"' && prev != '\\') {
+				quoted = !quoted;
+			}
+			else {
+				currentPart.append(c);
+			}
+			prev = c;
+		}
+
+		if (currentPart.length() > 0) {
+			parts.add(currentPart.toString());
+		}
+
+		Map<String, Object> identity = Maps.newHashMap();
+		List<Column> identityColumns = mapping.getSourceTable().getIdentityColumns();
+		for (int i = 0; i < identityColumns.size(); i++) {
+			Column column = identityColumns.get(i);
+			String columnName = column.getName();
+			Object value = parseValue(column.getType().getType(), parts.get(i));
+			identity.put(columnName, value);
+		}
+		return identity;
+	}
+
+	private Object parseValue(Type type, String value) {
+		if (Strings.isNullOrEmpty(value)) {
+			return null;
+		}
+
 		switch (type) {
 			case SMALLINT:
 			case INTEGER:
-				return resultSet.getInt(index);
+				return Integer.parseInt(value);
 			case BIGINT:
-				return resultSet.getLong(index);
+				return Long.parseLong(value);
 			case BOOLEAN:
-				return resultSet.getBoolean(index);
+				return Boolean.parseBoolean(value);
 			case TEXT:
 			case CHAR:
 			case VARCHAR:
-				return resultSet.getString(index);
+				return value;
 			case DATE:
-				return resultSet.getDate(index);
+				return Date.parse(value);
 			case FLOAT:
-				return resultSet.getFloat(index);
+				return Float.parseFloat(value);
 			case TIMESTAMP:
-				return resultSet.getTimestamp(index);
+				return Timestamp.parse(value);
 			case OID:
+				return value;
 			case UUID:
 			default:
-				return resultSet.getObject(index);
+				return UUID.fromString(value);
 		}
 	}
 

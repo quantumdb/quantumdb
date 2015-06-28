@@ -47,7 +47,7 @@ public class Driver implements java.sql.Driver {
 				applicationName += " - " + version;
 			}
 			else {
-				applicationName = version;
+				applicationName = "QuantumDB driver - " + version;
 			}
 			info.setProperty("ApplicationName", applicationName);
 		}

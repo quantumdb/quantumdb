@@ -29,4 +29,13 @@ public interface DatabaseMigrator {
 	 */
 	void migrate(State state, Version from, Version to) throws MigrationException;
 
+	/**
+	 * Drops the specified version of the database schema.
+	 *
+	 * @param state The state of the database.
+	 * @param version The version of the database schema to drop.
+	 * @throws MigrationException In case something prevented the drop.
+	 */
+	void drop(State state, Version version) throws MigrationException;
+
 }

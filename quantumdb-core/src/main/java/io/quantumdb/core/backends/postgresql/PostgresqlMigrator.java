@@ -3,40 +3,34 @@ package io.quantumdb.core.backends.postgresql;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import com.google.common.base.Joiner;
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Table.Cell;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 import io.quantumdb.core.backends.DatabaseMigrator;
-import io.quantumdb.core.backends.postgresql.TableDataMigrator.Data;
-import io.quantumdb.core.backends.postgresql.migrator.Expansion;
-import io.quantumdb.core.backends.postgresql.migrator.NullRecordCreator;
-import io.quantumdb.core.backends.postgresql.migrator.NullRecordPurger;
+import io.quantumdb.core.backends.postgresql.migrator.NullRecords;
 import io.quantumdb.core.backends.postgresql.migrator.TableCreator;
-import io.quantumdb.core.backends.postgresql.planner.ExpansiveMigrationPlanner;
-import io.quantumdb.core.backends.postgresql.planner.Migration;
-import io.quantumdb.core.backends.postgresql.planner.MigrationPlan;
+import io.quantumdb.core.backends.postgresql.planner.GreedyMigrationPlanner;
+import io.quantumdb.core.backends.postgresql.planner.Operation;
+import io.quantumdb.core.backends.postgresql.planner.Plan;
+import io.quantumdb.core.backends.postgresql.planner.PlanValidator;
 import io.quantumdb.core.backends.postgresql.planner.Step;
 import io.quantumdb.core.migration.utils.DataMapping;
-import io.quantumdb.core.migration.utils.DataMapping.Transformation;
 import io.quantumdb.core.migration.utils.DataMappings;
 import io.quantumdb.core.migration.utils.DataMappings.Direction;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
-import io.quantumdb.core.schema.definitions.Identity;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.utils.QueryBuilder;
-import io.quantumdb.core.utils.RandomHasher;
 import io.quantumdb.core.versioning.State;
 import io.quantumdb.core.versioning.TableMapping;
 import io.quantumdb.core.versioning.Version;
@@ -46,263 +40,237 @@ import lombok.extern.slf4j.Slf4j;
 class PostgresqlMigrator implements DatabaseMigrator {
 
 	private final PostgresqlBackend backend;
-	private final NullRecordCreator nullRecordCreator;
 
 	PostgresqlMigrator(PostgresqlBackend backend) {
 		this.backend = backend;
-		this.nullRecordCreator = new NullRecordCreator();
 	}
 
+	@Override
 	public void migrate(State state, Version from, Version to) throws MigrationException {
-		Expansion expansion;
-		Map<Table, Identity> createdIdentities;
+		Plan plan = new GreedyMigrationPlanner().createPlan(state, from, to);
+		PlanValidator.validate(plan);
 
-		try (Connection connection = backend.connect()) {
-			expansion = expand(connection, state, from, to);
+		log.info("Constructed migration plan: \n" + plan);
+		log.info("The new tableMapping will be: \n" + state.getTableMapping());
 
-			List<Table> createNullObjects = expansion.getTableIdsWithNullRecords().stream()
-					.map(expansion.getState().getCatalog()::getTable)
-					.collect(Collectors.toList());
-
-			createdIdentities = nullRecordCreator.insertNullObjects(connection, createNullObjects);
-
-			synchronizeForwards(connection, expansion);
-		}
-		catch (SQLException e) {
-			throw new MigrationException(e);
-		}
-
-		try {
-			migrateBaseData(createdIdentities, expansion);
-		    migrateRelationalData(createdIdentities, expansion);
-		}
-		catch (SQLException | InterruptedException e) {
-			throw new MigrationException(e);
-		}
-
-		try (Connection connection = backend.connect()) {
-			removeNullObjects(connection, createdIdentities);
-			synchronizeBackwards(connection, expansion);
-			backend.persistState(state);
-		}
-		catch (SQLException e) {
-			throw new MigrationException(e);
-		}
+		new InternalPlanner(backend, plan, state, from, to).migrate();
 	}
 
-	private Expansion expand(Connection connection, State state, Version from, Version to) throws SQLException {
-		MigrationPlan plan = new ExpansiveMigrationPlanner().createPlan(state, from, to);
+	@Override
+	public void drop(State state, Version version) throws MigrationException {
 
-		Catalog catalog = state.getCatalog();
-		Expansion expansion = new Expansion(plan, state, from, to);
-
-		Set<Table> newTables = expansion.getTableIds().stream()
-				.map(catalog::getTable)
-				.collect(Collectors.toSet());
-
-		createTables(connection, newTables);
-
-		backend.persistState(state);
-
-		return expansion;
 	}
 
-	private void synchronizeForwards(Connection connection, Expansion expansion) throws SQLException {
-		for (DataMapping dataMapping : listDataMappings(expansion, DataMappings.Direction.FORWARDS)) {
-			installDataMapping(connection, dataMapping);
-		}
-	}
+	static class InternalPlanner {
 
-	private void migrateBaseData(Map<Table, Identity> createdIdentities, Expansion expansion) throws SQLException, InterruptedException {
-		List<DataMapping> dataMappings = listDataMappings(expansion, Direction.FORWARDS);
+		private final Plan plan;
+		private final DataMappings dataMappings;
+		private final State state;
+		private final NullRecords nullRecords;
+		private final Multimap<Table, String> migratedColumns;
+		private final PostgresqlBackend backend;
+		private final Version from;
+		private final Version to;
 
-		Map<String, Identity> nullRecordIdentities = createdIdentities.entrySet().stream()
-				.collect(Collectors.toMap(entry -> entry.getKey().getName(), Entry::getValue));
+		private final com.google.common.collect.Table<String, String, SyncFunction> syncFunctions;
 
-		for (DataMapping dataMapping : dataMappings) {
-			new TableDataMigrator(backend, dataMapping).migrateData(nullRecordIdentities, Data.BASE);
-		}
-	}
-
-	private void migrateRelationalData(Map<Table, Identity> createdIdentities, Expansion expansion) throws SQLException, InterruptedException {
-		List<DataMapping> dataMappings = listDataMappings(expansion, Direction.FORWARDS);
-
-		Map<String, Identity> nullRecordIdentities = createdIdentities.entrySet().stream()
-				.collect(Collectors.toMap(entry -> entry.getKey().getName(), Entry::getValue));
-
-		for (DataMapping dataMapping : dataMappings) {
-			new TableDataMigrator(backend, dataMapping).migrateData(nullRecordIdentities, Data.RELATIONAL);
-		}
-	}
-
-	private void removeNullObjects(Connection connection, Map<Table, Identity> createdIdentities) throws SQLException {
-		new NullRecordPurger().purgeNullObjects(connection, createdIdentities);
-	}
-
-	private void synchronizeBackwards(Connection connection, Expansion expansion) throws SQLException {
-		for (DataMapping dataMapping : listDataMappings(expansion, DataMappings.Direction.BACKWARDS)) {
-			installDataMapping(connection, dataMapping);
-		}
-	}
-
-	private List<DataMapping> listDataMappings(Expansion expansion, DataMappings.Direction direction) {
-		State state = expansion.getState();
-		TableMapping tableMapping = state.getTableMapping();
-		Version version = direction == Direction.FORWARDS ? expansion.getOrigin() : expansion.getTarget();
-		ImmutableSet<String> tableIds = tableMapping.getTableIds(version);
-
-		Catalog catalog = state.getCatalog();
-		DataMappings dataMappings = expansion.getDataMappings();
-
-		List<DataMapping> results = Lists.newArrayList();
-		for (String tableId : tableIds) {
-			Table table = catalog.getTable(tableId);
-			Set<DataMapping> mappings = dataMappings.getTransitiveDataMappings(table, direction);
-			results.addAll(mappings);
+		public InternalPlanner(PostgresqlBackend backend, Plan plan, State state, Version from, Version to) {
+			this.backend = backend;
+			this.plan = plan;
+			this.dataMappings = plan.getDataMappings();
+			this.state = state;
+			this.nullRecords = new NullRecords();
+			this.migratedColumns = HashMultimap.create();
+			this.syncFunctions = HashBasedTable.create();
+			this.from = from;
+			this.to = to;
 		}
 
-		Collections.sort(results, new Comparator<DataMapping>() {
-			@Override
-			public int compare(DataMapping o1, DataMapping o2) {
-				String t1 = o1.getTargetTable().getName();
-				String t2 = o2.getTargetTable().getName();
+		public void migrate() throws MigrationException {
+			createGhostTables();
 
-				List<Step> migrationSteps = expansion.getMigrationSteps();
-				for (Step step : migrationSteps) {
-					Set<String> tableNames = step.getTableMigrations().stream()
-							.map(Migration::getTableName)
-							.collect(Collectors.toSet());
+			Optional<Step> nextStep;
+			while ((nextStep = plan.nextStep()).isPresent()) {
+				try {
+					Step step = nextStep.get();
+					execute(step.getOperation());
+					step.markAsExecuted();
+				}
+				catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+					throw new MigrationException(e);
+				}
+			}
 
-					if (tableNames.contains(t1)) {
-						if (tableNames.contains(t2)) {
-							return 0;
-						}
-						else {
-							return -1;
-						}
-					}
-					else {
-						if (tableNames.contains(t2)) {
-							return 1;
-						}
+			synchronizeBackwards();
+			persistState();
+		}
+
+		private void persistState() throws MigrationException {
+			try {
+				backend.persistState(state);
+			}
+			catch (SQLException e) {
+				throw new MigrationException(e);
+			}
+		}
+
+		private void execute(Operation operation) throws MigrationException, InterruptedException {
+			log.info("Executing operation: " + operation);
+			try {
+				Set<Table> tables = operation.getTables();
+				switch (operation.getType()) {
+					case ADD_NULL:
+						nullRecords.insertNullObjects(backend, tables);
+						break;
+					case DROP_NULL:
+						nullRecords.deleteNullObjects(backend, tables);
+						break;
+					case COPY:
+						Table table = tables.iterator().next();
+						Set<String> columns = operation.getColumns();
+						Set<String> previouslyMigrated = Sets.newHashSet(this.migratedColumns.get(table));
+						Set<String> combined = Sets.union(previouslyMigrated, columns);
+
+						synchronizeForwards(table, Sets.newHashSet(combined));
+						copyData(table, previouslyMigrated, columns);
+						this.migratedColumns.putAll(table, columns);
+						break;
+				}
+			}
+			catch (SQLException e) {
+				throw new MigrationException(e);
+			}
+		}
+
+		private void createGhostTables() throws MigrationException {
+			try (Connection connection = backend.connect()) {
+				TableCreator creator = new TableCreator();
+				creator.create(connection, plan.getGhostTables());
+				creator.createForeignKeys(connection, plan.getGhostTables());
+			}
+			catch (SQLException e) {
+				throw new MigrationException(e);
+			}
+		}
+
+		private void synchronizeForwards(Table targetTable, Set<String> targetColumns) throws SQLException {
+			try (Connection connection = backend.connect()) {
+				for (DataMapping dataMapping : listDataMappings(Direction.FORWARDS)) {
+					if (dataMapping.getTargetTable().equals(targetTable)) {
+						ensureSyncFunctionExists(connection, dataMapping, targetColumns);
 					}
 				}
-				return 0;
 			}
-		});
+		}
 
-		return results;
-	}
+		private void copyData(Table targetTable, Set<String> migratedColumns, Set<String> columnsToMigrate)
+				throws SQLException, InterruptedException {
 
-	private void createTables(Connection connection, Collection<Table> tables) throws SQLException {
-		new TableCreator().create(connection, tables);
-	}
+			for (DataMapping dataMapping : listDataMappings(Direction.FORWARDS)) {
+				if (dataMapping.getTargetTable().equals(targetTable)) {
+					TableDataMigrator tableDataMigrator = new TableDataMigrator(backend, dataMapping);
+					tableDataMigrator.migrateData(nullRecords, migratedColumns, columnsToMigrate);
+				}
+			}
+		}
 
-	private void installDataMapping(Connection connection, DataMapping dataMapping) throws SQLException {
-		Table sourceTable = dataMapping.getSourceTable();
-		String sourceTableName = sourceTable.getName();
+		private void synchronizeBackwards() throws MigrationException {
+			try (Connection connection = backend.connect()) {
+				for (DataMapping dataMapping : listDataMappings(DataMappings.Direction.BACKWARDS)) {
+					Set<String> columns = dataMapping.getTargetTable().getColumns().stream()
+							.map(Column::getName)
+							.collect(Collectors.toSet());
 
-		List<Cell<String, String, Transformation>> entries = Lists.newArrayList(
-				dataMapping.getColumnMappings().cellSet());
+					ensureSyncFunctionExists(connection, dataMapping, columns);
+				}
+			}
+			catch (SQLException e) {
+				throw new MigrationException(e);
+			}
+		}
 
-		Map<String, String> mapping = entries.stream()
-				.filter(entry -> {
-					Table targetTable = dataMapping.getTargetTable();
-					Column targetColumn = targetTable.getColumn(entry.getColumnKey());
-					Column sourceColumn = sourceTable.getColumn(entry.getRowKey());
+		private List<DataMapping> listDataMappings(Direction direction) {
+			TableMapping tableMapping = state.getTableMapping();
+			Version version = direction == Direction.FORWARDS ? from : to;
+			ImmutableSet<String> tableIds = tableMapping.getTableIds(version);
 
-					// Exclude fields which are made non-nullable
-					return !(!sourceColumn.isNotNull() && targetColumn.isNotNull());
-				})
-				.collect(Collectors.toMap(cell -> "\"" + cell.getRowKey() + "\"", cell -> "\"" + cell.getColumnKey() + "\"",
-						(u, v) -> {
-							throw new IllegalStateException(String.format("Duplicate key %s", u));
-						},
-						Maps::newLinkedHashMap));
+			Catalog catalog = state.getCatalog();
 
-		Map<String, String> withPrefixedSourceColumn = mapping.entrySet().stream()
-				.collect(Collectors.toMap(entry -> "NEW." + entry.getKey(), Entry::getValue,
-				(u, v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
-				Maps::newLinkedHashMap));
+			List<DataMapping> results = Lists.newArrayList();
+			for (String tableId : tableIds) {
+				Table table = catalog.getTable(tableId);
+				Set<DataMapping> mappings = dataMappings.getTransitiveDataMappings(table, direction);
+				results.addAll(mappings);
+			}
 
-		String setClause = withPrefixedSourceColumn.entrySet().stream()
-				.map(entry -> entry.getValue() + " = " + entry.getKey())
-				.reduce((l, r) -> l + ", " + r)
-				.orElseThrow(() -> new IllegalArgumentException("Cannot map 0 columns!"));
+			results = results.stream()
+					.filter(mapping -> !mapping.getSourceTable().equals(mapping.getTargetTable()))
+					.collect(Collectors.toList());
 
-		String prefixedIdClass = dataMapping.getTargetTable().getIdentityColumns().stream()
-				.map(column -> column.getName() + " = NEW." + mapping.get(column.getName()))
-				.reduce((l, r) -> l + " AND " + r)
-				.orElseThrow(() -> new IllegalArgumentException("Cannot update table without identity columns!"));
+			Collections.sort(results, new Comparator<DataMapping>() {
+				@Override
+				public int compare(DataMapping o1, DataMapping o2) {
+					String t1 = o1.getTargetTable().getName();
+					String t2 = o2.getTargetTable().getName();
 
-		String idClausePrefixWithNew = dataMapping.getTargetTable().getIdentityColumns().stream()
-				.map(column -> column.getName() + " = OLD." + mapping.get(column.getName()))
-				.reduce((l, r) -> l + " AND " + r)
-				.orElseThrow(() -> new IllegalArgumentException("Cannot update table without identity columns!"));
+					List<Step> migrationSteps = plan.getSteps();
+					for (Step step : migrationSteps) {
+						Set<String> tableNames = step.getOperation().getTables().stream()
+								.map(Table::getName)
+								.collect(Collectors.toSet());
 
-		String functionName = "sync_" + RandomHasher.generateHash();
-		QueryBuilder functionBuilder = new QueryBuilder()
-				.append("CREATE FUNCTION " + functionName + "()")
-				.append("RETURNS TRIGGER AS $$")
-				.append("BEGIN")
-				.append("   IF TG_OP = 'INSERT' THEN")
-				.append("       LOOP")
-				.append("           UPDATE " + dataMapping.getTargetTable().getName())
-				.append("               SET " + setClause)
-				.append("               WHERE " + prefixedIdClass + ";")
-				.append("           IF found THEN EXIT; END IF;")
-				.append("           BEGIN")
-				.append("               INSERT INTO " + dataMapping.getTargetTable().getName())
-				.append("                   (" + Joiner.on(", ").join(withPrefixedSourceColumn.values()) + ") VALUES")
-				.append("                   (" + Joiner.on(", ").join(withPrefixedSourceColumn.keySet()) + ");")
-				.append("               EXIT;")
-				.append("           EXCEPTION WHEN unique_violation THEN")
-				.append("           END;")
-				.append("       END LOOP;")
-				.append("   ELSIF TG_OP = 'UPDATE' THEN")
-				.append("       LOOP")
-				.append("           UPDATE " + dataMapping.getTargetTable().getName())
-				.append("               SET " + setClause)
-				.append("               WHERE " + prefixedIdClass + ";")
-				.append("           IF found THEN EXIT; END IF;")
-				.append("           BEGIN")
-				.append("               INSERT INTO " + dataMapping.getTargetTable().getName())
-				.append("                   (" + Joiner.on(", ").join(withPrefixedSourceColumn.values()) + ") VALUES")
-				.append("                   (" + Joiner.on(", ").join(withPrefixedSourceColumn.keySet()) + ");")
-				.append("               EXIT;")
-				.append("           EXCEPTION WHEN unique_violation THEN")
-				.append("           END;")
-				.append("       END LOOP;")
-				.append("   ELSIF TG_OP = 'DELETE' THEN")
-				.append("       DELETE FROM " + dataMapping.getTargetTable().getName())
-				.append("           WHERE " + idClausePrefixWithNew + ";")
-				.append("   END IF;")
-				.append("   RETURN NEW;")
-				.append("END;")
-				.append("$$ LANGUAGE 'plpgsql';");
+						if (tableNames.contains(t1)) {
+							if (tableNames.contains(t2)) {
+								return 0;
+							}
+							else {
+								return -1;
+							}
+						}
+						else {
+							if (tableNames.contains(t2)) {
+								return 1;
+							}
+						}
+					}
+					return 0;
+				}
+			});
 
-		String triggerName = "sync_" + RandomHasher.generateHash();
-		QueryBuilder triggerBuilder = new QueryBuilder()
-				.append("CREATE TRIGGER " + triggerName)
-				.append("AFTER INSERT OR UPDATE OR DELETE")
-				.append("ON " + sourceTable.getName())
-				.append("FOR EACH ROW")
-				.append("WHEN (pg_trigger_depth() = 0)")
-				.append("EXECUTE PROCEDURE " + functionName + "();");
+			return results;
+		}
 
-		log.info("Creating sync function: {} for table: {}", functionName, sourceTableName);
-		execute(connection, functionBuilder);
+		void ensureSyncFunctionExists(Connection connection, DataMapping dataMapping, Set<String> columns) throws SQLException {
+			String sourceTableId = dataMapping.getSourceTable().getName();
+			String targetTableId = dataMapping.getTargetTable().getName();
 
-		log.info("Creating trigger: {} for table: {}", triggerName, sourceTableName);
-		execute(connection, triggerBuilder);
-	}
+			SyncFunction syncFunction = syncFunctions.get(sourceTableId, targetTableId);
+			if (syncFunction == null) {
+				syncFunction = new SyncFunction(dataMapping, nullRecords);
+				syncFunction.setColumnsToMigrate(columns);
+				syncFunctions.put(sourceTableId, targetTableId, syncFunction);
 
-	private void execute(Connection connection, QueryBuilder queryBuilder) throws SQLException {
-		String query = queryBuilder.toString();
-		try (Statement statement = connection.createStatement()) {
-			log.debug("Executing: " + query);
-			statement.execute(query);
+				log.info("Creating sync function: {} for table: {}", syncFunction.getFunctionName(), sourceTableId);
+				execute(connection, syncFunction.createFunctionStatement());
+
+				log.info("Creating trigger: {} for table: {}", syncFunction.getTriggerName(), sourceTableId);
+				execute(connection, syncFunction.createTriggerStatement());
+			}
+			else {
+				syncFunction.setColumnsToMigrate(columns);
+
+				log.info("Updating sync function: {} for table: {}", syncFunction.getFunctionName(), sourceTableId);
+				execute(connection, syncFunction.createFunctionStatement());
+			}
+		}
+
+		private void execute(Connection connection, QueryBuilder queryBuilder) throws SQLException {
+			String query = queryBuilder.toString();
+			try (Statement statement = connection.createStatement()) {
+				log.debug("Executing: " + query);
+				statement.execute(query);
+			}
 		}
 	}
-
 }

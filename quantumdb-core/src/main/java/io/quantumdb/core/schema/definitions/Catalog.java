@@ -74,6 +74,7 @@ public class Catalog implements Copyable<Catalog> {
 		checkArgument(sequence != null, "You must specify a 'sequence'");
 
 		sequences.add(sequence);
+		sequence.setParent(this);
 		return this;
 	}
 
@@ -103,11 +104,26 @@ public class Catalog implements Copyable<Catalog> {
 		return ImmutableSet.copyOf(tables);
 	}
 
+	public ImmutableSet<ForeignKey> getForeignKeys() {
+		return ImmutableSet.copyOf(tables.stream()
+				.flatMap(table -> table.getForeignKeys().stream())
+				.collect(Collectors.toSet()));
+	}
+
 	@Override
 	public Catalog copy() {
 		Catalog schema = new Catalog(name);
 		for (Table table : tables) {
 			schema.addTable(table.copy());
+		}
+		for (ForeignKey foreignKey : getForeignKeys()) {
+			Table source = schema.getTable(foreignKey.getReferencingTableName());
+			Table target = schema.getTable(foreignKey.getReferredTableName());
+			source.addForeignKey(foreignKey.getReferencingColumns())
+					.referencing(target, foreignKey.getReferredColumns());
+		}
+		for (Sequence sequence : sequences) {
+			schema.addSequence(sequence.copy());
 		}
 		return schema;
 	}
@@ -123,4 +139,5 @@ public class Catalog implements Copyable<Catalog> {
 				.map(Table::getName)
 				.collect(Collectors.toSet());
 	}
+
 }

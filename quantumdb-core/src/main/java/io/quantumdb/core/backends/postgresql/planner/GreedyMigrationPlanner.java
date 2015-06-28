@@ -1,0 +1,525 @@
+package io.quantumdb.core.backends.postgresql.planner;
+
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
+import com.google.common.collect.Sets.SetView;
+import io.quantumdb.core.backends.postgresql.planner.Graph.GraphResult;
+import io.quantumdb.core.backends.postgresql.planner.MigrationState.Progress;
+import io.quantumdb.core.backends.postgresql.planner.Operation.Type;
+import io.quantumdb.core.backends.postgresql.planner.Plan.Builder;
+import io.quantumdb.core.migration.operations.SchemaOperationsMigrator;
+import io.quantumdb.core.migration.utils.DataMapping.Transformation;
+import io.quantumdb.core.migration.utils.DataMappings;
+import io.quantumdb.core.migration.utils.VersionTraverser;
+import io.quantumdb.core.schema.definitions.Catalog;
+import io.quantumdb.core.schema.definitions.Column;
+import io.quantumdb.core.schema.definitions.ForeignKey;
+import io.quantumdb.core.schema.definitions.Table;
+import io.quantumdb.core.utils.RandomHasher;
+import io.quantumdb.core.versioning.State;
+import io.quantumdb.core.versioning.TableMapping;
+import io.quantumdb.core.versioning.Version;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class GreedyMigrationPlanner implements MigrationPlanner {
+
+	private static class ResetException extends RuntimeException {
+		public ResetException() {}
+	}
+
+	public Plan createPlan(io.quantumdb.core.versioning.State state, Version from, Version to) {
+		log.debug("Creating migration plan for migration from version: {} to: {}", from, to);
+
+		Catalog catalog = state.getCatalog();
+		TableMapping tableMapping = state.getTableMapping();
+		SchemaOperationsMigrator migrator = new SchemaOperationsMigrator(catalog, tableMapping);
+
+		List<Version> migrationPath = VersionTraverser.findChildPath(from, to)
+				.orElseThrow(() -> new IllegalStateException("No path from " + from.getId() + " to " + to.getId()));
+
+		migrationPath.remove(from);
+		migrationPath.stream()
+				.filter(version -> version.getParent() != null)
+				.forEachOrdered(version -> migrator.migrate(version, version.getSchemaOperation()));
+
+		Set<String> preTableIds = tableMapping.getTableIds(from);
+		Set<String> postTableIds = tableMapping.getTableIds(to);
+		Set<String> newTableIds = Sets.difference(postTableIds, preTableIds);
+
+		log.debug("The following ghost tables will be created: " + newTableIds.stream()
+				.collect(Collectors.toMap(Function.identity(), (id) -> tableMapping.getTableName(to, id))));
+
+		return new Planner(state, from, to, newTableIds, migrator.getDataMappings()).createPlan();
+	}
+
+	private static class Planner {
+
+		private final Catalog catalog;
+		private final TableMapping tableMapping;
+		private final Version from;
+		private final Version to;
+		private final Set<String> newTableIds;
+		private final DataMappings dataMappings;
+
+		private Set<String> tableIdsWithNullRecords;
+		private Builder plan;
+		private MigrationState migrationState;
+		private Graph graph;
+
+		public Planner(State state, Version from, Version to, Set<String> newTableIds, DataMappings dataMappings) {
+			this.catalog = state.getCatalog();
+			this.tableMapping = state.getTableMapping();
+			this.from = from;
+			this.to = to;
+			this.newTableIds = Sets.newHashSet(newTableIds);
+			this.dataMappings = dataMappings;
+
+			this.tableIdsWithNullRecords = Sets.newHashSet();
+			this.graph = Graph.fromCatalog(catalog, newTableIds);
+			this.migrationState = new MigrationState(catalog);
+			this.plan = Plan.builder(migrationState);
+		}
+
+		private void reset() {
+			this.tableIdsWithNullRecords = Sets.newHashSet();
+			this.graph = Graph.fromCatalog(catalog, newTableIds);
+			this.migrationState = new MigrationState(catalog);
+			this.plan = Plan.builder(migrationState);
+		}
+
+		public Plan createPlan() {
+			Set<String> toDo;
+			while (!(toDo = listToDo()).isEmpty()) {
+				try {
+					GraphResult least = graph.leastOutgoingForeignKeys(toDo).get();
+					if (least.getCount() == 0) {
+						migrateTables(least.getTableNames());
+					}
+					else {
+						migrateCoreTables(least.getTableNames());
+					}
+				}
+				catch (ResetException e) {
+					reset();
+				}
+			}
+			addDropNullsStep();
+
+			Set<Table> ghostTables = newTableIds.stream()
+					.map(catalog::getTable)
+					.collect(Collectors.toSet());
+
+			return plan.build(dataMappings, ghostTables);
+		}
+
+		private Set<String> listToDo() {
+			return Sets.difference(
+					Sets.difference(graph.getTableIds(), migrationState.getPartiallyMigratedTables()),
+					migrationState.getMigratedTables());
+		}
+
+		private Set<Step> migrateCoreTables(Set<String> tableIds) {
+			GraphResult most = graph.mostIncomingForeignKeys(tableIds).get();
+			List<String> toMigrate = Lists.newArrayList(most.getTableNames());
+			log.debug("Migrating tables: " + toMigrate);
+
+			Set<Step> newSteps = Sets.newHashSet();
+			while (!toMigrate.isEmpty()) {
+				String tableId = toMigrate.remove(0);
+				Table table = catalog.getTable(tableId);
+				Set<String> columns = table.getColumns().stream()
+						.filter(column -> {
+							if (most.getCount() == 0) {
+								return true;
+							}
+							ForeignKey outgoingForeignKey = column.getOutgoingForeignKey();
+							if (outgoingForeignKey == null) {
+								return true;
+							}
+
+							String otherTableId = outgoingForeignKey.getReferredTableName();
+							return !graph.getTableIds().contains(otherTableId) ||
+									migrationState.getProgress(otherTableId) != Progress.PENDING;
+						})
+						.map(Column::getName)
+						.collect(Collectors.toCollection(Sets::newLinkedHashSet));
+
+				Set<String> identityColumns = table.getIdentityColumns().stream()
+						.map(Column::getName)
+						.collect(Collectors.toSet());
+
+				SetView<String> missingIdentityColumns = Sets.difference(identityColumns, columns);
+				if (!missingIdentityColumns.isEmpty()) {
+					toMigrate.add(0, tableId);
+
+					List<Table> parentTables = table.getIdentityColumns().stream()
+							.map(Column::getOutgoingForeignKey)
+							.map(ForeignKey::getReferredTable)
+							.distinct()
+							.collect(Collectors.toList());
+
+					parentTables.forEach(parentTable -> {
+						toMigrate.remove(parentTable.getName());
+						toMigrate.add(0, parentTable.getName());
+					});
+
+					continue;
+				}
+
+				Set<Table> dependentOnTables = table.getForeignKeys().stream()
+						.filter(foreignKey -> !Sets.intersection(Sets.newHashSet(foreignKey.getReferencingColumns()), columns).isEmpty())
+						.map(ForeignKey::getReferredTableName)
+						.map(catalog::getTable)
+						.distinct()
+						.collect(Collectors.toSet());
+
+				Set<Step> dependentOnSteps = dependentOnTables.stream()
+						.map(plan::findFirstCopy)
+						.flatMap(o -> o.isPresent() ? Stream.of(o.get()) : Stream.empty())
+						.collect(Collectors.toSet());
+
+				Map<Step, Set<Step>> mapping = dependentOnSteps.stream()
+						.collect(Collectors.toMap(Function.identity(), Step::getTransitiveDependencies));
+
+				while (!mapping.isEmpty()) {
+					Optional<Entry<Step, Set<Step>>> crucial = mapping.entrySet().stream()
+							.sorted(Comparator.comparing(entry -> entry.getValue().size() * -1))
+							.findFirst();
+
+					if (crucial.isPresent()) {
+						Entry<Step, Set<Step>> entry = crucial.get();
+						Step step = entry.getKey();
+						dependentOnSteps.removeAll(step.getTransitiveDependencies());
+						mapping.remove(step);
+					}
+					else {
+						break;
+					}
+				}
+
+				Step step = plan.copy(table, columns);
+				dependentOnSteps.forEach(step::makeDependentOn);
+
+				applyRules(step);
+				newSteps.add(step);
+			}
+			return newSteps;
+		}
+
+		private Set<Step> migrateTables(Set<String> tableIds) {
+			List<String> toMigrate = Lists.newArrayList(tableIds);
+			log.debug("Migrating tables: " + toMigrate);
+
+
+			Set<Step> newSteps = Sets.newHashSet();
+			while (!toMigrate.isEmpty()) {
+				String tableId = toMigrate.remove(0);
+
+				Table table = catalog.getTable(tableId);
+				Set<String> columns = table.getColumns().stream()
+						.filter(column -> {
+							ForeignKey outgoingForeignKey = column.getOutgoingForeignKey();
+							if (outgoingForeignKey == null) {
+								return true;
+							}
+
+							String otherTableId = outgoingForeignKey.getReferredTableName();
+							return !graph.getTableIds().contains(otherTableId) ||
+									migrationState.getProgress(otherTableId) != Progress.PENDING;
+						})
+						.map(Column::getName)
+						.collect(Collectors.toCollection(Sets::newLinkedHashSet));
+
+				Set<String> identityColumns = table.getIdentityColumns().stream()
+						.map(Column::getName)
+						.collect(Collectors.toSet());
+
+				SetView<String> missingIdentityColumns = Sets.difference(identityColumns, columns);
+				if (!missingIdentityColumns.isEmpty()) {
+					toMigrate.add(0, tableId);
+
+					List<Table> parentTables = table.getIdentityColumns().stream()
+							.map(Column::getOutgoingForeignKey)
+							.map(ForeignKey::getReferredTable)
+							.distinct()
+							.collect(Collectors.toList());
+
+					parentTables.forEach(parentTable -> {
+						toMigrate.remove(parentTable.getName());
+						toMigrate.add(0, parentTable.getName());
+					});
+
+					continue;
+				}
+
+				Set<Table> dependentOnTables = table.getForeignKeys().stream()
+						.filter(foreignKey -> !Sets.intersection(Sets.newHashSet(foreignKey.getReferencingColumns()), columns).isEmpty())
+						.map(ForeignKey::getReferredTableName)
+						.map(catalog::getTable)
+						.distinct()
+						.collect(Collectors.toSet());
+
+				Set<Step> dependentOnSteps = dependentOnTables.stream()
+						.map(plan::findFirstCopy)
+						.flatMap(o -> o.isPresent() ? Stream.of(o.get()) : Stream.empty())
+						.collect(Collectors.toSet());
+
+				Map<Step, Set<Step>> mapping = dependentOnSteps.stream()
+						.collect(Collectors.toMap(Function.identity(), Step::getTransitiveDependencies));
+
+				while (!mapping.isEmpty()) {
+					Optional<Entry<Step, Set<Step>>> crucial = mapping.entrySet().stream()
+							.sorted(Comparator.comparing(entry -> entry.getValue().size() * -1))
+							.findFirst();
+
+					if (crucial.isPresent()) {
+						Entry<Step, Set<Step>> entry = crucial.get();
+						Step step = entry.getKey();
+						dependentOnSteps.removeAll(step.getTransitiveDependencies());
+						mapping.remove(step);
+					}
+					else {
+						break;
+					}
+				}
+
+				Step step = plan.copy(table, columns);
+				dependentOnSteps.forEach(step::makeDependentOn);
+
+				applyRules(step);
+				newSteps.add(step);
+			}
+			return newSteps;
+		}
+
+		private void addDropNullsStep() {
+			Set<Table> tables = tableIdsWithNullRecords.stream()
+					.map(catalog::getTable)
+					.collect(Collectors.toSet());
+
+			if (tables.isEmpty()) {
+				return;
+			}
+
+			Set<Step> stepsWithNoDependees = Sets.newHashSet(plan.getSteps());
+			plan.getSteps().forEach(step -> step.getDependencies().forEach(stepsWithNoDependees::remove));
+
+			Step step = plan.dropNullRecord(tables);
+			stepsWithNoDependees.forEach(step::makeDependentOn);
+		}
+
+		private void applyRules(Step step) {
+			applyDependencyRule(step);
+			applyCompletionRule(step);
+		}
+
+		private void applyDependencyRule(Step step) {
+			Operation operation = step.getOperation();
+			Type operationType = operation.getType();
+			if (operationType != Type.COPY && operationType != Type.ADD_NULL) {
+				return;
+			}
+
+			Set<Table> tables = operation.getTables();
+			for (Table table : tables) {
+				Set<String> copiedColumns = table.getColumns().stream()
+						.map(Column::getName)
+						.collect(Collectors.toSet());
+
+				if (operationType == Type.COPY && (operation.getColumns().containsAll(copiedColumns))) {
+					return;
+				}
+
+				for (ForeignKey foreignKey : table.getForeignKeys()) {
+					if (operationType == Type.COPY) {
+						if (!foreignKey.isNotNullable() && !foreignKey.isInheritanceRelation()) {
+							continue;
+						}
+					}
+					else if (operationType == Type.ADD_NULL) {
+						if (!foreignKey.isNotNullable() && !foreignKey.isInheritanceRelation()) {
+							continue;
+						}
+					}
+
+					Table otherTable = foreignKey.getReferredTable();
+					if (!tableIdsWithNullRecords.contains(otherTable.getName())) {
+						TableNode tableNode = graph.get(otherTable.getName());
+						if (tableNode == null) {
+							expand(Sets.newHashSet(otherTable.getName()));
+							throw new ResetException();
+						}
+						else {
+							tableIdsWithNullRecords.add(otherTable.getName());
+							if (operationType == Type.ADD_NULL) {
+								step.getOperation().addTable(otherTable);
+								applyDependencyRule(step);
+							}
+							else {
+								Step dependency = plan.addNullRecord(Sets.newHashSet(otherTable));
+								step.makeDependentOn(dependency);
+								applyDependencyRule(dependency);
+							}
+						}
+					}
+				}
+			}
+		}
+
+		private void applyCompletionRule(Step step) {
+			Operation operation = step.getOperation();
+			if (operation.getType() != Type.COPY) {
+				return;
+			}
+
+			for (String tableName : migrationState.getPartiallyMigratedTables()) { //newTableIds
+				Set<String> toMigrate = migrationState.getYetToBeMigratedColumns(tableName);
+				if (toMigrate.isEmpty()) {
+					continue;
+				}
+
+				Table table = catalog.getTable(tableName);
+				boolean allDependenciesMigrated = table.getForeignKeys().stream()
+						.allMatch(foreignKey -> {
+							String otherTableId = foreignKey.getReferredTableName();
+							return !graph.getTableIds().contains(otherTableId) ||
+									migrationState.getProgress(otherTableId) != Progress.PENDING;
+						});
+
+				if (allDependenciesMigrated) {
+					Set<Table> dependentOnTables = table.getForeignKeys().stream()
+							.filter(foreignKey -> !Sets.intersection(Sets.newHashSet(foreignKey.getReferencingColumns()), toMigrate).isEmpty())
+							.map(ForeignKey::getReferredTableName)
+							.map(catalog::getTable)
+							.distinct()
+							.collect(Collectors.toSet());
+
+					Set<Step> dependentOnSteps = dependentOnTables.stream()
+							.map(plan::findFirstCopy)
+							.flatMap(o -> o.isPresent() ? Stream.of(o.get()) : Stream.empty())
+							.collect(Collectors.toSet());
+
+					Map<Step, Set<Step>> mapping = dependentOnSteps.stream()
+							.collect(Collectors.toMap(Function.identity(), Step::getTransitiveDependencies));
+
+					while (!mapping.isEmpty()) {
+						Optional<Entry<Step, Set<Step>>> crucial = mapping.entrySet().stream()
+								.sorted(Comparator.comparing(entry -> entry.getValue().size() * -1))
+								.findFirst();
+
+						if (crucial.isPresent()) {
+							Entry<Step, Set<Step>> entry = crucial.get();
+							Step key = entry.getKey();
+							dependentOnSteps.removeAll(key.getTransitiveDependencies());
+							mapping.remove(key);
+						}
+						else {
+							break;
+						}
+					}
+
+					Step dependent = plan.copy(table, toMigrate);
+					dependentOnSteps.forEach(dependent::makeDependentOn);
+					applyRules(dependent);
+				}
+			}
+		}
+
+		private void expand(Set<String> tableIdsToExpand) {
+			log.trace("Creating ghost tables for: " + tableIdsToExpand);
+
+			List<String> tableIdsToMirror = Lists.newArrayList(tableIdsToExpand);
+			Multimap<String, String> ghostedTableIds = tableMapping.getGhostTableIdMapping(from, to);
+			Set<String> createdGhostTableIds = Sets.newHashSet();
+
+			while(!tableIdsToMirror.isEmpty()) {
+				String tableId = tableIdsToMirror.remove(0);
+				if (ghostedTableIds.containsKey(tableId)) {
+					continue;
+				}
+
+				String tableName = tableMapping.getTableName(to, tableId);
+				Table table = catalog.getTable(tableId);
+
+				String newTableId = RandomHasher.generateTableId(tableMapping);
+				tableMapping.ghost(to, tableName, newTableId);
+				Table ghostTable = table.copy().rename(newTableId);
+				catalog.addTable(ghostTable);
+
+				for (Column column : table.getColumns()) {
+					dataMappings.drop(table, column.getName());
+					dataMappings.add(table, column.getName(), ghostTable, column.getName(), Transformation.createNop());
+				}
+
+				createdGhostTableIds.add(newTableId);
+				ghostedTableIds.put(tableId, newTableId);
+
+				log.debug("Planned creation of ghost table: {} for source table: {}", newTableId, tableName);
+
+				// Traverse incoming foreign keys
+				String oldTableId = tableMapping.getTableId(from, tableName);
+				catalog.getTablesReferencingTable(oldTableId).stream()
+						.filter(tableMapping.getTableIds(from)::contains)
+						.filter(referencingTableId -> !ghostedTableIds.containsKey(referencingTableId)
+								&& !tableIdsToMirror.contains(referencingTableId))
+						.distinct()
+						.forEach(tableIdsToMirror::add);
+			}
+
+			// Copying foreign keys for each affected table.
+			for (Entry<String, String> entry : ghostedTableIds.entries()) {
+				String oldTableId = entry.getKey();
+				String newTableId = entry.getValue();
+
+				Table oldTable = catalog.getTable(oldTableId);
+				Table newTable = catalog.getTable(newTableId);
+
+				if (newTableIds.contains(newTableId)) {
+					List<ForeignKey> foreignKeysToFix = newTable.getForeignKeys().stream()
+							.filter(fk -> {
+								String referredTableId = fk.getReferredTableName();
+								Map<String, String> version = tableMapping.getTableMapping(to);
+								return !version.containsKey(referredTableId);
+							})
+							.collect(Collectors.toList());
+
+					foreignKeysToFix.forEach(fk -> {
+						fk.drop();
+						String referredTableId = fk.getReferredTableName();
+						String referredTableName = tableMapping.getTableName(from, referredTableId);
+						String mappedTableId = tableMapping.getTableId(to, referredTableName);
+						Table referredTable = catalog.getTable(mappedTableId);
+						newTable.addForeignKey(fk.getReferencingColumns()).referencing(referredTable, fk.getReferredColumns());
+					});
+				}
+				else {
+					List<ForeignKey> outgoingForeignKeys = oldTable.getForeignKeys();
+					for (ForeignKey foreignKey : outgoingForeignKeys) {
+						String oldReferredTableId = foreignKey.getReferredTableName();
+						String oldReferredTableName = tableMapping.getTableName(from, oldReferredTableId);
+						String newReferredTableId = tableMapping.getTableId(to, oldReferredTableName);
+
+						Table newReferredTable = catalog.getTable(newReferredTableId);
+						newTable.addForeignKey(foreignKey.getReferencingColumns())
+								.referencing(newReferredTable, foreignKey.getReferredColumns());
+					}
+				}
+			}
+
+			newTableIds.addAll(createdGhostTableIds);
+		}
+	}
+
+}

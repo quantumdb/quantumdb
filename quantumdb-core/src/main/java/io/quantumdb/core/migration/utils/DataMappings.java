@@ -3,7 +3,6 @@ package io.quantumdb.core.migration.utils;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Strings.isNullOrEmpty;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -191,13 +190,13 @@ public class DataMappings {
 		return Sets.newHashSet(currentMappings.values());
 	}
 
-	private Collection<DataMapping> getMappings(Table table, Direction direction) {
+	public List<DataMapping> getMappings(Table table, Direction direction) {
 		checkArgument(table != null, "You must specify a 'table'.");
 		checkArgument(direction != null, "You must specify a 'direction'.");
 
 		switch (direction) {
 			case FORWARDS:
-				return mappings.row(table).values();
+				return Lists.newArrayList(mappings.row(table).values());
 			case BACKWARDS:
 				return mappings.column(table).values().stream()
 						.map(DataMapping::copyAndInverse)

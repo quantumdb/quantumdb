@@ -81,8 +81,8 @@ class BackendUtils {
 				.addColumn(new Column("description", text()));
 
 		Table tableMappings = new Table("quantumdb_tablemappings")
-				.addColumn(new Column("table_name", varchar(64), Hint.IDENTITY, Hint.NOT_NULL))
-				.addColumn(new Column("table_id", varchar(32), Hint.NOT_NULL))
+				.addColumn(new Column("table_name", varchar(255), Hint.IDENTITY, Hint.NOT_NULL))
+				.addColumn(new Column("table_id", varchar(255), Hint.NOT_NULL))
 				.addColumn(new Column("version_id", varchar(32), Hint.IDENTITY, Hint.NOT_NULL));
 
 		changelog.addForeignKey("parent_version_id").referencing(changelog, "version_id");

@@ -30,4 +30,8 @@ public class Sequence {
 		return PrettyPrinter.prettyPrint(this);
 	}
 
+	public Sequence copy() {
+		return new Sequence(name);
+	}
+
 }

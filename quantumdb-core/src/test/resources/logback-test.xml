@@ -9,7 +9,7 @@
 		</encoder>
 	</appender>
 
-	<logger name="io.quantumdb" level="DEBUG"/>
+	<logger name="io.quantumdb" level="TRACE"/>
 	<logger name="org.hibernate.ejb.HibernatePersistence" level="ERROR"/>
 
 	<root level="WARN">

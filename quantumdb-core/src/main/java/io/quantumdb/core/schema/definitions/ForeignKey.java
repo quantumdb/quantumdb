@@ -2,8 +2,11 @@ package io.quantumdb.core.schema.definitions;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
@@ -17,7 +20,9 @@ public class ForeignKey {
 	private final ImmutableList<String> referencingColumns;
 	private final ImmutableList<String> referredColumns;
 
-	ForeignKey(Table referencingTable, List<String> referencingColumns, Table referredTable, List<String> referredColumns) {
+	ForeignKey(Table referencingTable, List<String> referencingColumns,
+			Table referredTable, List<String> referredColumns) {
+
 		checkArgument(referredColumns.size() == referencingColumns.size(),
 				"You must refer to as many columns as you are referring from.");
 
@@ -52,6 +57,16 @@ public class ForeignKey {
 		return referencingColumns;
 	}
 
+	public LinkedHashMap<String, String> getColumnMapping() {
+		LinkedHashMap<String, String> mapping = Maps.newLinkedHashMap();
+		for (int i = 0; i < referencingColumns.size(); i++) {
+			String referencingColumn = referencingColumns.get(i);
+			String referredColumn = referredColumns.get(i);
+			mapping.put(referencingColumn, referredColumn);
+		}
+		return mapping;
+	}
+
 	public Map<String, String> getColumns() {
 		Map<String, String> columns = Maps.newLinkedHashMap();
 		for (int i = 0; i < referredColumns.size(); i++) {
@@ -60,6 +75,25 @@ public class ForeignKey {
 			columns.put(referencingColumnName, referredColumnName);
 		}
 		return columns;
+	}
+
+	public boolean isNotNullable() {
+		return referencingColumns.stream()
+				.map(referencingTable::getColumn)
+				.anyMatch(Column::isNotNull);
+	}
+
+	public boolean isSelfReferencing() {
+		return referencingTable.equals(referredTable);
+	}
+
+	public boolean isInheritanceRelation() {
+		Set<String> identityColumns = getReferencingTable().getIdentityColumns().stream()
+				.map(Column::getName)
+				.collect(Collectors.toSet());
+
+		return referencingColumns.stream()
+				.anyMatch(identityColumns::contains);
 	}
 
 	public void drop() {
@@ -85,5 +119,4 @@ public class ForeignKey {
 	public String toString() {
 		return PrettyPrinter.prettyPrint(this);
 	}
-
 }

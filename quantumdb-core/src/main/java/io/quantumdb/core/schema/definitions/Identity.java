@@ -1,6 +1,7 @@
 package io.quantumdb.core.schema.definitions;
 
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import com.google.common.collect.Maps;
@@ -35,5 +36,8 @@ public class Identity {
 		return values.get(key);
 	}
 
+	public Set<Entry<String, Object>> values() {
+		return values.entrySet();
+	}
 
 }
