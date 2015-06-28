@@ -4,6 +4,8 @@ import javax.inject.Inject;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import com.google.inject.name.Named;
@@ -15,6 +17,7 @@ import io.quantumdb.core.versioning.ChangelogBackend;
 import io.quantumdb.core.versioning.State;
 import io.quantumdb.core.versioning.TableMapping;
 import io.quantumdb.core.versioning.TableNameMappingBackend;
+import io.quantumdb.core.versioning.Version;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -67,6 +70,21 @@ public class PostgresqlBackend implements Backend {
 	@Override
 	public PostgresqlMigrator getMigrator() {
 		return new PostgresqlMigrator(this);
+	}
+
+	@Override
+	public int countClientsConnectedToVersion(Version version) throws SQLException {
+		try (Connection connection = connect()) {
+			String query = "SELECT COUNT(*) AS cnt FROM pg_stat_activity WHERE application_name LIKE ?;";
+			PreparedStatement statement = connection.prepareStatement(query);
+			statement.setString(1, " - " + version.getId());
+
+			ResultSet resultSet = statement.executeQuery();
+			if (resultSet.next()) {
+				return resultSet.getInt("cnt");
+			}
+			throw new SQLException("Query produced 0 rows!");
+		}
 	}
 
 	@Override

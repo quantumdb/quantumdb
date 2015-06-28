@@ -7,10 +7,13 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
+import io.quantumdb.core.backends.Backend;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.ColumnType;
 import io.quantumdb.core.schema.definitions.ForeignKey;
@@ -21,25 +24,82 @@ import io.quantumdb.core.utils.QueryBuilder;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class NullRecordCreator {
+public class NullRecords {
 
-	public Map<Table, Identity> insertNullObjects(Connection connection, List<Table> tables) throws SQLException {
-		Map<Table, Identity> persisted = Maps.newHashMap();
+	private final Map<Table, Identity> identities = Maps.newHashMap();
 
-		ensureDeferredConstraints(connection);
-
-		log.debug("Generating NULL objects for table: " + tables);
-		Map<String, Identity> generatedIdentities = Maps.newHashMap();
+	public Map<Table, Identity> insertNullObjects(Backend backend, Set<Table> tables) throws SQLException {
 		for (Table table : tables) {
-			Identity identity = insertNullObject(connection, table, generatedIdentities);
-			if (identity != null) {
-				persisted.put(table, identity);
-			}
+			Preconditions.checkArgument(!identities.containsKey(table));
 		}
 
-		commit(connection);
+		Map<Table, Identity> persisted = Maps.newHashMap();
 
+		try (Connection connection = backend.connect()) {
+			ensureDeferredConstraints(connection);
+
+			Set<String> tableNames = tables.stream()
+					.map(Table::getName)
+					.collect(Collectors.toSet());
+
+			log.debug("Generating NULL objects for tables: " + tableNames);
+			Map<String, Identity> generatedIdentities = Maps.newHashMap();
+			for (Table table : tables) {
+				Identity identity = insertNullObject(connection, table, generatedIdentities);
+				if (identity != null) {
+					persisted.put(table, identity);
+				}
+			}
+
+			commit(connection);
+		}
+
+		identities.putAll(persisted);
 		return persisted;
+	}
+
+	public void deleteNullObjects(Backend backend, Set<Table> tables) throws SQLException {
+		for (Table table : tables) {
+			Preconditions.checkArgument(identities.containsKey(table));
+		}
+
+		try (Connection connection = backend.connect()) {
+			ensureDeferredConstraints(connection);
+
+			log.debug("Dropping NULL objects for tables: " + tables);
+			for (Table table : tables) {
+				dropNullObject(connection, table);
+			}
+
+			commit(connection);
+		}
+	}
+
+	public boolean hasNullRecord(Table table) {
+		return identities.containsKey(table);
+	}
+
+	public Identity getIdentity(Table table) {
+		return identities.get(table);
+	}
+
+	private void dropNullObject(Connection connection, Table table) throws SQLException {
+		Identity identity = identities.get(table);
+
+		QueryBuilder queryBuilder = new QueryBuilder("DELETE FROM " + table.getName() + " WHERE");
+		queryBuilder.append(Joiner.on(" = ?, ").join(identity.keys()) + " = ?");
+
+		try (PreparedStatement statement = connection.prepareStatement(queryBuilder.toString())) {
+			int i = 0;
+			for (String columnName : identity.keys()) {
+				i++;
+				Object value = identity.getValue(columnName);
+				Column column = table.getColumn(columnName);
+				ColumnType type = column.getType();
+				type.getValueSetter().setValue(statement, i, value);
+			}
+			statement.execute();
+		}
 	}
 
 	private Identity insertNullObject(Connection connection, Table table, Map<String, Identity> generatedIdentities) throws SQLException {
@@ -158,5 +218,4 @@ public class NullRecordCreator {
 		connection.commit();
 		connection.setAutoCommit(true);
 	}
-
 }
