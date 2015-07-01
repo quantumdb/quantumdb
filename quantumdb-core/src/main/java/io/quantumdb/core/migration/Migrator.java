@@ -7,7 +7,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.Sets;
-import com.google.inject.Inject;
 import io.quantumdb.core.backends.Backend;
 import io.quantumdb.core.backends.DatabaseMigrator.MigrationException;
 import io.quantumdb.core.migration.utils.VersionTraverser;
@@ -22,8 +21,7 @@ public class Migrator {
 
 	private final Backend backend;
 
-	@Inject
-	Migrator(Backend backend) {
+	public Migrator(Backend backend) {
 		this.backend = backend;
 	}
 

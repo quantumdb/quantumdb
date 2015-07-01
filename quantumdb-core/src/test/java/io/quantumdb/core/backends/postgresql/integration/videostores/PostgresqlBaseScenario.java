@@ -13,11 +13,9 @@ import java.sql.SQLException;
 import java.util.Set;
 
 import com.google.common.collect.Sets;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
 import io.quantumdb.core.backends.Backend;
+import io.quantumdb.core.backends.Config;
 import io.quantumdb.core.backends.DatabaseMigrator.MigrationException;
-import io.quantumdb.core.backends.guice.PersistenceModule;
 import io.quantumdb.core.backends.postgresql.PostgresqlDatabase;
 import io.quantumdb.core.backends.postgresql.migrator.TableCreator;
 import io.quantumdb.core.migration.Migrator;
@@ -45,7 +43,6 @@ public class PostgresqlBaseScenario extends PostgresqlDatabase {
 	private Backend backend;
 	private Catalog catalog;
 	private Migrator migrator;
-	private Injector injector;
 	private Changelog changelog;
 	private TableMapping tableMapping;
 	private State state;
@@ -129,14 +126,14 @@ public class PostgresqlBaseScenario extends PostgresqlDatabase {
 
 		tableCreator.create(getConnection(), tables);
 
-		String jdbcUrl = getJdbcUrl();
-		String catalogName = getCatalogName();
-		String jdbcUser = getJdbcUser();
-		String jdbcPass = getJdbcPass();
-		PersistenceModule module = new PersistenceModule(jdbcUrl, catalogName, jdbcUser, jdbcPass);
+		Config config = new Config();
+		config.setUrl(getJdbcUrl());
+		config.setUser(getJdbcUser());
+		config.setPassword(getJdbcPass());
+		config.setCatalog(getCatalogName());
+		config.setDriver(getJdbcDriver());
 
-		injector = Guice.createInjector(module);
-		backend = injector.getInstance(Backend.class);
+		backend = config.getBackend();
 
 		state = backend.loadState();
 		changelog = state.getChangelog();
@@ -154,7 +151,7 @@ public class PostgresqlBaseScenario extends PostgresqlDatabase {
 		tableMapping.add(changelog.getRoot(), "rentals", RENTALS_ID);
 
 		backend.persistState(state);
-		migrator = injector.getInstance(Migrator.class);
+		migrator = new Migrator(backend);
 	}
 
 	void insertTestData() throws SQLException {

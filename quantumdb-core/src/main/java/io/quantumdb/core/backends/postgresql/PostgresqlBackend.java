@@ -1,14 +1,11 @@
 package io.quantumdb.core.backends.postgresql;
 
-import javax.inject.Inject;
-
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import com.google.inject.name.Named;
 import io.quantumdb.core.backends.Backend;
 import io.quantumdb.core.backends.postgresql.migrator.TableCreator;
 import io.quantumdb.core.schema.definitions.Catalog;
@@ -18,6 +15,7 @@ import io.quantumdb.core.versioning.State;
 import io.quantumdb.core.versioning.TableMapping;
 import io.quantumdb.core.versioning.TableNameMappingBackend;
 import io.quantumdb.core.versioning.Version;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -30,16 +28,13 @@ public class PostgresqlBackend implements Backend {
 	private final String jdbcUser;
 	private final String jdbcPass;
 	private final String jdbcCatalog;
+	private final String driver;
 
-	@Inject
-	PostgresqlBackend(ChangelogBackend changelogBackend, TableNameMappingBackend tableMappings,
-			@Named("javax.persistence.jdbc.url") String jdbcUrl,
-			@Named("javax.persistence.jdbc.user") String jdbcUser,
-			@Named("javax.persistence.jdbc.password") String jdbcPass,
-			@Named("javax.persistence.jdbc.catalog") String jdbcCatalog) {
+	public PostgresqlBackend(String jdbcUrl, String jdbcUser, String jdbcPass, String jdbcCatalog, String driver) {
+		this.driver = driver;
+		this.changelogBackend = new ChangelogBackend();
+		this.tableNameMappingBackend = new TableNameMappingBackend();
 
-		this.changelogBackend = changelogBackend;
-		this.tableNameMappingBackend = tableMappings;
 
 		this.jdbcUrl = jdbcUrl;
 		this.jdbcUser = jdbcUser;
@@ -93,8 +88,10 @@ public class PostgresqlBackend implements Backend {
 	}
 
 	@Override
+	@SneakyThrows(ClassNotFoundException.class)
 	public Connection connect() throws SQLException {
-		return DriverManager.getConnection(jdbcUrl, jdbcUser, jdbcPass);
+		Class.forName(driver);
+		return DriverManager.getConnection(jdbcUrl + "/" + jdbcCatalog, jdbcUser, jdbcPass);
 	}
 
 }
