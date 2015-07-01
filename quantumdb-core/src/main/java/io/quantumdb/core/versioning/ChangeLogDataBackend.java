@@ -40,7 +40,7 @@ import io.quantumdb.core.versioning.ChangeLogDataBackend.ChangeLogEntry;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-class ChangeLogDataBackend implements DataBackend<String, ChangeLogEntry> {
+class ChangeLogDataBackend implements PrimaryKeyBackend<String, ChangeLogEntry> {
 
 	static class ChangeLogEntry {
 
@@ -58,7 +58,7 @@ class ChangeLogDataBackend implements DataBackend<String, ChangeLogEntry> {
 		ChangeLogEntry(ResultSet resultSet, Gson serializer, boolean isNew) throws SQLException {
 			this.resultSet = resultSet;
 			this.serizalizer = serializer;
-			this.row = isNew ? 0 : resultSet.getRow();
+			this.row = isNew ? -1 : resultSet.getRow();
 			this.isNew = isNew;
 			this.isChanged = false;
 			this.isDeleted = false;
@@ -70,29 +70,29 @@ class ChangeLogDataBackend implements DataBackend<String, ChangeLogEntry> {
 			}
 		}
 
-		public String getVersionId() throws SQLException {
+		public String getVersionId() {
 			return versionId;
 		}
 
-		public SchemaOperation getSchemaOperation() throws SQLException {
+		public SchemaOperation getSchemaOperation() {
 			return schemaOperation;
 		}
 
-		public void setSchemaOperation(SchemaOperation operation) throws SQLException {
+		public void setSchemaOperation(SchemaOperation operation) {
 			this.schemaOperation = operation;
 			this.isChanged = true;
 		}
 
-		public String getParentVersionId() throws SQLException {
+		public String getParentVersionId() {
 			return parentVersionId;
 		}
 
-		public void setParentVersionId(String parentVersionId) throws SQLException {
+		public void setParentVersionId(String parentVersionId) {
 			this.parentVersionId = parentVersionId;
 			this.isChanged = true;
 		}
 
-		void delete() throws SQLException {
+		void delete() {
 			this.isDeleted = true;
 		}
 
@@ -228,7 +228,6 @@ class ChangeLogDataBackend implements DataBackend<String, ChangeLogEntry> {
 				.registerTypeAdapter(ColumnType.class, columnTypeSerializer)
 				.create();
 
-		log.trace("Creating deserializer for general type: {}", SchemaOperation.class);
 		GsonBuilder builder = new GsonBuilder()
 				.registerTypeAdapter(ColumnType.class, columnTypeDeserializer)
 				.registerTypeAdapter(ColumnType.class, columnTypeSerializer)
@@ -245,7 +244,6 @@ class ChangeLogDataBackend implements DataBackend<String, ChangeLogEntry> {
 				});
 
 		for (Map.Entry<String, Class<? extends SchemaOperation>> entry : operations.entrySet()) {
-			log.trace("Creating serializer for type: {}", entry.getValue());
 			builder.registerTypeAdapter(entry.getValue(), new JsonSerializer<SchemaOperation>() {
 				@Override
 				public JsonElement serialize(SchemaOperation src, Type typeOfSrc, JsonSerializationContext context) {

@@ -3,9 +3,12 @@ package io.quantumdb.core.versioning;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
+import java.util.stream.Collectors;
 
+import com.google.common.collect.Maps;
 import com.google.common.collect.Queues;
 import com.google.common.collect.Sets;
 import io.quantumdb.core.backends.Backend;
@@ -13,61 +16,76 @@ import io.quantumdb.core.schema.operations.SchemaOperation;
 import io.quantumdb.core.utils.RandomHasher;
 import io.quantumdb.core.versioning.ChangeLogDataBackend.ChangeLogEntry;
 import io.quantumdb.core.versioning.ChangeSetDataBackend.ChangeSetEntry;
-import lombok.AccessLevel;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@Getter(AccessLevel.NONE)
 public class ChangelogBackend {
+
+	private final ChangeLogDataBackend changeLogBackend = new ChangeLogDataBackend();
+	private final ChangeSetDataBackend changeSetBackend = new ChangeSetDataBackend();
 
 	public Changelog load(Backend backend) throws SQLException {
 		try (Connection connection = backend.connect()) {
 			BackendUtils.ensureQuantumDbTablesExist(backend, connection);
 			return BackendUtils.inTransaction(connection, () -> {
-				Changelog log = null;
-
-				ChangeLogDataBackend changeLogBackend = new ChangeLogDataBackend();
-				ChangeSetDataBackend changeSetBackend = new ChangeSetDataBackend();
 				Map<String, ChangeLogEntry> changeLogEntries = changeLogBackend.load(backend, connection);
 				Map<String, ChangeSetEntry> changeSetEntries = changeSetBackend.load(backend, connection);
 
-				for (ChangeLogEntry entry : changeLogEntries.values()) {
-					ChangeSetEntry changeSetEntry = changeSetEntries.get(entry.getVersionId());
+				Optional<ChangeLogEntry> root = changeLogEntries.values().stream()
+						.filter(entry -> entry.getParentVersionId() == null)
+						.findAny();
 
-					ChangeSet changeSet;
-					if (changeSetEntry != null) {
-						changeSet = new ChangeSet(changeSetEntry.getAuthor(), changeSetEntry.getCreated(),
-								changeSetEntry.getDescription());
-					}
-					else {
-						Version parent = log.getVersion(entry.getParentVersionId());
-						changeSet = parent.getChangeSet();
-					}
+				if (root.isPresent()) {
+					ChangeLogEntry logEntry = root.get();
+					String rootVersionId = logEntry.getVersionId();
 
-					if (log == null) {
-						log = new Changelog(entry.getVersionId(), changeSet);
-						changeSet.setVersion(log.getRoot());
-					}
-					else {
-						String parentVersionId = entry.getParentVersionId();
+					Map<String, ChangeSet> sets = changeSetEntries.values().stream()
+							.collect(Collectors.toMap(ChangeSetEntry::getVersionId,
+									entry -> new ChangeSet(entry.getAuthor(), entry.getCreated(),
+											entry.getDescription())));
 
-						Version parent = log.getVersion(parentVersionId);
-						SchemaOperation schemaOperation = entry.getSchemaOperation();
-						log.addChangeSet(parent, entry.getVersionId(), changeSet, schemaOperation);
+					Map<String, Version> versions = Maps.newLinkedHashMap();
+					Set<ChangeLogEntry> entries = Sets.newHashSet(changeLogEntries.values());
+					while (!entries.isEmpty()) {
+						Set<ChangeLogEntry> toRemove = Sets.newHashSet();
+						for (ChangeLogEntry entry : entries) {
+							String currentVersionId = entry.getVersionId();
+							String parentVersionId = entry.getParentVersionId();
+							if (parentVersionId == null) {
+								toRemove.add(entry);
+								ChangeSet changeSet = sets.get(currentVersionId);
 
-						if (changeSet.getVersion() == null) {
-							changeSet.setVersion(log.getVersion(entry.getVersionId()));
+								Version newVersion = new Version(currentVersionId, null, changeSet, entry.getSchemaOperation());
+								versions.put(currentVersionId, newVersion);
+							}
+							else {
+								Version parentVersion = versions.get(parentVersionId);
+								if (parentVersion != null) {
+									toRemove.add(entry);
+									ChangeSet changeSet = Optional.ofNullable(sets.get(currentVersionId))
+											.orElse(parentVersion.getChangeSet());
+
+									Version newVersion = new Version(currentVersionId, parentVersion, changeSet, entry.getSchemaOperation());
+									versions.put(currentVersionId, newVersion);
+								}
+							}
 						}
+						entries.removeAll(toRemove);
 					}
+
+					Changelog log = new Changelog(rootVersionId, sets.get(rootVersionId));
+					for (Version version : versions.values()) {
+						Optional.ofNullable(version.getParent())
+								.map(Version::getId)
+								.map(log::getVersion)
+								.ifPresent(parent -> log.addChangeSet(parent, version.getId(), version.getChangeSet(), version.getSchemaOperation()));
+					}
+					return log;
 				}
 
-				if (log == null) {
-					String author = System.getProperty("user.name");
-					ChangeSet changeSet = new ChangeSet(author, "Initial import of existing database.");
-					log = new Changelog(RandomHasher.generateHash(), changeSet);
-				}
-				return log;
+				String author = System.getProperty("user.name");
+				ChangeSet changeSet = new ChangeSet(author, "Initial import of existing database.");
+				return new Changelog(RandomHasher.generateHash(), changeSet);
 			});
 		}
 	}
@@ -76,8 +94,6 @@ public class ChangelogBackend {
 		try (Connection connection = backend.connect()) {
 			BackendUtils.ensureQuantumDbTablesExist(backend, connection);
 			BackendUtils.inTransaction(connection, () -> {
-				ChangeLogDataBackend changeLogBackend = new ChangeLogDataBackend();
-				ChangeSetDataBackend changeSetBackend = new ChangeSetDataBackend();
 				Map<String, ChangeLogEntry> changeLogEntries = changeLogBackend.load(backend, connection);
 				Map<String, ChangeSetEntry> changeSetEntries = changeSetBackend.load(backend, connection);
 

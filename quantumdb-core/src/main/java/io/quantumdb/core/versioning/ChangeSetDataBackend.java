@@ -13,7 +13,7 @@ import com.google.common.collect.Maps;
 import io.quantumdb.core.backends.Backend;
 import io.quantumdb.core.versioning.ChangeSetDataBackend.ChangeSetEntry;
 
-class ChangeSetDataBackend implements DataBackend<String, ChangeSetEntry> {
+class ChangeSetDataBackend implements PrimaryKeyBackend<String, ChangeSetEntry> {
 
 	static class ChangeSetEntry {
 
@@ -30,7 +30,7 @@ class ChangeSetDataBackend implements DataBackend<String, ChangeSetEntry> {
 
 		ChangeSetEntry(ResultSet resultSet, boolean isNew) throws SQLException {
 			this.resultSet = resultSet;
-			this.row = isNew ? 0 : resultSet.getRow();
+			this.row = isNew ? -1 : resultSet.getRow();
 			this.isNew = isNew;
 			this.isChanged = false;
 			this.isDeleted = false;
@@ -43,38 +43,38 @@ class ChangeSetDataBackend implements DataBackend<String, ChangeSetEntry> {
 			}
 		}
 
-		public String getVersionId() throws SQLException {
+		public String getVersionId() {
 			return versionId;
 		}
 
-		public String getAuthor() throws SQLException {
+		public String getAuthor() {
 			return author;
 		}
 
-		public void setAuthor(String author) throws SQLException {
+		public void setAuthor(String author) {
 			this.author = author;
 			this.isChanged = true;
 		}
 
-		public java.util.Date getCreated() throws SQLException {
+		public java.util.Date getCreated() {
 			return created;
 		}
 
-		public void setCreated(java.util.Date created) throws SQLException {
+		public void setCreated(java.util.Date created) {
 			this.created = new Date(created.getTime());
 			this.isChanged = true;
 		}
 
-		public String getDescription() throws SQLException {
+		public String getDescription() {
 			return description;
 		}
 
-		public void setDescription(String description) throws SQLException {
+		public void setDescription(String description) {
 			this.description = description;
 			this.isChanged = true;
 		}
 
-		void delete() throws SQLException {
+		void delete() {
 			this.isDeleted = true;
 		}
 
