@@ -21,11 +21,13 @@ public class PostgresqlDatabase extends ExternalResource {
 	private Connection connection;
 	private String catalogName;
 	private String jdbcUrl;
+	private String jdbcDriver;
 	private String jdbcUser;
 	private String jdbcPass;
 
 	@Override
 	public void before() throws SQLException, ClassNotFoundException, MigrationException {
+		this.jdbcDriver = getProperty("jdbc.driver").orElse("org.postgresql.Driver");
 		this.jdbcUrl = getProperty("jdbc.url").orElse("jdbc:postgresql://localhost:5432");
 		this.jdbcUser = getProperty("jdbc.user", "PG_USER").orElse(null);
 		this.jdbcPass = getProperty("jdbc.pass", "PG_PASSWORD").orElse(null);
