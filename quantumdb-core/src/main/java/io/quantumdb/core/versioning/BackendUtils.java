@@ -43,30 +43,12 @@ class BackendUtils {
 	}
 
 	static void ensureQuantumDbTablesExist(Backend backend, Connection connection) throws SQLException {
-		boolean changelogExists = true;
-		boolean changesetsExists = true;
-		boolean tableMappingsExists = true;
-		try {
-			DatabaseMetaData metaData = connection.getMetaData();
-			try (ResultSet tables = metaData.getTables(null, null, "quantumdb_changelog", new String[] { "TABLE" })) {
-				if (!tables.next()) {
-					changelogExists = false;
-				}
-			}
-			try (ResultSet tables = metaData.getTables(null, null, "quantumdb_changesets", new String[] { "TABLE" })) {
-				if (!tables.next()) {
-					changesetsExists = false;
-				}
-			}
-			try (ResultSet tables = metaData.getTables(null, null, "quantumdb_tablemappings", new String[] { "TABLE" })) {
-				if (!tables.next()) {
-					tableMappingsExists = false;
-				}
-			}
-		}
-		catch (SQLException e) {
-			throw e;
-		}
+		DatabaseMetaData metaData = connection.getMetaData();
+		boolean changelogExists = tableExists(metaData, "quantumdb_changelog");
+		boolean changesetsExists = tableExists(metaData, "quantumdb_changesets");
+		boolean tableMappingsExists = tableExists(metaData, "quantumdb_tablemappings");
+		boolean functionsExists = tableExists(metaData, "quantumdb_functions");
+		boolean triggersExists = tableExists(metaData, "quantumdb_triggers");
 
 		Set<Table> tables = Sets.newHashSet();
 		Table changelog = new Table("quantumdb_changelog")
@@ -85,9 +67,19 @@ class BackendUtils {
 				.addColumn(new Column("table_id", varchar(255), Hint.NOT_NULL))
 				.addColumn(new Column("version_id", varchar(32), Hint.IDENTITY, Hint.NOT_NULL));
 
+		Table functions = new Table("quantumdb_functions")
+				.addColumn(new Column("source_table_id", varchar(255), Hint.IDENTITY, Hint.NOT_NULL))
+				.addColumn(new Column("target_table_id", varchar(255), Hint.IDENTITY, Hint.NOT_NULL))
+				.addColumn(new Column("function_name", varchar(255)));
+
+		Table triggers = new Table("quantumdb_triggers")
+				.addColumn(new Column("source_table_id", varchar(255), Hint.IDENTITY, Hint.NOT_NULL))
+				.addColumn(new Column("target_table_id", varchar(255), Hint.IDENTITY, Hint.NOT_NULL))
+				.addColumn(new Column("trigger_name", varchar(255)));
+
 		changelog.addForeignKey("parent_version_id").referencing(changelog, "version_id");
 		changesets.addForeignKey("version_id").referencing(changelog, "version_id");
-		tableMappings.addForeignKey("version_id").referencing(changelog, "version_id");
+//		tableMappings.addForeignKey("version_id").referencing(changelog, "version_id");
 
 		if (!changelogExists) {
 			tables.add(changelog);
@@ -98,11 +90,26 @@ class BackendUtils {
 		if (!tableMappingsExists) {
 			tables.add(tableMappings);
 		}
+		if (!functionsExists) {
+			tables.add(functions);
+		}
+		if (!triggersExists) {
+			tables.add(triggers);
+		}
 
 		if (!tables.isEmpty()) {
 			TableCreator tableCreator = backend.getTableCreator();
 			tableCreator.create(connection, tables);
 		}
+	}
+
+	private static boolean tableExists(DatabaseMetaData metaData, String tableName) throws SQLException {
+		try (ResultSet tables = metaData.getTables(null, null, tableName, new String[] { "TABLE" })) {
+			if (!tables.next()) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 }

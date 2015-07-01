@@ -11,9 +11,11 @@ import io.quantumdb.core.backends.postgresql.migrator.TableCreator;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.versioning.Changelog;
 import io.quantumdb.core.versioning.ChangelogBackend;
+import io.quantumdb.core.versioning.MigrationFunctions;
+import io.quantumdb.core.versioning.PersistentMigrationFunctions;
+import io.quantumdb.core.versioning.PersistentTableMapping;
 import io.quantumdb.core.versioning.State;
 import io.quantumdb.core.versioning.TableMapping;
-import io.quantumdb.core.versioning.TableNameMappingBackend;
 import io.quantumdb.core.versioning.Version;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +24,6 @@ import lombok.extern.slf4j.Slf4j;
 public class PostgresqlBackend implements Backend {
 
 	private final ChangelogBackend changelogBackend;
-	private final TableNameMappingBackend tableNameMappingBackend;
 
 	private final String jdbcUrl;
 	private final String jdbcUser;
@@ -33,8 +34,6 @@ public class PostgresqlBackend implements Backend {
 	public PostgresqlBackend(String jdbcUrl, String jdbcUser, String jdbcPass, String jdbcCatalog, String driver) {
 		this.driver = driver;
 		this.changelogBackend = new ChangelogBackend();
-		this.tableNameMappingBackend = new TableNameMappingBackend();
-
 
 		this.jdbcUrl = jdbcUrl;
 		this.jdbcUser = jdbcUser;
@@ -48,9 +47,10 @@ public class PostgresqlBackend implements Backend {
 		try (Connection connection = connect()) {
 			Changelog changelog = changelogBackend.load(this);
 			Catalog catalog = new CatalogLoader(connection).load(jdbcCatalog);
-			TableMapping tableMapping = tableNameMappingBackend.load(this, changelog);
+			MigrationFunctions functions = new PersistentMigrationFunctions(connect());
+			TableMapping tableMapping = new PersistentTableMapping(changelog, connect());
 
-			return new State(catalog, tableMapping, changelog);
+			return new State(catalog, tableMapping, functions, changelog);
 		}
 	}
 
@@ -59,7 +59,6 @@ public class PostgresqlBackend implements Backend {
 		log.info("Persisting state to database...");
 
 		changelogBackend.persist(this, state.getChangelog());
-		tableNameMappingBackend.persist(this, state.getTableMapping());
 	}
 
 	@Override

@@ -4,6 +4,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -59,26 +60,26 @@ public class TableMapping {
 		if (version.getParent() != null && versionMapping.containsRow(version.getParent())) {
 			Map<String, TableMappingNode> mapping = versionMapping.row(version.getParent());
 			for (Map.Entry<String, TableMappingNode> entry : mapping.entrySet()) {
-				versionMapping.put(version, entry.getKey(), entry.getValue());
+				putInternally(version, entry.getKey(), entry.getValue());
 			}
 		}
 		return this;
 	}
 
 	public TableMapping add(Version version, String tableName, String tableId) {
-		versionMapping.put(version, tableName, new TableMappingNode(tableId));
+		putInternally(version, tableName, new TableMappingNode(tableId));
 		return this;
 	}
 
 	public TableMapping rename(Version version, String oldTableName, String newTableName) {
 		TableMappingNode node = removeInternally(version, oldTableName);
-		versionMapping.put(version, newTableName, node);
+		putInternally(version, newTableName, node);
 		return this;
 	}
 
 	public TableMapping copy(Version version, String sourceTableName, String newTableName, String newTableId) {
 		TableMappingNode node = versionMapping.get(version, sourceTableName);
-		versionMapping.put(version, newTableName, new TableMappingNode(newTableId, node.getTableId()));
+		putInternally(version, newTableName, new TableMappingNode(newTableId, node.getTableId()));
 		return this;
 	}
 
@@ -88,8 +89,15 @@ public class TableMapping {
 		if (basedOnTableIds.isEmpty()) {
 			basedOnTableIds.add(node.getTableId());
 		}
-		versionMapping.put(version, tableName, new TableMappingNode(newTableId, basedOnTableIds));
+		putInternally(version, tableName, new TableMappingNode(newTableId, basedOnTableIds));
 		return this;
+	}
+
+	public Set<Version> getVersions(String tableId) {
+		return versionMapping.cellSet().stream()
+				.filter(cell -> cell.getValue().getTableId().equals(tableId))
+				.map(Cell::getRowKey)
+				.collect(Collectors.toSet());
 	}
 
 	public String getTableId(Version version, String tableName) {
@@ -143,12 +151,16 @@ public class TableMapping {
 		return builder.build();
 	}
 
-	public String remove(Version version, String tableName) {
-		return removeInternally(version, tableName).getTableId();
+	public Map<String, String> remove(Version version) {
+		Map<String, String> results = versionMapping.row(version).entrySet().stream()
+				.collect(Collectors.toMap(entry -> entry.getValue().getTableId(), Entry::getKey));
+
+		results.forEach((tableId, tableName) -> remove(version, tableName));
+		return results;
 	}
 
-	TableMappingNode removeInternally(Version version, String tableName) {
-		return versionMapping.remove(version, tableName);
+	public String remove(Version version, String tableName) {
+		return removeInternally(version, tableName).getTableId();
 	}
 
 	public Multimap<String, String> getGhostTableIdMapping(Version source, Version target) {
@@ -165,6 +177,30 @@ public class TableMapping {
 		}
 
 		return ghosts;
+	}
+
+	protected TableMapping addInternally(Version version, String tableName, String tableId) {
+		versionMapping.put(version, tableName, new TableMappingNode(tableId));
+		return this;
+	}
+
+	private void putInternally(Version version, String tableName, TableMappingNode node) {
+		versionMapping.put(version, tableName, node);
+		onPut(version, tableName, node);
+	}
+
+	private TableMappingNode removeInternally(Version version, String tableName) {
+		TableMappingNode remove = versionMapping.remove(version, tableName);
+		onRemove(version, tableName);
+		return remove;
+	}
+
+	protected void onPut(Version version, String tableName, TableMappingNode node) {
+		// Allow for overriding...
+	}
+
+	protected void onRemove(Version version, String tableName) {
+		// Allow for overriding...
 	}
 
 	@Override
