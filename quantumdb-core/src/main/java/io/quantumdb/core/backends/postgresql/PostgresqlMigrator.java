@@ -31,6 +31,7 @@ import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.utils.QueryBuilder;
+import io.quantumdb.core.versioning.MigrationFunctions;
 import io.quantumdb.core.versioning.State;
 import io.quantumdb.core.versioning.TableMapping;
 import io.quantumdb.core.versioning.Version;
@@ -245,6 +246,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 			String sourceTableId = dataMapping.getSourceTable().getName();
 			String targetTableId = dataMapping.getTargetTable().getName();
 
+			MigrationFunctions functions = state.getFunctions();
 			SyncFunction syncFunction = syncFunctions.get(sourceTableId, targetTableId);
 			if (syncFunction == null) {
 				syncFunction = new SyncFunction(dataMapping, nullRecords);
@@ -253,15 +255,18 @@ class PostgresqlMigrator implements DatabaseMigrator {
 
 				log.info("Creating sync function: {} for table: {}", syncFunction.getFunctionName(), sourceTableId);
 				execute(connection, syncFunction.createFunctionStatement());
+				functions.putFunction(sourceTableId, targetTableId, syncFunction.getFunctionName());
 
 				log.info("Creating trigger: {} for table: {}", syncFunction.getTriggerName(), sourceTableId);
 				execute(connection, syncFunction.createTriggerStatement());
+				functions.putTrigger(sourceTableId, targetTableId, syncFunction.getTriggerName());
 			}
 			else {
 				syncFunction.setColumnsToMigrate(columns);
 
 				log.info("Updating sync function: {} for table: {}", syncFunction.getFunctionName(), sourceTableId);
 				execute(connection, syncFunction.createFunctionStatement());
+				functions.putFunction(sourceTableId, targetTableId, syncFunction.getFunctionName());
 			}
 		}
 
