@@ -7,7 +7,7 @@ import java.util.Map;
 
 import io.quantumdb.core.backends.Backend;
 
-interface DataBackend<K, V> {
+interface PrimaryKeyBackend<K, V> {
 	Map<K, V> load(Backend backend, Connection connection) throws SQLException;
 	V create(K key) throws SQLException;
 	void delete(K key) throws SQLException;

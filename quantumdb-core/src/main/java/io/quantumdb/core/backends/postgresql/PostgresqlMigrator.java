@@ -6,6 +6,8 @@ import java.sql.Statement;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -14,8 +16,10 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+import com.google.common.collect.Table.Cell;
 import io.quantumdb.core.backends.DatabaseMigrator;
 import io.quantumdb.core.backends.postgresql.migrator.NullRecords;
 import io.quantumdb.core.backends.postgresql.migrator.TableCreator;
@@ -48,13 +52,18 @@ class PostgresqlMigrator implements DatabaseMigrator {
 
 	@Override
 	public void migrate(State state, Version from, Version to) throws MigrationException {
+		Set<Version> preMigration = state.getTableMapping().getVersions();
 		Plan plan = new GreedyMigrationPlanner().createPlan(state, from, to);
 		PlanValidator.validate(plan);
 
-		log.info("Constructed migration plan: \n" + plan);
-		log.info("The new tableMapping will be: \n" + state.getTableMapping());
+		log.info("Constructed migration plan: \n{}", plan);
+		log.info("The new tableMapping will be: \n{}", state.getTableMapping());
 
-		new InternalPlanner(backend, plan, state, from, to).migrate();
+		Set<Version> postMigration = state.getTableMapping().getVersions();
+		Set<Version> intermediateVersions = Sets.newHashSet(Sets.difference(postMigration, preMigration));
+		intermediateVersions.remove(to);
+
+		new InternalPlanner(backend, plan, state, from, to, intermediateVersions).migrate();
 	}
 
 	@Override
@@ -65,6 +74,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 	static class InternalPlanner {
 
 		private final Plan plan;
+		private final Set<Version> intermediateVersions;
 		private final DataMappings dataMappings;
 		private final State state;
 		private final NullRecords nullRecords;
@@ -75,9 +85,12 @@ class PostgresqlMigrator implements DatabaseMigrator {
 
 		private final com.google.common.collect.Table<String, String, SyncFunction> syncFunctions;
 
-		public InternalPlanner(PostgresqlBackend backend, Plan plan, State state, Version from, Version to) {
+		public InternalPlanner(PostgresqlBackend backend, Plan plan, State state, Version from, Version to,
+				Set<Version> intermediateVersions) {
+
 			this.backend = backend;
 			this.plan = plan;
+			this.intermediateVersions = intermediateVersions;
 			this.dataMappings = plan.getDataMappings();
 			this.state = state;
 			this.nullRecords = new NullRecords();
@@ -104,6 +117,9 @@ class PostgresqlMigrator implements DatabaseMigrator {
 			}
 
 			synchronizeBackwards();
+
+			intermediateVersions.forEach(state.getTableMapping()::remove);
+
 			persistState();
 		}
 
@@ -156,6 +172,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		}
 
 		private void synchronizeForwards(Table targetTable, Set<String> targetColumns) throws SQLException {
+			log.info("Creating forward sync function for table: {}...", targetTable.getName());
 			try (Connection connection = backend.connect()) {
 				for (DataMapping dataMapping : listDataMappings(Direction.FORWARDS)) {
 					if (dataMapping.getTargetTable().equals(targetTable)) {
@@ -177,12 +194,14 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		}
 
 		private void synchronizeBackwards() throws MigrationException {
+			log.info("Creating backwards sync functions...");
 			try (Connection connection = backend.connect()) {
 				for (DataMapping dataMapping : listDataMappings(DataMappings.Direction.BACKWARDS)) {
 					Set<String> columns = dataMapping.getTargetTable().getColumns().stream()
 							.map(Column::getName)
 							.collect(Collectors.toSet());
 
+					log.info("Creating backward sync function for table: {}...", dataMapping.getTargetTable().getName());
 					ensureSyncFunctionExists(connection, dataMapping, columns);
 				}
 			}
@@ -193,21 +212,27 @@ class PostgresqlMigrator implements DatabaseMigrator {
 
 		private List<DataMapping> listDataMappings(Direction direction) {
 			TableMapping tableMapping = state.getTableMapping();
-			Version version = direction == Direction.FORWARDS ? from : to;
-			ImmutableSet<String> tableIds = tableMapping.getTableIds(version);
+			Version target = direction == Direction.FORWARDS ? from : to;
+			ImmutableSet<String> tableIds = tableMapping.getTableIds(target);
+			Multimap<String, String> ghostTableIdMapping = tableMapping.getGhostTableIdMapping(from, to);
 
 			Catalog catalog = state.getCatalog();
 
 			List<DataMapping> results = Lists.newArrayList();
 			for (String tableId : tableIds) {
 				Table table = catalog.getTable(tableId);
-				Set<DataMapping> mappings = dataMappings.getTransitiveDataMappings(table, direction);
-				results.addAll(mappings);
-			}
 
-			results = results.stream()
-					.filter(mapping -> !mapping.getSourceTable().equals(mapping.getTargetTable()))
-					.collect(Collectors.toList());
+				if (direction == Direction.BACKWARDS) {
+					dataMappings.getTransitiveDataMappings(table, direction).stream()
+							.filter(mapping -> ghostTableIdMapping.containsKey(mapping.getTargetTable().getName()))
+							.forEach(results::add);
+				}
+				else {
+					dataMappings.getTransitiveDataMappings(table, direction).stream()
+							.filter(mapping -> ghostTableIdMapping.containsValue(mapping.getTargetTable().getName()))
+							.forEach(results::add);
+				}
+			}
 
 			Collections.sort(results, new Comparator<DataMapping>() {
 				@Override
