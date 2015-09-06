@@ -13,6 +13,7 @@
 	<modules>
 		<module>quantumdb-core</module>
 		<module>quantumdb-driver</module>
+		<module>quantumdb-cli</module>
 	</modules>
 
 	<properties>
