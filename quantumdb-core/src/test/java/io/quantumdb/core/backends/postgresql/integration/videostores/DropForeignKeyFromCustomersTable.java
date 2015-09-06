@@ -42,7 +42,7 @@ public class DropForeignKeyFromCustomersTable {
 		origin = setup.getChangelog().getLastAdded();
 
 		setup.getChangelog().addChangeSet("Michael de Jong",
-				SchemaOperations.dropForeignKey("customers", "store_id"));
+				SchemaOperations.dropForeignKey("customers", "customer_registered_at_store"));
 
 		target = setup.getChangelog().getLastAdded();
 		setup.getBackend().persistState(setup.getState());

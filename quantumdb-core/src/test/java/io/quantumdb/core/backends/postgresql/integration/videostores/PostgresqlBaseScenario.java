@@ -104,7 +104,9 @@ public class PostgresqlBaseScenario extends PostgresqlDatabase {
 		staff.addForeignKey("store_id").referencing(stores, "id");
 
 		customers.addForeignKey("referred_by").referencing(customers, "id");
-		customers.addForeignKey("store_id").referencing(stores, "id");
+		customers.addForeignKey("store_id")
+				.named("customer_registered_at_store")
+				.referencing(stores, "id");
 
 		inventory.addForeignKey("store_id").referencing(stores, "id");
 		inventory.addForeignKey("film_id").referencing(films, "id");

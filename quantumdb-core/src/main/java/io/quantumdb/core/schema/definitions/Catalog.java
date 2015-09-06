@@ -120,6 +120,9 @@ public class Catalog implements Copyable<Catalog> {
 			Table source = schema.getTable(foreignKey.getReferencingTableName());
 			Table target = schema.getTable(foreignKey.getReferredTableName());
 			source.addForeignKey(foreignKey.getReferencingColumns())
+					.named(foreignKey.getForeignKeyName())
+					.onDelete(foreignKey.getOnDelete())
+					.onUpdate(foreignKey.getOnUpdate())
 					.referencing(target, foreignKey.getReferredColumns());
 		}
 		for (Sequence sequence : sequences) {

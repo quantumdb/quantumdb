@@ -38,7 +38,9 @@ public class DropForeignKeyMigratorTest {
 
 		Table posts = catalog.getTable("posts");
 		Table users = catalog.getTable("users");
-		posts.addForeignKey("author").referencing(users, "id");
+		posts.addForeignKey("author")
+				.named("post_author")
+				.referencing(users, "id");
 
 		this.changelog = new Changelog();
 		this.tableMapping = TableMapping.bootstrap(changelog.getRoot(), catalog);
@@ -49,7 +51,7 @@ public class DropForeignKeyMigratorTest {
 
 	@Test
 	public void testExpandForDroppingForeignKey() {
-		DropForeignKey operation = dropForeignKey("posts", "author");
+		DropForeignKey operation = dropForeignKey("posts", "post_author");
 		changelog.addChangeSet("Michael de Jong", "Drop author foreign key from posts table.", operation);
 		migrator.migrate(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
 

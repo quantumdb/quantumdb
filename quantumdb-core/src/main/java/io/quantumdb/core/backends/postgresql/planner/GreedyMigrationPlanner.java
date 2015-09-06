@@ -501,7 +501,12 @@ public class GreedyMigrationPlanner implements MigrationPlanner {
 						String referredTableName = tableMapping.getTableName(from, referredTableId);
 						String mappedTableId = tableMapping.getTableId(to, referredTableName);
 						Table referredTable = catalog.getTable(mappedTableId);
-						newTable.addForeignKey(fk.getReferencingColumns()).referencing(referredTable, fk.getReferredColumns());
+
+						newTable.addForeignKey(fk.getReferencingColumns())
+								.named(fk.getForeignKeyName())
+								.onUpdate(fk.getOnUpdate())
+								.onDelete(fk.getOnDelete())
+								.referencing(referredTable, fk.getReferredColumns());
 					});
 				}
 				else {
@@ -513,6 +518,9 @@ public class GreedyMigrationPlanner implements MigrationPlanner {
 
 						Table newReferredTable = catalog.getTable(newReferredTableId);
 						newTable.addForeignKey(foreignKey.getReferencingColumns())
+								.named(foreignKey.getForeignKeyName())
+								.onUpdate(foreignKey.getOnUpdate())
+								.onDelete(foreignKey.getOnDelete())
 								.referencing(newReferredTable, foreignKey.getReferredColumns());
 					}
 				}

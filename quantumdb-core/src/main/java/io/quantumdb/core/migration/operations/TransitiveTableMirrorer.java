@@ -65,7 +65,11 @@ class TransitiveTableMirrorer {
 				String[] referencingColumnNames = foreignKey.getReferencingColumns().toArray(new String[0]);
 				String[] referredColumnNames = foreignKey.getReferredColumns().toArray(new String[0]);
 
-				newTable.addForeignKey(referencingColumnNames).referencing(newReferredTable, referredColumnNames);
+				newTable.addForeignKey(referencingColumnNames)
+						.named(foreignKey.getForeignKeyName())
+						.onUpdate(foreignKey.getOnUpdate())
+						.onDelete(foreignKey.getOnDelete())
+						.referencing(newReferredTable, referredColumnNames);
 			}
 		}
 
