@@ -13,10 +13,10 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.ForeignKey;
+import io.quantumdb.core.schema.definitions.ForeignKey.Action;
 import io.quantumdb.core.schema.definitions.Sequence;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.utils.QueryBuilder;
-import io.quantumdb.core.utils.RandomHasher;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -103,18 +103,29 @@ public class TableCreator {
 
 	private void createForeignKeys(Connection connection, Table table) throws SQLException {
 		for (ForeignKey foreignKey : table.getForeignKeys()) {
-			String foreignKeyName = "fk_" + RandomHasher.generateHash();
-
 			QueryBuilder queryBuilder = new QueryBuilder();
 			queryBuilder.append("ALTER TABLE " + table.getName());
-			queryBuilder.append("ADD CONSTRAINT " + foreignKeyName);
+			queryBuilder.append("ADD CONSTRAINT " + foreignKey.getForeignKeyName());
 			queryBuilder.append("FOREIGN KEY (" + Joiner.on(", ").join(foreignKey.getReferencingColumns()) + ")");
 			queryBuilder.append("REFERENCES " + foreignKey.getReferredTableName());
-			queryBuilder.append("(" + Joiner.on(", ").join(foreignKey.getReferredColumns()) + ") ");
+			queryBuilder.append("(" + Joiner.on(", ").join(foreignKey.getReferredColumns()) + ")");
+			queryBuilder.append("ON UPDATE " + valueOf(foreignKey.getOnUpdate()));
+			queryBuilder.append("ON DELETE " + valueOf(foreignKey.getOnDelete()));
 			queryBuilder.append("DEFERRABLE");
 
-			log.info("Creating foreign key: {}", foreignKeyName);
+			log.info("Creating foreign key: {}", foreignKey.getForeignKeyName());
 			execute(connection, queryBuilder);
+		}
+	}
+
+	private String valueOf(Action action) {
+		switch (action) {
+			case CASCADE: return "CASCADE";
+			case NO_ACTION: return "NO ACTION";
+			case RESTRICT: return "RESTRICT";
+			case SET_DEFAULT: return "SET DEFAULT";
+			case SET_NULL: return "SET NULL";
+			default: throw new IllegalArgumentException("Action: " + action + " is not supported!");
 		}
 	}
 

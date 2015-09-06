@@ -61,8 +61,8 @@ public class SchemaOperations {
 		return new AddForeignKey(table, columns);
 	}
 
-	public static DropForeignKey dropForeignKey(String tableName, String... columns) {
-		return new DropForeignKey(tableName, columns);
+	public static DropForeignKey dropForeignKey(String tableName, String foreignKeyName) {
+		return new DropForeignKey(tableName, foreignKeyName);
 	}
 
 }

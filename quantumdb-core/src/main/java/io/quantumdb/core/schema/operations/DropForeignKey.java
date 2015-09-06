@@ -11,14 +11,14 @@ import lombok.experimental.Accessors;
 public class DropForeignKey implements SchemaOperation {
 
 	private final String tableName;
-	private final String[] referringColumnNames;
+	private final String foreignKeyName;
 
-	DropForeignKey(String tableName, String... columns) {
+	DropForeignKey(String tableName, String foreignKeyName) {
 		checkArgument(!Strings.isNullOrEmpty(tableName), "You must specify a 'table'.");
-		checkArgument(columns != null && columns.length > 0, "You must specify at least one 'column'.");
+		checkArgument(!Strings.isNullOrEmpty(foreignKeyName), "You must specify a 'foreignKeyName'.");
 
 		this.tableName = tableName;
-		this.referringColumnNames = columns;
+		this.foreignKeyName = foreignKeyName;
 	}
 
 }

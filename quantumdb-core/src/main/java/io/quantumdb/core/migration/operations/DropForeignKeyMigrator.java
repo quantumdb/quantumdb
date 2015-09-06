@@ -1,9 +1,5 @@
 package io.quantumdb.core.migration.operations;
 
-import java.util.List;
-
-import com.google.common.base.Joiner;
-import com.google.common.collect.Sets;
 import io.quantumdb.core.migration.utils.DataMappings;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.ForeignKey;
@@ -25,13 +21,10 @@ class DropForeignKeyMigrator implements SchemaOperationMigrator<DropForeignKey> 
 		Table table = catalog.getTable(tableId);
 
 		ForeignKey matchedForeignKey = table.getForeignKeys().stream()
-				.filter(foreignKey -> {
-					List<String> referencingColumns = foreignKey.getReferencingColumns();
-					return referencingColumns.containsAll(Sets.newHashSet(operation.getReferringColumnNames()));
-				})
+				.filter(foreignKey -> foreignKey.getForeignKeyName().equals(operation.getForeignKeyName()))
 				.findFirst()
 				.orElseThrow(() -> new IllegalStateException("No foreign key exists in table: " + tableName
-						+ " for the column(s): " + Joiner.on(", ").join(operation.getReferringColumnNames())));
+						+ " with name: " + operation.getForeignKeyName()));
 
 		matchedForeignKey.drop();
 	}

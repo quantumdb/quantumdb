@@ -34,6 +34,9 @@ class CopyTableMigrator implements SchemaOperationMigrator<CopyTable> {
 
 			Table referredTable = catalog.getTable(referredTableId);
 			copy.addForeignKey(foreignKey.getReferencingColumns().toArray(new String[0]))
+					.named(foreignKey.getForeignKeyName())
+					.onUpdate(foreignKey.getOnUpdate())
+					.onDelete(foreignKey.getOnDelete())
 					.referencing(referredTable, foreignKey.getReferredColumns().toArray(new String[0]));
 		}
 

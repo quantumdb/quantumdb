@@ -13,6 +13,8 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import io.quantumdb.core.schema.definitions.ForeignKey.Action;
+import io.quantumdb.core.utils.RandomHasher;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -25,12 +27,33 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 
 	public static class ForeignKeyBuilder {
 
+		private String name;
 		private final List<String> referringColumns;
 		private final Table parentTable;
+		private Action onUpdate;
+		private Action onDelete;
 
 		private ForeignKeyBuilder(Table parent, List<String> referringColumnNames) {
+			this.name = "fk_" + RandomHasher.generateHash();
 			this.parentTable = parent;
 			this.referringColumns = referringColumnNames;
+			this.onUpdate = Action.NO_ACTION;
+			this.onDelete = Action.NO_ACTION;
+		}
+
+		public ForeignKeyBuilder onDelete(Action action) {
+			this.onDelete = action;
+			return this;
+		}
+
+		public ForeignKeyBuilder onUpdate(Action action) {
+			this.onUpdate = action;
+			return this;
+		}
+
+		public ForeignKeyBuilder named(String name) {
+			this.name = name;
+			return this;
 		}
 
 		public ForeignKey referencing(Table table, String... referredColumns) {
@@ -38,7 +61,8 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 		}
 
 		public ForeignKey referencing(Table table, List<String> referredColumns) {
-			ForeignKey constraint = new ForeignKey(parentTable, referringColumns, table, referredColumns);
+			ForeignKey constraint = new ForeignKey(name, parentTable, referringColumns, table, referredColumns,
+					onUpdate, onDelete);
 
 			referringColumns.forEach(column -> parentTable.getColumn(column).setOutgoingForeignKey(constraint));
 			referredColumns.forEach(column -> table.getColumn(column).getIncomingForeignKeys().add(constraint));

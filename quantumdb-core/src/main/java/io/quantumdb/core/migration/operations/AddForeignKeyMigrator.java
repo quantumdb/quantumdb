@@ -24,6 +24,9 @@ class AddForeignKeyMigrator implements SchemaOperationMigrator<AddForeignKey> {
 		Table referencedTable = catalog.getTable(referencedTableId);
 
 		table.addForeignKey(operation.getReferringColumnNames())
+				.named(operation.getName())
+				.onDelete(operation.getOnDelete())
+				.onUpdate(operation.getOnUpdate())
 				.referencing(referencedTable, operation.getReferencedColumnNames());
 	}
 

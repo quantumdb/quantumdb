@@ -1,5 +1,11 @@
 package io.quantumdb.core.backends.postgresql;
 
+import static io.quantumdb.core.schema.definitions.ForeignKey.Action.CASCADE;
+import static io.quantumdb.core.schema.definitions.ForeignKey.Action.NO_ACTION;
+import static io.quantumdb.core.schema.definitions.ForeignKey.Action.RESTRICT;
+import static io.quantumdb.core.schema.definitions.ForeignKey.Action.SET_DEFAULT;
+import static io.quantumdb.core.schema.definitions.ForeignKey.Action.SET_NULL;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -16,6 +22,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
+import io.quantumdb.core.schema.definitions.ForeignKey.Action;
 import io.quantumdb.core.schema.definitions.Sequence;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.utils.QueryBuilder;
@@ -167,14 +174,18 @@ class CatalogLoader {
 				.append("  att2.attname AS referencing_column,")
 				.append("  cl.relname AS referred_table,")
 				.append("  att.attname AS referred_column,")
-				.append("  con.conname AS constraint_name")
+				.append("  con.conname AS constraint_name,")
+				.append("  con.confupdtype AS confupdtype,")
+				.append("  con.confdeltype AS confdeltype")
 				.append("FROM")
 				.append("   (SELECT")
 				.append("        unnest(con1.conkey) AS parent,")
 				.append("        unnest(con1.confkey) AS child,")
 				.append("        con1.conname,")
 				.append("        con1.confrelid,")
-				.append("        con1.conrelid")
+				.append("        con1.conrelid,")
+				.append("        con1.confupdtype,")
+				.append("        con1.confdeltype")
 				.append("    FROM")
 				.append("        pg_class cl")
 				.append("        JOIN pg_namespace ns ON cl.relnamespace = ns.oid")
@@ -198,6 +209,8 @@ class CatalogLoader {
 
 			String prevConstraintName = null;
 			String prevReferredTable = null;
+			Action prevOnDelete = null;
+			Action prevOnUpdate = null;
 			Map<String, String> mapping = Maps.newLinkedHashMap();
 
 			while (resultSet.next()) {
@@ -206,11 +219,17 @@ class CatalogLoader {
 				String referredColumn = resultSet.getString("referred_column");
 				String constraintName = resultSet.getString("constraint_name");
 
+				Action onUpdate = valueOf(resultSet.getString("confupdtype"));
+				Action onDelete = valueOf(resultSet.getString("confdeltype"));
+
 				if (prevConstraintName != null && !constraintName.equals(prevConstraintName)) {
 					Table source = catalog.getTable(tableName);
 					Table target = catalog.getTable(prevReferredTable);
 
 					source.addForeignKey(Lists.newArrayList(mapping.keySet()))
+							.named(prevConstraintName)
+							.onDelete(prevOnDelete)
+							.onUpdate(prevOnUpdate)
 							.referencing(target, Lists.newArrayList(mapping.values()));
 
 					mapping.clear();
@@ -218,6 +237,8 @@ class CatalogLoader {
 
 				prevReferredTable = referredTable;
 				prevConstraintName = constraintName;
+				prevOnDelete = onDelete;
+				prevOnUpdate = onUpdate;
 				mapping.put(referencingColumn, referredColumn);
 			}
 
@@ -226,8 +247,23 @@ class CatalogLoader {
 				Table target = catalog.getTable(prevReferredTable);
 
 				source.addForeignKey(Lists.newArrayList(mapping.keySet()))
+						.named(prevConstraintName)
+						.onDelete(prevOnDelete)
+						.onUpdate(prevOnUpdate)
 						.referencing(target, Lists.newArrayList(mapping.values()));
 			}
 		}
 	}
+
+	private Action valueOf(String input) {
+		switch (input) {
+			case "a": return NO_ACTION;
+			case "r": return RESTRICT;
+			case "c": return CASCADE;
+			case "n": return SET_NULL;
+			case "d": return SET_DEFAULT;
+			default: throw new IllegalArgumentException("Unknown foreign key action type: " + input);
+		}
+	}
+
 }

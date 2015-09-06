@@ -60,9 +60,17 @@ class PrettyPrinter {
 			.registerTypeAdapter(ForeignKey.class, new JsonSerializer<ForeignKey>() {
 				@Override
 				public JsonElement serialize(ForeignKey src, Type typeOfSrc, JsonSerializationContext context) {
+					JsonObject mapping = new JsonObject();
+					src.getColumnMapping().entrySet()
+							.forEach(entry -> mapping.addProperty(entry.getKey(), entry.getValue()));
+
 					JsonObject model = new JsonObject();
-					model.addProperty("referringFrom", src.getReferencingTableName() + ": " + Joiner.on(", ").join(src.getReferencingColumns()));
-					model.addProperty("referringTo", src.getReferredTableName() + ": " + Joiner.on(", ").join(src.getReferredColumns()));
+					model.addProperty("name", src.getForeignKeyName());
+					model.addProperty("from", src.getReferencingTableName());
+					model.addProperty("to", src.getReferredTableName());
+					model.add("mapping", mapping);
+					model.addProperty("onUpdate", src.getOnUpdate().name());
+					model.addProperty("onDelete", src.getOnDelete().name());
 					return model;
 				}
 			})

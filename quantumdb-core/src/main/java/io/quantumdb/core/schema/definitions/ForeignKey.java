@@ -1,6 +1,7 @@
 package io.quantumdb.core.schema.definitions;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Strings.isNullOrEmpty;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -15,14 +16,24 @@ import lombok.Data;
 @Data
 public class ForeignKey {
 
+	public static enum Action {
+		CASCADE, RESTRICT, NO_ACTION, SET_DEFAULT, SET_NULL
+	}
+
+	private final String foreignKeyName;
 	private final Table referencingTable;
 	private final Table referredTable;
 	private final ImmutableList<String> referencingColumns;
 	private final ImmutableList<String> referredColumns;
+	private Action onUpdate;
+	private Action onDelete;
 
-	ForeignKey(Table referencingTable, List<String> referencingColumns,
-			Table referredTable, List<String> referredColumns) {
+	ForeignKey(String foreignKeyName, Table referencingTable, List<String> referencingColumns, Table referredTable,
+			List<String> referredColumns, Action onUpdate, Action onDelete) {
 
+		checkArgument(!isNullOrEmpty(foreignKeyName), "You must specify a 'foreignKeyName'.");
+		checkArgument(onUpdate != null, "You must specify an 'onUpdate' action.");
+		checkArgument(onDelete != null, "You must specify an 'onDelete' action.");
 		checkArgument(referredColumns.size() == referencingColumns.size(),
 				"You must refer to as many columns as you are referring from.");
 
@@ -35,10 +46,13 @@ public class ForeignKey {
 					"The column: " + referredColumn + " is not present in table: " +referredTable.getName());
 		}
 
+		this.foreignKeyName = foreignKeyName;
 		this.referencingTable = referencingTable;
 		this.referredTable = referredTable;
 		this.referencingColumns = ImmutableList.copyOf(referencingColumns);
 		this.referredColumns = ImmutableList.copyOf(referredColumns);
+		this.onUpdate = onUpdate;
+		this.onDelete = onDelete;
 	}
 
 	public String getReferredTableName() {
