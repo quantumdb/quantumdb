@@ -110,6 +110,12 @@ public class Catalog implements Copyable<Catalog> {
 				.collect(Collectors.toSet()));
 	}
 
+	public ImmutableSet<Index> getIndexes() {
+		return ImmutableSet.copyOf(tables.stream()
+				.flatMap(table -> table.getIndexes().stream())
+				.collect(Collectors.toSet()));
+	}
+
 	@Override
 	public Catalog copy() {
 		Catalog schema = new Catalog(name);

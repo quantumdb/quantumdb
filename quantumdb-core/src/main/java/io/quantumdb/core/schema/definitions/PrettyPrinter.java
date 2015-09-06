@@ -82,6 +82,17 @@ class PrettyPrinter {
 					return model;
 				}
 			})
+			.registerTypeAdapter(Index.class, new JsonSerializer<Index>() {
+				@Override
+				public JsonElement serialize(Index src, Type typeOfSrc, JsonSerializationContext context) {
+					JsonObject model = new JsonObject();
+					model.addProperty("indexName", src.getIndexName());
+					model.addProperty("table", src.getParent().getName());
+					model.addProperty("unique", src.isUnique());
+					model.addProperty("columns", Joiner.on(", ").join(src.getColumns()));
+					return model;
+				}
+			})
 			.registerTypeAdapter(Table.class, new JsonSerializer<Table>() {
 				@Override
 				public JsonElement serialize(Table src, Type typeOfSrc, JsonSerializationContext context) {

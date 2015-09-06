@@ -14,6 +14,7 @@ import com.google.common.collect.Maps;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.ForeignKey;
 import io.quantumdb.core.schema.definitions.ForeignKey.Action;
+import io.quantumdb.core.schema.definitions.Index;
 import io.quantumdb.core.schema.definitions.Sequence;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.utils.QueryBuilder;
@@ -36,6 +37,12 @@ public class TableCreator {
 	public void createForeignKeys(Connection connection, Collection<Table> tables) throws SQLException {
 		for (Table table : tables) {
 			createForeignKeys(connection, table);
+		}
+	}
+
+	public void createIndexes(Connection connection, Collection<Table> tables) throws SQLException {
+		for (Table table : tables) {
+			createIndexes(connection, table);
 		}
 	}
 
@@ -114,6 +121,22 @@ public class TableCreator {
 			queryBuilder.append("DEFERRABLE");
 
 			log.info("Creating foreign key: {}", foreignKey.getForeignKeyName());
+			execute(connection, queryBuilder);
+		}
+	}
+
+	private void createIndexes(Connection connection, Table table) throws SQLException {
+		for (Index index : table.getIndexes()) {
+			QueryBuilder queryBuilder = new QueryBuilder();
+			queryBuilder.append("CREATE");
+			if (index.isUnique()) {
+				queryBuilder.append("UNIQUE");
+			}
+			queryBuilder.append("INDEX " + index.getIndexName());
+			queryBuilder.append("ON " + index.getParent().getName());
+			queryBuilder.append("(" + Joiner.on(", ").join(index.getColumns()) + ");");
+
+			log.info("Creating index key: {}", index.getIndexName());
 			execute(connection, queryBuilder);
 		}
 	}

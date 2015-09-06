@@ -21,7 +21,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Setter;
 
 @Data
-@EqualsAndHashCode(exclude = { "parent", "foreignKeys" })
+@EqualsAndHashCode(exclude = { "parent", "foreignKeys", "indexes" })
 @Setter(AccessLevel.NONE)
 public class Table implements Copyable<Table>, Comparable<Table> {
 
@@ -78,6 +78,7 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 
 	private final LinkedHashSet<Column> columns = Sets.newLinkedHashSet();
 	private final List<ForeignKey> foreignKeys = Lists.newArrayList();
+	private final List<Index> indexes = Lists.newArrayList();
 
 	public Table(String name) {
 		checkArgument(!Strings.isNullOrEmpty(name), "You must specify a 'name'.");
@@ -95,6 +96,46 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 		}
 
 		this.parent = parent;
+	}
+
+	public Table addIndex(Index index) {
+		checkArgument(index != null, "You must specify an 'index'.");
+		checkState(!containsIndex(index.getIndexName()), "Table already contains an index with name: " + index.getIndexName());
+
+		indexes.add(index);
+		index.setParent(this);
+		return this;
+	}
+
+	public boolean containsIndex(String... columns) {
+		checkArgument(columns.length > 0, "You must specify at least one 'columns'.");
+
+		return indexes.stream()
+				.filter(c -> c.getColumns().equals(Lists.newArrayList(columns)))
+				.findFirst()
+				.isPresent();
+	}
+
+	public Index removeIndex(String... columns) {
+		checkState(containsIndex(columns), "You cannot remove an index which does not exist: " + columns);
+
+		Index index = getIndex(columns);
+		index.setParent(null);
+		indexes.remove(index);
+		return index;
+	}
+
+	public Index getIndex(String... columns) {
+		checkArgument(columns.length > 0, "You must specify at least one 'columns'.");
+
+		return indexes.stream()
+				.filter(c -> c.getColumns().equals(Lists.newArrayList(columns)))
+				.findFirst()
+				.orElse(null);
+	}
+
+	public ImmutableList<Index> getIndexes() {
+		return ImmutableList.copyOf(indexes);
 	}
 
 	public Table addColumn(Column column) {
@@ -217,6 +258,7 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 	public Table copy() {
 		Table copy = new Table(name);
 		columns.stream().forEachOrdered(column -> copy.addColumn(column.copy()));
+		indexes.stream().forEachOrdered(index -> copy.addIndex(new Index(index.getColumns(), index.isUnique())));
 		return copy;
 	}
 

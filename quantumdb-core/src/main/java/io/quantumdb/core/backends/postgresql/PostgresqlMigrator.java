@@ -116,6 +116,8 @@ class PostgresqlMigrator implements DatabaseMigrator {
 				}
 			}
 
+			createIndexes();
+
 			synchronizeBackwards();
 
 			intermediateVersions.forEach(state.getTableMapping()::remove);
@@ -164,7 +166,16 @@ class PostgresqlMigrator implements DatabaseMigrator {
 			try (Connection connection = backend.connect()) {
 				TableCreator creator = new TableCreator();
 				creator.create(connection, plan.getGhostTables());
-				creator.createForeignKeys(connection, plan.getGhostTables());
+			}
+			catch (SQLException e) {
+				throw new MigrationException(e);
+			}
+		}
+
+		private void createIndexes() throws MigrationException {
+			try (Connection connection = backend.connect()) {
+				TableCreator creator = new TableCreator();
+				creator.createIndexes(connection, plan.getGhostTables());
 			}
 			catch (SQLException e) {
 				throw new MigrationException(e);
