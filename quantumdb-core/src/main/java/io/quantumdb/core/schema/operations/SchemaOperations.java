@@ -24,18 +24,22 @@ public class SchemaOperations {
 		return new CopyTable(sourceTableName, targetTableName);
 	}
 
+	@Deprecated
 	public static MergeTable mergeTable(String leftTableName, String rightTableName, String targetTableName) {
 		return new MergeTable(leftTableName, rightTableName, targetTableName);
 	}
 
+	@Deprecated
 	public static PartitionTable partitionTable(String tableName) {
 		return new PartitionTable(tableName);
 	}
 
+	@Deprecated
 	public static DecomposeTable decomposeTable(String tableName) {
 		return new DecomposeTable(tableName);
 	}
 
+	@Deprecated
 	public static JoinTable joinTable(String sourceTable, String alias, String... columns) {
 		return new JoinTable(sourceTable, alias, columns);
 	}
@@ -63,6 +67,14 @@ public class SchemaOperations {
 
 	public static DropForeignKey dropForeignKey(String tableName, String foreignKeyName) {
 		return new DropForeignKey(tableName, foreignKeyName);
+	}
+
+	public static CreateIndex createIndex(String table, boolean unique, String... columns) {
+		return new CreateIndex(table, unique, columns);
+	}
+
+	public static DropIndex dropIndex(String tableName, String... columns) {
+		return new DropIndex(tableName, columns);
 	}
 
 }

@@ -23,6 +23,7 @@ import com.google.common.collect.Sets;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.ForeignKey.Action;
+import io.quantumdb.core.schema.definitions.Index;
 import io.quantumdb.core.schema.definitions.Sequence;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.utils.QueryBuilder;
@@ -74,6 +75,8 @@ class CatalogLoader {
 					.map(Column::getSequence)
 					.filter(seq -> seq != null)
 					.forEach(catalog::addSequence);
+
+			addIndexes(catalog, tableName);
 		}
 
 		for (String tableName : tableNames) {
@@ -266,4 +269,46 @@ class CatalogLoader {
 		}
 	}
 
+	private void addIndexes(Catalog catalog, String tableName) throws SQLException {
+		String query = new QueryBuilder()
+				.append("SELECT pg_get_indexdef(i.indexrelid) AS index_definition")
+				.append("FROM pg_index i")
+				.append("LEFT JOIN pg_class c ON i.indrelid = c.oid")
+				.append("LEFT JOIN pg_namespace nsp ON c.relnamespace = nsp.oid")
+				.append("WHERE c.relname = ? AND nsp.nspname = ?;")
+				.toString();
+
+		try (PreparedStatement statement = connection.prepareStatement(query)) {
+			statement.setString(1, tableName);
+			statement.setString(2, "public");
+			ResultSet resultSet = statement.executeQuery();
+
+			while (resultSet.next()) {
+				String indexDefinition = resultSet.getString("index_definition");
+
+				StatementParser parser = new StatementParser(indexDefinition);
+				parser.expect("CREATE");
+				boolean unique = parser.present("UNIQUE");
+				parser.expect("INDEX");
+				parser.present("CONCURRENTLY");
+				String indexName = parser.consume();
+				if (indexName.startsWith("pk_")) {
+					continue;
+				}
+
+				parser.expect("ON");
+				String indexTableName = parser.consume();
+
+				if (parser.present("USING")) {
+					parser.consume();
+				}
+
+				List<String> groups = parser.consumeGroup('(', ')', ',');
+				// TODO: Add support for expressions. Now we only support column references.
+
+				Table table = catalog.getTable(indexTableName);
+				table.addIndex(new Index(indexName, groups, unique));
+			}
+		}
+	}
 }
