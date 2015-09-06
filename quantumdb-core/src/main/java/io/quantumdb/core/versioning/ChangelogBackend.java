@@ -85,7 +85,10 @@ public class ChangelogBackend {
 
 				String author = System.getProperty("user.name");
 				ChangeSet changeSet = new ChangeSet(author, "Initial import of existing database.");
-				return new Changelog(RandomHasher.generateHash(), changeSet);
+				Changelog changelog = new Changelog(RandomHasher.generateHash(), changeSet);
+				persist(backend, changelog);
+
+				return changelog;
 			});
 		}
 	}

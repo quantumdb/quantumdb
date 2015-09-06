@@ -41,6 +41,8 @@ public class PostgresTypes {
 				return PostgresTypes.date();
 			case "double precision":
 				return PostgresTypes.floats();
+			case "real":
+				return PostgresTypes.doubles();
 			default:
 				String error = "Unsupported type: " + type;
 				if (length != null) {

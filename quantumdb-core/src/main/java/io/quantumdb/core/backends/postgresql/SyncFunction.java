@@ -43,6 +43,9 @@ public class SyncFunction {
 	@Setter(AccessLevel.NONE)
 	private ImmutableMap<String, String> updateIdentities;
 
+	@Setter(AccessLevel.NONE)
+	private ImmutableMap<String, String> updateIdentitiesForInserts;
+
 	public SyncFunction(DataMapping dataMapping, NullRecords nullRecords) {
 		this(dataMapping, nullRecords, "sync_" + RandomHasher.generateHash(), "trig_" + RandomHasher.generateHash());
 	}
@@ -87,12 +90,16 @@ public class SyncFunction {
 				LinkedHashMap<String, String> columnMapping = foreignKey.getColumnMapping();
 				for (String columnName : foreignKeyColumns) {
 					String referencedColumn = columnMapping.get(columnName);
-					String value = identity.getValue(referencedColumn).toString();
 
 					Column column = targetTable.getColumn(columnName);
-					if (column.getType().isRequireQuotes()) {
-						value = "'" + value + "'";
+					String value = column.getDefaultValue();
+					if (identity != null) {
+						value = identity.getValue(referencedColumn).toString();
+						if (column.getType().isRequireQuotes()) {
+							value = "'" + value + "'";
+						}
 					}
+
 					expressions.put("\"" + columnName + "\"", value);
 				}
 			}
@@ -100,6 +107,12 @@ public class SyncFunction {
 
 		this.insertExpressions = ImmutableMap.copyOf(expressions);
 		this.updateExpressions = ImmutableMap.copyOf(insertExpressions);
+
+		this.updateIdentitiesForInserts = ImmutableMap.copyOf(dataMapping.getTargetTable().getIdentityColumns().stream()
+				.collect(Collectors.toMap(column -> "\"" + column.getName() + "\"",
+						column -> "NEW.\"" + mapping.get(column.getName()) + "\"",
+						(u, v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
+						Maps::newLinkedHashMap)));
 
 		this.updateIdentities = ImmutableMap.copyOf(dataMapping.getTargetTable().getIdentityColumns().stream()
 				.collect(Collectors.toMap(column -> "\"" + column.getName() + "\"",
@@ -116,8 +129,8 @@ public class SyncFunction {
 				.append("   IF TG_OP = 'INSERT' THEN")
 				.append("       LOOP")
 				.append("           UPDATE " + targetTableId)
-				.append("               SET " + represent(updateExpressions, " = ", ", "))
-				.append("               WHERE " + represent(updateIdentities, " = ", " AND ") + ";")
+				.append("               SET " + represent(updateIdentitiesForInserts, " = ", ", "))
+				.append("               WHERE " + represent(updateIdentitiesForInserts, " = ", " AND ") + ";")
 				.append("           IF found THEN EXIT; END IF;")
 				.append("           BEGIN")
 				.append("               INSERT INTO " + targetTableId)

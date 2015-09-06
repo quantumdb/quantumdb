@@ -1,21 +1,17 @@
 package io.quantumdb.core.backends.postgresql.integration.videostores;
 
 import static io.quantumdb.core.backends.postgresql.PostgresTypes.date;
+import static io.quantumdb.core.backends.postgresql.PostgresTypes.doubles;
 import static io.quantumdb.core.backends.postgresql.PostgresTypes.floats;
 import static io.quantumdb.core.backends.postgresql.PostgresTypes.integer;
 import static io.quantumdb.core.backends.postgresql.PostgresTypes.varchar;
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
 import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
-import static io.quantumdb.core.schema.operations.SchemaOperations.joinTable;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotEquals;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.List;
 
 import com.google.common.collect.Lists;
@@ -23,16 +19,15 @@ import io.quantumdb.core.backends.DatabaseMigrator.MigrationException;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Table;
+import io.quantumdb.core.schema.operations.SchemaOperations;
 import io.quantumdb.core.versioning.State;
 import io.quantumdb.core.versioning.TableMapping;
 import io.quantumdb.core.versioning.Version;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 
-@Ignore
-public class JoinPaymentsAndRentalsTable {
+public class ModifyTypeInPaymentsTable {
 
 	@ClassRule
 	public static PostgresqlBaseScenario setup = new PostgresqlBaseScenario();
@@ -43,14 +38,11 @@ public class JoinPaymentsAndRentalsTable {
 
 	@BeforeClass
 	public static void performEvolution() throws SQLException, MigrationException {
-		setup.insertTestData();
-
 		origin = setup.getChangelog().getLastAdded();
 
 		setup.getChangelog().addChangeSet("Michael de Jong",
-				joinTable("payments", "p", "id", "staff_id", "customer_id", "amount")
-					.with("rentals", "r", "p.rental_id = r.id", "date", "inventory_id")
-					.into("payed_rentals"));
+				SchemaOperations.alterColumn("payments", "amount")
+						.modifyDataType(doubles()));
 
 		target = setup.getChangelog().getLastAdded();
 		setup.getBackend().persistState(setup.getState());
@@ -128,20 +120,20 @@ public class JoinPaymentsAndRentalsTable {
 
 		// New tables and foreign keys.
 
-		Table payedRentals = new Table(mapping.getTableId(target, "payed_rentals"))
+		Table newPayments = new Table(mapping.getTableId(target, "payments"))
 				.addColumn(new Column("id", integer(), payments.getColumn("id").getSequence(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("staff_id", integer()))
 				.addColumn(new Column("customer_id", integer(), NOT_NULL))
-				.addColumn(new Column("amount", floats(), NOT_NULL))
+				.addColumn(new Column("rental_id", integer(), NOT_NULL))
 				.addColumn(new Column("date", date(), NOT_NULL))
-				.addColumn(new Column("inventory_id", integer(), NOT_NULL));
+				.addColumn(new Column("amount", doubles(), NOT_NULL));
 
-		payedRentals.addForeignKey("staff_id").referencing(staff, "id");
-		payedRentals.addForeignKey("customer_id").referencing(customers, "id");
-		payedRentals.addForeignKey("inventory_id").referencing(inventory, "id");
+		newPayments.addForeignKey("staff_id").referencing(staff, "id");
+		newPayments.addForeignKey("customer_id").referencing(customers, "id");
+		newPayments.addForeignKey("rental_id").referencing(rentals, "id");
 
 		List<Table> tables = Lists.newArrayList(stores, staff, customers, films, inventory, paychecks, payments, rentals,
-				payedRentals);
+				newPayments);
 
 		Catalog expected = new Catalog(setup.getCatalogName());
 		tables.forEach(expected::addTable);
@@ -154,54 +146,16 @@ public class JoinPaymentsAndRentalsTable {
 		TableMapping tableMapping = state.getTableMapping();
 
 		// Unchanged tables
-		assertEquals(PostgresqlBaseScenario.FILMS_ID, tableMapping.getTableId(target, "films"));
 		assertEquals(PostgresqlBaseScenario.STORES_ID, tableMapping.getTableId(target, "stores"));
 		assertEquals(PostgresqlBaseScenario.STAFF_ID, tableMapping.getTableId(target, "staff"));
 		assertEquals(PostgresqlBaseScenario.CUSTOMERS_ID, tableMapping.getTableId(target, "customers"));
 		assertEquals(PostgresqlBaseScenario.PAYCHECKS_ID, tableMapping.getTableId(target, "paychecks"));
+		assertEquals(PostgresqlBaseScenario.FILMS_ID, tableMapping.getTableId(target, "films"));
 		assertEquals(PostgresqlBaseScenario.INVENTORY_ID, tableMapping.getTableId(target, "inventory"));
 		assertEquals(PostgresqlBaseScenario.RENTALS_ID, tableMapping.getTableId(target, "rentals"));
-		assertEquals(PostgresqlBaseScenario.PAYMENTS_ID, tableMapping.getTableId(target, "payments"));
-	}
 
-	@Test
-	public void verifyContents() throws SQLException {
-		String tableName = state.getTableMapping().getTableId(target, "payed_rentals");
-
-		try (Connection connection = setup.getBackend().connect()) {
-			Statement statement = connection.createStatement();
-			ResultSet resultSet = statement.executeQuery("SELECT * FROM " + tableName + " ORDER BY id ASC");
-
-			assertTrue(resultSet.next());
-			assertEquals(1, resultSet.getInt("id"));
-			assertEquals(1, resultSet.getInt("staff_id"));
-			assertEquals(1, resultSet.getInt("customer_id"));
-			assertEquals(5f, resultSet.getFloat("amount"));
-			assertEquals(1, resultSet.getInt("inventory_id"));
-
-			assertTrue(resultSet.next());
-			assertEquals(2, resultSet.getInt("id"));
-			assertEquals(2, resultSet.getInt("staff_id"));
-			assertEquals(2, resultSet.getInt("customer_id"));
-			assertEquals(5f, resultSet.getFloat("amount"));
-			assertEquals(2, resultSet.getInt("inventory_id"));
-
-			assertTrue(resultSet.next());
-			assertEquals(3, resultSet.getInt("id"));
-			assertEquals(3, resultSet.getInt("staff_id"));
-			assertEquals(3, resultSet.getInt("customer_id"));
-			assertEquals(5f, resultSet.getFloat("amount"));
-			assertEquals(5, resultSet.getInt("inventory_id"));
-
-			assertTrue(resultSet.next());
-			assertEquals(4, resultSet.getInt("id"));
-			assertEquals(null, resultSet.getObject("staff_id"));
-			assertEquals(4, resultSet.getInt("customer_id"));
-			assertEquals(5f, resultSet.getFloat("amount"));
-			assertEquals(6, resultSet.getInt("inventory_id"));
-
-			assertFalse(resultSet.next());
-		}
+		// Ghosted tables
+		assertNotEquals(PostgresqlBaseScenario.PAYMENTS_ID, tableMapping.getTableId(target, "payments"));
 	}
 
 }

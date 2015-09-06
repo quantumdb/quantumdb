@@ -54,6 +54,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 	public void migrate(State state, Version from, Version to) throws MigrationException {
 		Set<Version> preMigration = state.getTableMapping().getVersions();
 		Plan plan = new GreedyMigrationPlanner().createPlan(state, from, to);
+
 		PlanValidator.validate(plan);
 
 		log.info("Constructed migration plan: \n{}", plan);
@@ -68,6 +69,86 @@ class PostgresqlMigrator implements DatabaseMigrator {
 
 	@Override
 	public void drop(State state, Version version) throws MigrationException {
+		TableMapping tableMapping = state.getTableMapping();
+		Map<String, String> mappingAtVersion = tableMapping.getTableMapping(version);
+
+		Map<String, String> tablesToDrop = Maps.newHashMap();
+		for (String tableId : mappingAtVersion.keySet()) {
+			String tableName = mappingAtVersion.get(tableId);
+
+			Set<Version> versions = tableMapping.getVersions(tableId);
+			Set<Version> otherVersions = Sets.difference(versions, Sets.newHashSet(version));
+			if (otherVersions.isEmpty()) {
+				tablesToDrop.put(tableName, tableId);
+			}
+		}
+
+		log.info("Determined the following tables will be dropped: {}", tablesToDrop);
+		try (Connection connection = backend.connect()) {
+			dropTriggers(connection, state.getFunctions(), tablesToDrop);
+			dropFunctions(connection, state.getFunctions(), tablesToDrop);
+			dropTables(connection, version, tableMapping, tablesToDrop);
+			backend.persistState(state);
+		}
+		catch (SQLException e) {
+			throw new MigrationException(e);
+		}
+	}
+
+	private void dropTriggers(Connection connection, MigrationFunctions migrationFunctions,
+			Map<String, String> tablesToDrop) throws SQLException {
+
+		for (Entry<String, String> entry : tablesToDrop.entrySet()) {
+			String tableId = entry.getValue();
+
+			com.google.common.collect.Table<String, String, String> triggers = migrationFunctions.getTriggers(tableId);
+			for (Cell<String, String, String> function : triggers.cellSet()) {
+				String triggerName = function.getValue();
+				String sourceTableId = function.getRowKey();
+				String targetTableId = function.getColumnKey();
+				try (Statement statement = connection.createStatement()) {
+					statement.execute("DROP TRIGGER " + triggerName + " ON " + sourceTableId + ";");
+				}
+				migrationFunctions.removeTrigger(sourceTableId, targetTableId);
+			}
+		}
+	}
+
+	private void dropFunctions(Connection connection, MigrationFunctions migrationFunctions,
+			Map<String, String> tablesToDrop) throws SQLException {
+
+		for (Entry<String, String> entry : tablesToDrop.entrySet()) {
+			String tableId = entry.getValue();
+
+			com.google.common.collect.Table<String, String, String> functions = migrationFunctions.getFunctions(tableId);
+			for (Cell<String, String, String> function : functions.cellSet()) {
+				String functionName = function.getValue();
+				String sourceTableId = function.getRowKey();
+				String targetTableId = function.getColumnKey();
+				try (Statement statement = connection.createStatement()) {
+					statement.execute("DROP FUNCTION " + functionName + "();");
+				}
+				migrationFunctions.removeFunction(sourceTableId, targetTableId);
+			}
+		}
+	}
+
+	private void dropTables(Connection connection, Version version, TableMapping tableMapping,
+			Map<String, String> tablesToDrop) throws SQLException {
+
+		for (Entry<String, String> entry : tablesToDrop.entrySet()) {
+			String tableName = entry.getKey();
+			String tableId = entry.getValue();
+
+			try (Statement statement = connection.createStatement()) {
+				statement.execute("DROP TABLE " + tableId + " CASCADE;");
+			}
+			tableMapping.remove(version, tableName);
+		}
+
+		for (String tableName : tableMapping.getTableNames(version)) {
+			tableMapping.remove(version, tableName);
+		}
 
 	}
 
@@ -84,6 +165,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		private final Version to;
 
 		private final com.google.common.collect.Table<String, String, SyncFunction> syncFunctions;
+
 
 		public InternalPlanner(PostgresqlBackend backend, Plan plan, State state, Version from, Version to,
 				Set<Version> intermediateVersions) {
@@ -135,6 +217,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		}
 
 		private void execute(Operation operation) throws MigrationException, InterruptedException {
+
 			log.info("Executing operation: " + operation);
 			try {
 				Set<Table> tables = operation.getTables();

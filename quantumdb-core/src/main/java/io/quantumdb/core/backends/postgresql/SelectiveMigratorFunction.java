@@ -177,14 +177,7 @@ public class SelectiveMigratorFunction {
 		Table targetTable = mapping.getTargetTable();
 		Map<String, String> values = mapping.getColumnMappings().cellSet().stream()
 				.filter(entry -> columns.contains(entry.getColumnKey()))
-				.filter(entry -> {
-					Column targetColumn = targetTable.getColumn(entry.getColumnKey());
-					Column sourceColumn = mapping.getSourceTable().getColumn(entry.getRowKey());
-
-					// Exclude fields which are made non-nullable
-					return !(!sourceColumn.isNotNull() && targetColumn.isNotNull());
-				})
-				.collect(Collectors.toMap(Cell::getRowKey,
+				.collect(Collectors.toMap(Cell::getColumnKey,
 						entry -> "r.\"" + entry.getRowKey() + "\"",
 						(u, v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
 						Maps::newLinkedHashMap));
@@ -198,12 +191,16 @@ public class SelectiveMigratorFunction {
 				LinkedHashMap<String, String> columnMapping = foreignKey.getColumnMapping();
 				for (String columnName : foreignKeyColumns) {
 					String referencedColumn = columnMapping.get(columnName);
-					String value = identity.getValue(referencedColumn).toString();
-
 					Column column = targetTable.getColumn(columnName);
-					if (column.getType().isRequireQuotes()) {
-						value = "'" + value + "'";
+
+					String value = column.getDefaultValue();
+					if (identity != null) {
+						value = identity.getValue(referencedColumn).toString();
+						if (column.getType().isRequireQuotes()) {
+							value = "'" + value + "'";
+						}
 					}
+
 					values.put(columnName, value);
 				}
 			}

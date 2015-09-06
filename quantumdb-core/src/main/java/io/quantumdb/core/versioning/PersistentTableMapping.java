@@ -21,7 +21,8 @@ public class PersistentTableMapping extends TableMapping {
 			ResultSet resultSet = statement.executeQuery("SELECT * FROM quantumdb_tablemappings");
 
 			while (resultSet.next()) {
-				Version version = changelog.getVersion(resultSet.getString("version_id"));
+				String versionId = resultSet.getString("version_id");
+				Version version = changelog.getVersion(versionId);
 				String tableName = resultSet.getString("table_name");
 				String tableId = resultSet.getString("table_id");
 				addInternally(version, tableName, tableId);
