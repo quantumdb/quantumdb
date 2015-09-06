@@ -7,3 +7,5 @@
 *.iml
 target/
 bin/
+
+.quantumdb
