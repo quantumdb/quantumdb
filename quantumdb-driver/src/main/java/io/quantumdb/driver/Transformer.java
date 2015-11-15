@@ -7,6 +7,8 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
+import io.quantumdb.query.rewriter.QueryRewriter;
+
 class Transformer {
 
 	private final QueryRewriter queryRewriter;

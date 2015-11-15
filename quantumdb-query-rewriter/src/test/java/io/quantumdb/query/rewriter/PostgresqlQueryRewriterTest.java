@@ -1,4 +1,4 @@
-package io.quantumdb.driver;
+package io.quantumdb.query.rewriter;
 
 import static org.junit.Assert.assertEquals;
 
@@ -17,7 +17,7 @@ public class PostgresqlQueryRewriterTest {
 
 	@Before
 	public void setUp() {
-		this.rewriter = new PostgresqlQueryRewriter(false);
+		this.rewriter = new PostgresqlQueryRewriter();
 		this.tableMappings = new HashMap<>();
 
 		tableMappings.put("accounts", "accounts_v2");

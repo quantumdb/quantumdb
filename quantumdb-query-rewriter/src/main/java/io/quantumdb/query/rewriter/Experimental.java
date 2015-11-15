@@ -1,4 +1,4 @@
-package io.quantumdb.driver;
+package io.quantumdb.query.rewriter;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -7,7 +7,7 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value = { ElementType.TYPE, ElementType.METHOD, ElementType.CONSTRUCTOR })
-@interface Experimental {
+public @interface Experimental {
 
 	String value() default "";
 
