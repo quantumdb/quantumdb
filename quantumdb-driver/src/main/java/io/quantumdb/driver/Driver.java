@@ -8,6 +8,9 @@ import java.sql.SQLFeatureNotSupportedException;
 import java.util.Properties;
 import java.util.logging.Logger;
 
+import io.quantumdb.query.rewriter.PostgresqlQueryRewriter;
+import io.quantumdb.query.rewriter.QueryRewriter;
+
 public class Driver implements java.sql.Driver {
 
 	static {
@@ -54,7 +57,7 @@ public class Driver implements java.sql.Driver {
 
 		this.delegate = DriverManager.getDriver(url);
 		Connection connection = delegate.connect(url, info);
-		QueryRewriter queryRewriter = new PostgresqlQueryRewriter(true);
+		QueryRewriter queryRewriter = new PostgresqlQueryRewriter();
 		this.transformer = new Transformer(connection, queryRewriter, version);
 
 		return new ProxyConnection(connection, transformer);

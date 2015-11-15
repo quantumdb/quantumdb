@@ -1,4 +1,4 @@
-package io.quantumdb.driver;
+package io.quantumdb.query.rewriter;
 
 import java.sql.SQLException;
 import java.util.Deque;
@@ -7,7 +7,7 @@ import java.util.LinkedList;
 import java.util.Map;
 
 @Experimental
-class PostgresqlQueryRewriter implements QueryRewriter {
+public class PostgresqlQueryRewriter implements QueryRewriter {
 
 	private static class State {
 
@@ -32,10 +32,8 @@ class PostgresqlQueryRewriter implements QueryRewriter {
 	private static final String DEFAULT_SCHEMA = "public";
 
 	private final Map<String, String> tableMapping;
-	private final boolean outputRewrites;
 
-	public PostgresqlQueryRewriter(boolean outputRewrites) {
-		this.outputRewrites = outputRewrites;
+	public PostgresqlQueryRewriter() {
 		this.tableMapping = new HashMap<>();
 	}
 

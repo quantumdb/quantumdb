@@ -22,6 +22,8 @@ import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.Map;
 
+import io.quantumdb.query.rewriter.Experimental;
+
 @Experimental
 class MetaResultSet implements ResultSet {
 
