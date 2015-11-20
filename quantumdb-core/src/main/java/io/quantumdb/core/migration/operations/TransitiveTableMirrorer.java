@@ -8,6 +8,8 @@ import com.google.common.collect.Sets;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.ForeignKey;
 import io.quantumdb.core.schema.definitions.Table;
+import io.quantumdb.core.state.RefLog;
+import io.quantumdb.core.state.RefLog.TableRef;
 import io.quantumdb.core.utils.RandomHasher;
 import io.quantumdb.core.versioning.TableMapping;
 import io.quantumdb.core.versioning.Version;
@@ -17,9 +19,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 class TransitiveTableMirrorer {
 
-	static Set<String> mirror(Catalog catalog, TableMapping tableMapping, Version version, String... tableNames) {
+	static Set<String> mirror(Catalog catalog, RefLog refLog, Version version, String... tableNames) {
+		refLog.prepareFork(version);
 		Version parentVersion = version.getParent();
-		tableMapping.copyMappingFromParent(version);
 
 		Set<String> mirrored = Sets.newHashSet();
 
@@ -27,14 +29,14 @@ class TransitiveTableMirrorer {
 		List<String> tablesToMirror = Lists.newArrayList(tableNames);
 		while(!tablesToMirror.isEmpty()) {
 			String tableName = tablesToMirror.remove(0);
-			String tableId = tableMapping.getTableId(parentVersion, tableName);
+			TableRef tableRef = refLog.getTableRef(parentVersion, tableName);
 			if (mirrored.contains(tableName)) {
 				continue;
 			}
 
-			Table table = catalog.getTable(tableId);
+			Table table = catalog.getTable(tableRef.getTableId());
 
-			String newTableId = RandomHasher.generateTableId(tableMapping);
+			String newTableId = RandomHasher.generateTableId(refLog);
 			tableMapping.ghost(version, tableName, newTableId);
 			catalog.addTable(table.copy()
 					.rename(newTableId));
