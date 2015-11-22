@@ -2,13 +2,9 @@ package io.quantumdb.core.state;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.*;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.versioning.Version;
@@ -16,187 +12,232 @@ import lombok.Data;
 
 public class RefLog {
 
-    @Data
-    public static class TableRef {
+	@Data
+	public static class TableRef {
 
-        private final String name;
-        private final String tableId;
-        private final Set<Version> versions;
-        private final Map<String, ColumnRef> columns;
-        private final Set<SyncRef> outboundSyncs;
-        private final Set<SyncRef> inboundSyncs;
-        private final RefLog refLog;
+		private String name;
+		private String tableId;
+		private final Set<Version> versions;
+		private final Map<String, ColumnRef> columns;
+		private final Set<SyncRef> outboundSyncs;
+		private final Set<SyncRef> inboundSyncs;
+		private final RefLog refLog;
 
-        private TableRef(RefLog refLog, String name, String tableId, Version version, Collection<ColumnRef> columns) {
-            this.name = name;
-            this.tableId = tableId;
-            this.refLog = refLog;
-            this.versions = Sets.newHashSet(version);
-            this.columns = Maps.newHashMap();
-            this.outboundSyncs = Sets.newHashSet();
-            this.inboundSyncs = Sets.newHashSet();
+		private TableRef(RefLog refLog, String name, String tableId, Version version, Collection<ColumnRef> columns) {
+			this.name = name;
+			this.tableId = tableId;
+			this.refLog = refLog;
+			this.versions = Sets.newHashSet(version);
+			this.columns = Maps.newHashMap();
+			this.outboundSyncs = Sets.newHashSet();
+			this.inboundSyncs = Sets.newHashSet();
 
-            columns.forEach(column -> column.table = this);
-            refLog.tables.put(version, this);
-        }
+			columns.forEach(column -> column.table = this);
+			refLog.tables.put(version, this);
+		}
 
-        public ImmutableSet<SyncRef> getOutboundSyncs() {
-            return ImmutableSet.copyOf(outboundSyncs);
-        }
+		public ImmutableSet<SyncRef> getOutboundSyncs() {
+			return ImmutableSet.copyOf(outboundSyncs);
+		}
 
-        public ImmutableSet<SyncRef> getInboundSync() {
-            return ImmutableSet.copyOf(inboundSyncs);
-        }
+		public ImmutableSet<SyncRef> getInboundSync() {
+			return ImmutableSet.copyOf(inboundSyncs);
+		}
 
-        public ImmutableMap<String, ColumnRef> getColumns() {
-            return ImmutableMap.copyOf(columns);
-        }
+		public ImmutableMap<String, ColumnRef> getColumns() {
+			return ImmutableMap.copyOf(columns);
+		}
 
-        public Set<TableRef> getBasedOn() {
-            return columns.values().stream()
-                    .flatMap(column -> column.getBasedOn().stream())
-                    .map(ColumnRef::getTable)
-                    .distinct()
-                    .collect(Collectors.toSet());
-        }
+		public Set<TableRef> getBasedOn() {
+			return columns.values().stream()
+					.flatMap(column -> column.getBasedOn().stream())
+					.map(ColumnRef::getTable)
+					.distinct()
+					.collect(Collectors.toSet());
+		}
 
-        private TableRef fork(Version version) {
-            checkArgument(versions.contains(version.getParent()));
-            versions.add(version);
-            refLog.tables.put(version, this);
-            return this;
-        }
-    }
+		private TableRef fork(Version version) {
+			checkArgument(versions.contains(version.getParent()));
+			versions.add(version);
+			refLog.tables.put(version, this);
+			return this;
+		}
 
-    @Data
-    public static class ColumnRef {
+		public TableRef ghost(String newTableId, Version version) {
+			Collection<ColumnRef> newColumns = columns.values().stream()
+					.map(ColumnRef::ghost)
+					.collect(Collectors.toList());
 
-        private final String name;
-        private final ImmutableSet<ColumnRef> basedOn;
-        private final Set<ColumnRef> basisFor;
+			return new TableRef(refLog, name, newTableId, version, newColumns);
+		}
 
-        private TableRef table;
+		public ColumnRef dropColumn(String name) {
+			return columns.remove(name);
+		}
 
-        public ColumnRef(String name) {
-            this(name, Sets.newHashSet());
-        }
+		public TableRef renameColumn(String oldName, String newName) {
+			ColumnRef removed = columns.remove(oldName);
+			removed.name = newName;
+			columns.put(newName, removed);
+			return this;
+		}
+	}
 
-        public ColumnRef(String name, Collection<ColumnRef> basedOn) {
-            this.name = name;
-            this.basedOn = ImmutableSet.copyOf(basedOn);
-            this.basisFor = Sets.newHashSet();
+	@Data
+	public static class ColumnRef {
 
-            basedOn.forEach(column -> column.basisFor.add(this));
-        }
+		private final ImmutableSet<ColumnRef> basedOn;
+		private final Set<ColumnRef> basisFor;
 
-        public ImmutableSet<ColumnRef> getBasisFor() {
-            return ImmutableSet.copyOf(basisFor);
-        }
+		private String name;
+		private TableRef table;
 
-    }
+		public ColumnRef(String name) {
+			this(name, Sets.newHashSet());
+		}
 
-    @Data
-    public static class SyncRef {
+		public ColumnRef(String name, Collection<ColumnRef> basedOn) {
+			this.name = name;
+			this.basedOn = ImmutableSet.copyOf(basedOn);
+			this.basisFor = Sets.newHashSet();
 
-        private final String name;
-        private final String functionName;
-        private final ImmutableMap<ColumnRef, ColumnRef> columnMapping;
-        private final TableRef source;
-        private final TableRef target;
+			basedOn.forEach(column -> column.basisFor.add(this));
+		}
 
-        private SyncRef(String name, String functionName, Map<ColumnRef, ColumnRef> columnMapping) {
-            this.name = name;
-            this.functionName = functionName;
-            this.columnMapping = ImmutableMap.copyOf(columnMapping);
+		private ColumnRef ghost() {
+			return new ColumnRef(name, Sets.newHashSet(this));
+		}
 
-            List<TableRef> sources = columnMapping.keySet().stream()
-                    .map(ColumnRef::getTable)
-                    .distinct()
-                    .collect(Collectors.toList());
+		public ImmutableSet<ColumnRef> getBasisFor() {
+			return ImmutableSet.copyOf(basisFor);
+		}
 
-            List<TableRef> targets = columnMapping.values().stream()
-                    .map(ColumnRef::getTable)
-                    .distinct()
-                    .collect(Collectors.toList());
+	}
 
-            checkArgument(sources.size() == 1, "There can be only one source table!");
-            checkArgument(targets.size() == 1, "There can be only one target table!");
+	@Data
+	public static class SyncRef {
 
-            this.source = sources.get(0);
-            this.target = targets.get(0);
+		private final String name;
+		private final String functionName;
+		private final ImmutableMap<ColumnRef, ColumnRef> columnMapping;
+		private final TableRef source;
+		private final TableRef target;
 
-            checkArgument(!source.equals(target), "You cannot add a recursive sync function!");
+		private SyncRef(String name, String functionName, Map<ColumnRef, ColumnRef> columnMapping) {
+			this.name = name;
+			this.functionName = functionName;
+			this.columnMapping = ImmutableMap.copyOf(columnMapping);
 
-            source.outboundSyncs.add(this);
-            target.inboundSyncs.add(this);
-        }
+			List<TableRef> sources = columnMapping.keySet().stream()
+					.map(ColumnRef::getTable)
+					.distinct()
+					.collect(Collectors.toList());
 
-    }
+			List<TableRef> targets = columnMapping.values().stream()
+					.map(ColumnRef::getTable)
+					.distinct()
+					.collect(Collectors.toList());
 
-    public static RefLog init(Catalog catalog, Version version) {
-        RefLog log = new RefLog();
-        catalog.getTables().forEach(table -> {
-            log.addTable(table.getName(), table.getName(), version, table.getColumns().stream()
-                    .map(column -> new ColumnRef(column.getName()))
-                    .collect(Collectors.toList()));
-        });
-        return log;
-    }
+			checkArgument(sources.size() == 1, "There can be only one source table!");
+			checkArgument(targets.size() == 1, "There can be only one target table!");
 
-    private final Multimap<Version, TableRef> tables;
+			this.source = sources.get(0);
+			this.target = targets.get(0);
 
-    public RefLog() {
-        this.tables = HashMultimap.create();
-    }
+			checkArgument(!source.equals(target), "You cannot add a recursive sync function!");
 
-    public RefLog prepareFork(Version nextVersion) {
-        Version parent = nextVersion.getParent();
-        checkArgument(tables.keySet().contains(parent), "You cannot fork to a version whose parent is not in the RefLog!");
-        tables.get(parent).forEach(table -> table.fork(nextVersion));
-        return this;
-    }
+			source.outboundSyncs.add(this);
+			target.inboundSyncs.add(this);
+		}
 
-    public Collection<TableRef> getTableRefs() {
-        return ImmutableSet.copyOf(tables.values());
-    }
+	}
 
-    public Collection<TableRef> getTableRefs(Version version) {
-        return ImmutableSet.copyOf(tables.get(version));
-    }
+	public static RefLog init(Catalog catalog, Version version) {
+		RefLog log = new RefLog();
+		catalog.getTables().forEach(table -> {
+			log.addTable(table.getName(), table.getName(), version, table.getColumns().stream()
+					.map(column -> new ColumnRef(column.getName()))
+					.collect(Collectors.toList()));
+		});
+		return log;
+	}
 
-    public TableRef getTableRef(Version version, String tableName) {
-        return tables.get(version).stream()
-                .filter(table -> table.getName().equals(tableName))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Version: " + version.getId()
-                        + " does not contain a TableRef with tableName: " + tableName));
-    }
+	private final Multimap<Version, TableRef> tables;
 
-    public RefLog addTable(String name, String tableId, Version version, Collection<ColumnRef> columns) {
-        long matches = tables.get(version).stream()
-                .filter(table -> table.getName().equals(name))
-                .count();
+	public RefLog() {
+		this.tables = HashMultimap.create();
+	}
 
-        if (matches > 0) {
-            throw new IllegalArgumentException("A TableRef for tableName: " + name
-                    + " is already present for version: " + version.getId());
-        }
+	public RefLog prepareFork(Version nextVersion) {
+		Version parent = nextVersion.getParent();
+		checkArgument(tables.keySet().contains(parent), "You cannot fork to a version whose parent is not in the RefLog!");
+		tables.get(parent).forEach(table -> table.fork(nextVersion));
+		return this;
+	}
 
-        new TableRef(this, name, tableId, version, columns);
-        return this;
-    }
+	public Collection<TableRef> getTableRefs() {
+		return ImmutableSet.copyOf(tables.values());
+	}
 
-    public RefLog addSync(String name, String functionName, Map<ColumnRef, ColumnRef> columns) {
-        long matches = tables.values().stream()
-                .filter(table -> table.getName().equals(name))
-                .count();
+	public Collection<TableRef> getTableRefs(Version version) {
+		return ImmutableSet.copyOf(tables.get(version));
+	}
 
-        if (matches > 0) {
-            throw new IllegalArgumentException("A SyncRef with name: " + name + " is already present!");
-        }
+	public TableRef getTableRef(Version version, String tableName) {
+		return tables.get(version).stream()
+				.filter(table -> table.getName().equals(tableName))
+				.findFirst()
+				.orElseThrow(() -> new IllegalArgumentException("Version: " + version.getId()
+						+ " does not contain a TableRef with tableName: " + tableName));
+	}
 
-        new SyncRef(name, functionName, columns);
-        return this;
-    }
+	public TableRef getTableRefById(Version version, String tableId) {
+		return tables.get(version).stream()
+				.filter(table -> table.getTableId().equals(tableId))
+				.findFirst()
+				.orElseThrow(() -> new IllegalArgumentException("No table with id: " + tableId
+						+ " at version: " + version.getId()));
+	}
+
+	public TableRef copyTable(Version version, String sourceTableName, String targetTableName, String tableId) {
+		TableRef tableRef = dropTable(version, sourceTableName);
+		tableRef.tableId = tableId;
+		tableRef.name = targetTableName;
+		tables.put(version, tableRef);
+		return tableRef;
+	}
+
+	public TableRef dropTable(Version version, String tableName) {
+		TableRef tableRef = getTableRef(version, tableName);
+		tables.remove(version, tableRef);
+		return tableRef;
+	}
+
+	public RefLog addTable(String name, String tableId, Version version, Collection<ColumnRef> columns) {
+		long matches = tables.get(version).stream()
+				.filter(table -> table.getName().equals(name))
+				.count();
+
+		if (matches > 0) {
+			throw new IllegalArgumentException("A TableRef for tableName: " + name
+					+ " is already present for version: " + version.getId());
+		}
+
+		new TableRef(this, name, tableId, version, columns);
+		return this;
+	}
+
+	public RefLog addSync(String name, String functionName, Map<ColumnRef, ColumnRef> columns) {
+		long matches = tables.values().stream()
+				.filter(table -> table.getName().equals(name))
+				.count();
+
+		if (matches > 0) {
+			throw new IllegalArgumentException("A SyncRef with name: " + name + " is already present!");
+		}
+
+		new SyncRef(name, functionName, columns);
+		return this;
+	}
 
 }

@@ -38,7 +38,7 @@ public class Version implements Comparable<Version> {
 	/**
 	 * Creates a new Version object based on the specified parameters.
 	 *
-	 * @param id     The unique identifier of this Version object.
+	 * @param id	 The unique identifier of this Version object.
 	 * @param parent The parent of this Version object (may be NULL in case of a root Version).
 	 */
 	public Version(String id, Version parent) {
@@ -48,7 +48,7 @@ public class Version implements Comparable<Version> {
 	/**
 	 * Creates a new Version object based on the specified parameters.
 	 *
-	 * @param id     The unique identifier of this Version object.
+	 * @param id	 The unique identifier of this Version object.
 	 * @param parent The parent of this Version object (may be NULL in case of a root Version).
 	 */
 	public Version(String id, Version parent, ChangeSet changeSet, SchemaOperation schemaOperation) {

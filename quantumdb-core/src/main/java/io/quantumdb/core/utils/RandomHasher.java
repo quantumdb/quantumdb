@@ -31,29 +31,29 @@ public class RandomHasher {
 		return builder.toString();
 	}
 
-    public static String generateTableId(TableMapping tableMapping) {
-        checkArgument(tableMapping != null, "You must specify a 'tableMapping'.");
+	public static String generateTableId(TableMapping tableMapping) {
+		checkArgument(tableMapping != null, "You must specify a 'tableMapping'.");
 
-        Set<String> tableIds = tableMapping.getTableIds();
-        String hash = "table_" + generateHash();
-        while (tableIds.contains(hash)) {
-            hash = "table_" + generateHash();
-        }
-        return hash;
-    }
+		Set<String> tableIds = tableMapping.getTableIds();
+		String hash = "table_" + generateHash();
+		while (tableIds.contains(hash)) {
+			hash = "table_" + generateHash();
+		}
+		return hash;
+	}
 
-    public static String generateTableId(RefLog refLog) {
-        checkArgument(refLog != null, "You must specify a 'refLog'.");
+	public static String generateTableId(RefLog refLog) {
+		checkArgument(refLog != null, "You must specify a 'refLog'.");
 
-        Set<String> tableIds = refLog.getTableRefs().stream()
-                .map(TableRef::getTableId)
-                .collect(Collectors.toSet());
+		Set<String> tableIds = refLog.getTableRefs().stream()
+				.map(TableRef::getTableId)
+				.collect(Collectors.toSet());
 
-        String hash = "table_" + generateHash();
-        while (tableIds.contains(hash)) {
-            hash = "table_" + generateHash();
-        }
-        return hash;
-    }
+		String hash = "table_" + generateHash();
+		while (tableIds.contains(hash)) {
+			hash = "table_" + generateHash();
+		}
+		return hash;
+	}
 
 }

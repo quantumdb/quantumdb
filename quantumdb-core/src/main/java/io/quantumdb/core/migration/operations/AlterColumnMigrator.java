@@ -6,36 +6,29 @@ import java.util.stream.Collectors;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-import io.quantumdb.core.migration.utils.DataMapping.Transformation;
-import io.quantumdb.core.migration.utils.DataMappings;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Index;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.schema.operations.AlterColumn;
-import io.quantumdb.core.versioning.TableMapping;
+import io.quantumdb.core.state.RefLog;
+import io.quantumdb.core.state.RefLog.TableRef;
 import io.quantumdb.core.versioning.Version;
 
 class AlterColumnMigrator implements SchemaOperationMigrator<AlterColumn> {
 
 	@Override
-	public void migrate(Catalog catalog, TableMapping tableMapping, DataMappings dataMappings, Version version,
-			AlterColumn operation) {
-
+	public void migrate(Catalog catalog, RefLog refLog, Version version, AlterColumn operation) {
 		String tableName = operation.getTableName();
-		TransitiveTableMirrorer.mirror(catalog, tableMapping, version, tableName);
-		DataMappings mapping = dataMappings.copy(version);
+		TransitiveTableMirrorer.mirror(catalog, refLog, version, tableName);
+//		refLog.prepareFork(version);
 
-		String tableId = tableMapping.getTableId(version, tableName);
-		Table table = catalog.getTable(tableId);
+		TableRef tableRef = refLog.getTableRef(version, tableName);
+		Table table = catalog.getTable(tableRef.getTableId());
 		Column column = table.getColumn(operation.getColumnName());
 
 		operation.getNewColumnName().ifPresent(columnName -> {
-			String oldTableId = tableMapping.getTableId(version.getParent(), tableName);
-			Table oldTable = catalog.getTable(oldTableId);
-			mapping.drop(table, operation.getColumnName());
-			mapping.add(oldTable, operation.getColumnName(), table, columnName, Transformation.createNop());
-			mapping.add(table, columnName, table, columnName, Transformation.createNop());
+			tableRef.renameColumn(operation.getColumnName(), columnName);
 			column.rename(columnName);
 
 			List<Index> indexes = Lists.newArrayList(table.getIndexes());

@@ -71,11 +71,11 @@ public class SelectiveMigratorFunction {
 		createStatement.append("  RETURNS text AS $$");
 		createStatement.append("  DECLARE r record;");
 		createStatement.append("  BEGIN");
-		createStatement.append("    FOR r IN");
-		createStatement.append("      SELECT * FROM " + mapping.getSourceTable().getName());
+		createStatement.append("	FOR r IN");
+		createStatement.append("	  SELECT * FROM " + mapping.getSourceTable().getName());
 
 		if (stage != Stage.INITIAL) {
-			createStatement.append("        WHERE");
+			createStatement.append("		WHERE");
 			for (int i = 0; i < identityColumns.size(); i++) {
 				if (i > 0) {
 					createStatement.append("OR");
@@ -128,15 +128,15 @@ public class SelectiveMigratorFunction {
 				})
 				.collect(Collectors.joining(" AND "));
 
-		createStatement.append("        ORDER BY " + Joiner.on(" ASC, ").join(identityColumnNames) + " ASC");
-		createStatement.append("        LIMIT " + batchSize);
-		createStatement.append("    LOOP");
-		createStatement.append("      BEGIN");
-		createStatement.append("        UPDATE " + mapping.getTargetTable().getName());
-		createStatement.append("          SET " + updates);
-		createStatement.append("          WHERE  " + identityCondition + ";");
-		createStatement.append("      EXCEPTION WHEN unique_violation THEN END;");
-		createStatement.append("    END LOOP;");
+		createStatement.append("		ORDER BY " + Joiner.on(" ASC, ").join(identityColumnNames) + " ASC");
+		createStatement.append("		LIMIT " + batchSize);
+		createStatement.append("	LOOP");
+		createStatement.append("	  BEGIN");
+		createStatement.append("		UPDATE " + mapping.getTargetTable().getName());
+		createStatement.append("		  SET " + updates);
+		createStatement.append("		  WHERE  " + identityCondition + ";");
+		createStatement.append("	  EXCEPTION WHEN unique_violation THEN END;");
+		createStatement.append("	END LOOP;");
 		createStatement.append("  RETURN CONCAT('(', r." + Joiner.on(", ',', r.").join(identityColumnNames) + ", ')');");
 		createStatement.append("END; $$ LANGUAGE 'plpgsql';");
 
@@ -223,11 +223,11 @@ public class SelectiveMigratorFunction {
 		createStatement.append("  RETURNS text AS $$");
 		createStatement.append("  DECLARE r record;");
 		createStatement.append("  BEGIN");
-		createStatement.append("    FOR r IN");
-		createStatement.append("      SELECT * FROM " + mapping.getSourceTable().getName());
+		createStatement.append("	FOR r IN");
+		createStatement.append("	  SELECT * FROM " + mapping.getSourceTable().getName());
 
 		if (stage != Stage.INITIAL) {
-			createStatement.append("        WHERE");
+			createStatement.append("		WHERE");
 			for (int i = 0; i < identityColumns.size(); i++) {
 				if (i > 0) {
 					createStatement.append("OR");
@@ -249,15 +249,15 @@ public class SelectiveMigratorFunction {
 			}
 		}
 
-		createStatement.append("        ORDER BY " + Joiner.on(" ASC, ").join(identityColumnNames) + " ASC");
-		createStatement.append("        LIMIT " + batchSize);
-		createStatement.append("    LOOP");
-		createStatement.append("      BEGIN");
-		createStatement.append("        INSERT INTO " + mapping.getTargetTable().getName());
-		createStatement.append("          (" + values.keySet().stream().map(input -> "\"" + input + "\"").collect(Collectors.joining(", ")) + ")");
-		createStatement.append("          VALUES (" + Joiner.on(", ").join(values.values()) + ");");
-		createStatement.append("      EXCEPTION WHEN unique_violation THEN END;");
-		createStatement.append("    END LOOP;");
+		createStatement.append("		ORDER BY " + Joiner.on(" ASC, ").join(identityColumnNames) + " ASC");
+		createStatement.append("		LIMIT " + batchSize);
+		createStatement.append("	LOOP");
+		createStatement.append("	  BEGIN");
+		createStatement.append("		INSERT INTO " + mapping.getTargetTable().getName());
+		createStatement.append("		  (" + values.keySet().stream().map(input -> "\"" + input + "\"").collect(Collectors.joining(", ")) + ")");
+		createStatement.append("		  VALUES (" + Joiner.on(", ").join(values.values()) + ");");
+		createStatement.append("	  EXCEPTION WHEN unique_violation THEN END;");
+		createStatement.append("	END LOOP;");
 		createStatement.append("  RETURN CONCAT('(', r." + Joiner.on(", ',', r.").join(identityColumnNames) + ", ')');");
 		createStatement.append("END; $$ LANGUAGE 'plpgsql';");
 
