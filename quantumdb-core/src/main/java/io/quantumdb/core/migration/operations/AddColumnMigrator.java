@@ -15,7 +15,6 @@ class AddColumnMigrator implements SchemaOperationMigrator<AddColumn> {
 	public void migrate(Catalog catalog, RefLog refLog, Version version, AddColumn operation) {
 		String tableName = operation.getTableName();
 		TransitiveTableMirrorer.mirror(catalog, refLog, version, tableName);
-//		refLog.prepareFork(version);
 
 		TableRef tableRef = refLog.getTableRef(version, tableName);
 		catalog.getTable(tableRef.getTableId())

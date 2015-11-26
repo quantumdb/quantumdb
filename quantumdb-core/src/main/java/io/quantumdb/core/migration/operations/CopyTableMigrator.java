@@ -8,7 +8,10 @@ import io.quantumdb.core.state.RefLog;
 import io.quantumdb.core.state.RefLog.TableRef;
 import io.quantumdb.core.utils.RandomHasher;
 import io.quantumdb.core.versioning.Version;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+@NoArgsConstructor(access = AccessLevel.PACKAGE)
 class CopyTableMigrator implements SchemaOperationMigrator<CopyTable> {
 
 	@Override
@@ -25,21 +28,16 @@ class CopyTableMigrator implements SchemaOperationMigrator<CopyTable> {
 		Table targetTable = sourceTable.copy().rename(tableId);
 		for (ForeignKey foreignKey : sourceTable.getForeignKeys()) {
 			String referredTableId = foreignKey.getReferredTableName();
-			String referredTableName = tableMapping.getTableName(version, referredTableId);
-			referredTableId = tableMapping.getTableId(version, referredTableName);
 
 			Table referredTable = catalog.getTable(referredTableId);
-			targetTable.addForeignKey(foreignKey.getReferencingColumns().toArray(new String[0]))
+			targetTable.addForeignKey(foreignKey.getReferencingColumns())
 					.named(foreignKey.getForeignKeyName())
 					.onUpdate(foreignKey.getOnUpdate())
 					.onDelete(foreignKey.getOnDelete())
-					.referencing(referredTable, foreignKey.getReferredColumns().toArray(new String[0]));
+					.referencing(referredTable, foreignKey.getReferredColumns());
 		}
 
 		catalog.addTable(targetTable);
-		tableMapping.copy(version, sourceTableName, targetTableName, tableId);
-
-		// TODO: Add pipeline mappings...
 	}
 
 }

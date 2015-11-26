@@ -28,12 +28,10 @@ import io.quantumdb.core.backends.postgresql.planner.Operation;
 import io.quantumdb.core.backends.postgresql.planner.Plan;
 import io.quantumdb.core.backends.postgresql.planner.PlanValidator;
 import io.quantumdb.core.backends.postgresql.planner.Step;
-import io.quantumdb.core.migration.utils.DataMapping;
-import io.quantumdb.core.migration.utils.DataMappings;
-import io.quantumdb.core.migration.utils.DataMappings.Direction;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Table;
+import io.quantumdb.core.state.RefLog;
 import io.quantumdb.core.utils.QueryBuilder;
 import io.quantumdb.core.versioning.MigrationFunctions;
 import io.quantumdb.core.versioning.State;
@@ -156,7 +154,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 
 		private final Plan plan;
 		private final Set<Version> intermediateVersions;
-		private final DataMappings dataMappings;
+		private final RefLog refLog;
 		private final State state;
 		private final NullRecords nullRecords;
 		private final Multimap<Table, String> migratedColumns;
@@ -173,7 +171,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 			this.backend = backend;
 			this.plan = plan;
 			this.intermediateVersions = intermediateVersions;
-			this.dataMappings = plan.getDataMappings();
+			this.refLog = plan.getRefLog();
 			this.state = state;
 			this.nullRecords = new NullRecords();
 			this.migratedColumns = HashMultimap.create();

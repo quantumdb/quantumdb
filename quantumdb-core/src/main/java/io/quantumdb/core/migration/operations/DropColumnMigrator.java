@@ -3,32 +3,34 @@ package io.quantumdb.core.migration.operations;
 import java.util.List;
 
 import com.google.common.collect.Lists;
-import io.quantumdb.core.migration.utils.DataMappings;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Index;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.schema.operations.DropColumn;
-import io.quantumdb.core.versioning.TableMapping;
+import io.quantumdb.core.state.RefLog;
+import io.quantumdb.core.state.RefLog.TableRef;
 import io.quantumdb.core.versioning.Version;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+@NoArgsConstructor(access = AccessLevel.PACKAGE)
 class DropColumnMigrator implements SchemaOperationMigrator<DropColumn> {
 
 	@Override
-	public void migrate(Catalog catalog, TableMapping tableMapping, DataMappings dataMappings, Version version,
-			DropColumn operation) {
+	public void migrate(Catalog catalog, RefLog refLog, Version version, DropColumn operation) {
 		String tableName = operation.getTableName();
-		TransitiveTableMirrorer.mirror(catalog, tableMapping, version, tableName);
+		TransitiveTableMirrorer.mirror(catalog, refLog, version, tableName);
 
-		String tableId = tableMapping.getTableId(version, tableName);
+		TableRef tableRef = refLog.getTableRef(version, tableName);
+		String tableId = tableRef.getTableId();
+		tableRef.dropColumn(operation.getColumnName());
+
 		Table table = catalog.getTable(tableId);
-		dataMappings.copy(version)
-				.drop(table, operation.getColumnName());
-
 		table.removeColumn(operation.getColumnName());
 
 		List<Index> indexes = Lists.newArrayList(table.getIndexes());
 		for (Index index : indexes) {
-			table.removeIndex(index.getColumns().toArray(new String[] {}));
+			table.removeIndex(index.getColumns());
 		}
 	}
 

@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.ForeignKey;
@@ -13,7 +12,6 @@ import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.state.RefLog;
 import io.quantumdb.core.state.RefLog.TableRef;
 import io.quantumdb.core.utils.RandomHasher;
-import io.quantumdb.core.versioning.TableMapping;
 import io.quantumdb.core.versioning.Version;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -65,14 +63,11 @@ class TransitiveTableMirrorer {
 				String newReferredTableId = refLog.getTableRef(version, oldReferredTableName).getTableId();
 
 				Table newReferredTable = catalog.getTable(newReferredTableId);
-				String[] referencingColumnNames = foreignKey.getReferencingColumns().toArray(new String[0]);
-				String[] referredColumnNames = foreignKey.getReferredColumns().toArray(new String[0]);
-
-				newTable.addForeignKey(referencingColumnNames)
+				newTable.addForeignKey(foreignKey.getReferencingColumns())
 						.named(foreignKey.getForeignKeyName())
 						.onUpdate(foreignKey.getOnUpdate())
 						.onDelete(foreignKey.getOnDelete())
-						.referencing(newReferredTable, referredColumnNames);
+						.referencing(newReferredTable, foreignKey.getReferredColumns());
 			}
 		}
 

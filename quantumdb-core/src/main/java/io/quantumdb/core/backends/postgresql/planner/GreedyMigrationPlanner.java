@@ -26,6 +26,8 @@ import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.ForeignKey;
 import io.quantumdb.core.schema.definitions.Table;
+import io.quantumdb.core.state.RefLog;
+import io.quantumdb.core.state.RefLog.TableRef;
 import io.quantumdb.core.utils.RandomHasher;
 import io.quantumdb.core.versioning.State;
 import io.quantumdb.core.versioning.TableMapping;
@@ -43,8 +45,8 @@ public class GreedyMigrationPlanner implements MigrationPlanner {
 		log.debug("Creating migration plan for migration from version: {} to: {}", from, to);
 
 		Catalog catalog = state.getCatalog();
-		TableMapping tableMapping = state.getTableMapping();
-		SchemaOperationsMigrator migrator = new SchemaOperationsMigrator(catalog, tableMapping);
+		RefLog refLog = state.getRefLog();
+		SchemaOperationsMigrator migrator = new SchemaOperationsMigrator(catalog, refLog);
 
 		List<Version> migrationPath = VersionTraverser.findChildPath(from, to)
 				.orElseThrow(() -> new IllegalStateException("No path from " + from.getId() + " to " + to.getId()));
@@ -54,37 +56,41 @@ public class GreedyMigrationPlanner implements MigrationPlanner {
 				.filter(version -> version.getParent() != null)
 				.forEachOrdered(version -> migrator.migrate(version, version.getSchemaOperation()));
 
-		Set<String> preTableIds = tableMapping.getTableIds(from);
-		Set<String> postTableIds = tableMapping.getTableIds(to);
+		Set<String> preTableIds = refLog.getTableRefs(from).stream()
+				.map(TableRef::getTableId)
+				.collect(Collectors.toSet());
+
+		Set<String> postTableIds = refLog.getTableRefs(to).stream()
+				.map(TableRef::getTableId)
+				.collect(Collectors.toSet());
+
 		Set<String> newTableIds = Sets.difference(postTableIds, preTableIds);
 
 		log.debug("The following ghost tables will be created: " + newTableIds.stream()
-				.collect(Collectors.toMap(Function.identity(), (id) -> tableMapping.getTableName(to, id))));
+				.collect(Collectors.toMap(Function.identity(), (id) -> refLog.getTableRefById(to, id).getName())));
 
-		return new Planner(state, from, to, newTableIds, migrator.getDataMappings()).createPlan();
+		return new Planner(state, from, to, newTableIds, migrator.getRefLog()).createPlan();
 	}
 
 	private static class Planner {
 
 		private final Catalog catalog;
-		private final TableMapping tableMapping;
 		private final Version from;
 		private final Version to;
 		private final Set<String> newTableIds;
-		private final DataMappings dataMappings;
+		private final RefLog refLog;
 
 		private Set<String> tableIdsWithNullRecords;
 		private Builder plan;
 		private MigrationState migrationState;
 		private Graph graph;
 
-		public Planner(State state, Version from, Version to, Set<String> newTableIds, DataMappings dataMappings) {
+		public Planner(State state, Version from, Version to, Set<String> newTableIds, RefLog refLog) {
 			this.catalog = state.getCatalog();
-			this.tableMapping = state.getTableMapping();
 			this.from = from;
 			this.to = to;
 			this.newTableIds = Sets.newHashSet(newTableIds);
-			this.dataMappings = dataMappings;
+			this.refLog = refLog;
 
 			this.tableIdsWithNullRecords = Sets.newHashSet();
 			this.graph = Graph.fromCatalog(catalog, newTableIds);
@@ -121,7 +127,7 @@ public class GreedyMigrationPlanner implements MigrationPlanner {
 					.map(catalog::getTable)
 					.collect(Collectors.toSet());
 
-			return plan.build(dataMappings, ghostTables);
+			return plan.build(refLog, ghostTables);
 		}
 
 		private Set<String> listToDo() {
@@ -384,7 +390,7 @@ public class GreedyMigrationPlanner implements MigrationPlanner {
 				return;
 			}
 
-			for (String tableName : migrationState.getPartiallyMigratedTables()) { //newTableIds
+			for (String tableName : migrationState.getPartiallyMigratedTables()) {
 				Set<String> toMigrate = migrationState.getYetToBeMigratedColumns(tableName);
 				if (toMigrate.isEmpty()) {
 					continue;
@@ -441,7 +447,7 @@ public class GreedyMigrationPlanner implements MigrationPlanner {
 			log.trace("Creating ghost tables for: " + tableIdsToExpand);
 
 			List<String> tableIdsToMirror = Lists.newArrayList(tableIdsToExpand);
-			Multimap<String, String> ghostedTableIds = tableMapping.getGhostTableIdMapping(from, to);
+			Multimap<TableRef, TableRef> ghostedTableIds = refLog.getMapping(from, to);
 			Set<String> createdGhostTableIds = Sets.newHashSet();
 
 			while(!tableIdsToMirror.isEmpty()) {

@@ -108,7 +108,11 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 	}
 
 	public boolean containsIndex(String... columns) {
-		checkArgument(columns.length > 0, "You must specify at least one 'columns'.");
+		return containsIndex(Sets.newHashSet(columns));
+	}
+
+	public boolean containsIndex(Collection<String> columns) {
+		checkArgument(!columns.isEmpty(), "You must specify at least one entry in 'columns'.");
 
 		return indexes.stream()
 				.filter(c -> c.getColumns().equals(Lists.newArrayList(columns)))
@@ -117,6 +121,10 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 	}
 
 	public Index removeIndex(String... columns) {
+		return removeIndex(Sets.newHashSet(columns));
+	}
+
+	public Index removeIndex(Collection<String> columns) {
 		checkState(containsIndex(columns), "You cannot remove an index which does not exist: " + columns);
 
 		Index index = getIndex(columns);
@@ -126,7 +134,11 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 	}
 
 	public Index getIndex(String... columns) {
-		checkArgument(columns.length > 0, "You must specify at least one 'columns'.");
+		return getIndex(Sets.newHashSet(columns));
+	}
+
+	public Index getIndex(Collection<String> columns) {
+		checkArgument(!columns.isEmpty(), "You must specify at least one 'columns'.");
 
 		return indexes.stream()
 				.filter(c -> c.getColumns().equals(Lists.newArrayList(columns)))

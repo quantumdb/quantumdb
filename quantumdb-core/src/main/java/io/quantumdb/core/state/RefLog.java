@@ -1,11 +1,20 @@
 package io.quantumdb.core.state;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
-import com.google.common.collect.*;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.versioning.Version;
 import lombok.Data;
@@ -56,6 +65,14 @@ public class RefLog {
 					.collect(Collectors.toSet());
 		}
 
+		public Set<TableRef> getBasisFor() {
+			return columns.values().stream()
+					.flatMap(column -> column.getBasisFor().stream())
+					.map(ColumnRef::getTable)
+					.distinct()
+					.collect(Collectors.toSet());
+		}
+
 		private TableRef fork(Version version) {
 			checkArgument(versions.contains(version.getParent()));
 			versions.add(version);
@@ -79,6 +96,11 @@ public class RefLog {
 			ColumnRef removed = columns.remove(oldName);
 			removed.name = newName;
 			columns.put(newName, removed);
+			return this;
+		}
+
+		public TableRef rename(String newTableName) {
+			this.name = newTableName;
 			return this;
 		}
 	}
@@ -238,6 +260,30 @@ public class RefLog {
 
 		new SyncRef(name, functionName, columns);
 		return this;
+	}
+
+	public Multimap<TableRef, TableRef> getMapping(Version from, Version to) {
+		Multimap<TableRef, TableRef> mapping = HashMultimap.create();
+		getTableRefs(from).forEach(tableRef -> {
+			Version currentVersion = from;
+			Set<TableRef> generation = Sets.newHashSet(tableRef);
+			while (generation.isEmpty() && !currentVersion.equals(to)) {
+				Set<Version> versions = generation.stream()
+						.flatMap(ref -> ref.getVersions().stream())
+						.distinct()
+						.collect(Collectors.toSet());
+
+				checkState(versions.size() == 1, "Generation consists of multiple versions: " + versions);
+				currentVersion = versions.iterator().next();
+
+				generation = generation.stream()
+						.flatMap(ref -> ref.getBasisFor().stream())
+						.collect(Collectors.toSet());
+			}
+
+			mapping.putAll(tableRef, generation);
+		});
+		return mapping;
 	}
 
 }

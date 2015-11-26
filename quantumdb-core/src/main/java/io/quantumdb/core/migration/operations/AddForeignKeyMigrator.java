@@ -6,14 +6,16 @@ import io.quantumdb.core.schema.operations.AddForeignKey;
 import io.quantumdb.core.state.RefLog;
 import io.quantumdb.core.state.RefLog.TableRef;
 import io.quantumdb.core.versioning.Version;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+@NoArgsConstructor(access = AccessLevel.PACKAGE)
 class AddForeignKeyMigrator implements SchemaOperationMigrator<AddForeignKey> {
 
 	@Override
 	public void migrate(Catalog catalog, RefLog refLog, Version version, AddForeignKey operation) {
 		String tableName = operation.getReferringTableName();
 		TransitiveTableMirrorer.mirror(catalog, refLog, version, tableName);
-//		refLog.prepareFork(version);
 
 		TableRef tableRef = refLog.getTableRef(version, tableName);
 		Table table = catalog.getTable(tableRef.getTableId());
