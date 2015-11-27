@@ -19,8 +19,6 @@ import io.quantumdb.core.backends.postgresql.planner.MigrationState.Progress;
 import io.quantumdb.core.backends.postgresql.planner.Operation.Type;
 import io.quantumdb.core.backends.postgresql.planner.Plan.Builder;
 import io.quantumdb.core.migration.operations.SchemaOperationsMigrator;
-import io.quantumdb.core.migration.utils.DataMapping.Transformation;
-import io.quantumdb.core.migration.utils.DataMappings;
 import io.quantumdb.core.migration.utils.VersionTraverser;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
@@ -30,7 +28,6 @@ import io.quantumdb.core.state.RefLog;
 import io.quantumdb.core.state.RefLog.TableRef;
 import io.quantumdb.core.utils.RandomHasher;
 import io.quantumdb.core.versioning.State;
-import io.quantumdb.core.versioning.TableMapping;
 import io.quantumdb.core.versioning.Version;
 import lombok.extern.slf4j.Slf4j;
 
@@ -456,28 +453,28 @@ public class GreedyMigrationPlanner implements MigrationPlanner {
 					continue;
 				}
 
-				String tableName = tableMapping.getTableName(to, tableId);
-				Table table = catalog.getTable(tableId);
+				TableRef tableRef = refLog.getTableRefById(to, tableId);
+				Table table = catalog.getTable(tableRef.getTableId());
 
-				String newTableId = RandomHasher.generateTableId(tableMapping);
-				tableMapping.ghost(to, tableName, newTableId);
-				Table ghostTable = table.copy().rename(newTableId);
+				String newTableId = RandomHasher.generateTableId(refLog);
+				TableRef ghostTableRef = tableRef.ghost(newTableId, to);
+
+				Table ghostTable = table.copy().rename(ghostTableRef.getTableId());
 				catalog.addTable(ghostTable);
 
-				for (Column column : table.getColumns()) {
-					dataMappings.drop(table, column.getName());
-					dataMappings.add(table, column.getName(), ghostTable, column.getName(), Transformation.createNop());
-				}
+				createdGhostTableIds.add(ghostTableRef.getTableId());
+				ghostedTableIds.put(tableRef, ghostTableRef);
 
-				createdGhostTableIds.add(newTableId);
-				ghostedTableIds.put(tableId, newTableId);
-
-				log.debug("Planned creation of ghost table: {} for source table: {}", newTableId, tableName);
+				log.debug("Planned creation of ghost table: {} for source table: {}", newTableId, tableRef.getName());
 
 				// Traverse incoming foreign keys
-				String oldTableId = tableMapping.getTableId(from, tableName);
-				catalog.getTablesReferencingTable(oldTableId).stream()
-						.filter(tableMapping.getTableIds(from)::contains)
+				TableRef oldTableRef = refLog.getTableRef(from, tableRef.getName());
+				Set<String> tableIdsAtOrigin = refLog.getTableRefs(from).stream()
+						.map(TableRef::getTableId)
+						.collect(Collectors.toSet());
+
+				catalog.getTablesReferencingTable(oldTableRef.getTableId()).stream()
+						.filter(tableIdsAtOrigin::contains)
 						.filter(referencingTableId -> !ghostedTableIds.containsKey(referencingTableId)
 								&& !tableIdsToMirror.contains(referencingTableId))
 						.distinct()
@@ -485,28 +482,31 @@ public class GreedyMigrationPlanner implements MigrationPlanner {
 			}
 
 			// Copying foreign keys for each affected table.
-			for (Entry<String, String> entry : ghostedTableIds.entries()) {
-				String oldTableId = entry.getKey();
-				String newTableId = entry.getValue();
+			for (Entry<TableRef, TableRef> entry : ghostedTableIds.entries()) {
+				TableRef oldTableRef = entry.getKey();
+				TableRef newTableRef = entry.getValue();
 
-				Table oldTable = catalog.getTable(oldTableId);
-				Table newTable = catalog.getTable(newTableId);
+				Table oldTable = catalog.getTable(oldTableRef.getTableId());
+				Table newTable = catalog.getTable(newTableRef.getTableId());
 
-				if (newTableIds.contains(newTableId)) {
+				if (newTableIds.contains(newTableRef.getTableId())) {
 					List<ForeignKey> foreignKeysToFix = newTable.getForeignKeys().stream()
 							.filter(fk -> {
 								String referredTableId = fk.getReferredTableName();
-								Map<String, String> version = tableMapping.getTableMapping(to);
-								return !version.containsKey(referredTableId);
+								Set<String> tableIdsAsTarget = refLog.getTableRefs(to).stream()
+										.map(TableRef::getTableId)
+										.collect(Collectors.toSet());
+
+								return !tableIdsAsTarget.contains(referredTableId);
 							})
 							.collect(Collectors.toList());
 
 					foreignKeysToFix.forEach(fk -> {
 						fk.drop();
 						String referredTableId = fk.getReferredTableName();
-						String referredTableName = tableMapping.getTableName(from, referredTableId);
-						String mappedTableId = tableMapping.getTableId(to, referredTableName);
-						Table referredTable = catalog.getTable(mappedTableId);
+						TableRef referredTableRef = refLog.getTableRefById(from, referredTableId);
+						TableRef mappedTableRef = refLog.getTableRef(to, referredTableRef.getName());
+						Table referredTable = catalog.getTable(mappedTableRef.getTableId());
 
 						newTable.addForeignKey(fk.getReferencingColumns())
 								.named(fk.getForeignKeyName())
@@ -519,10 +519,10 @@ public class GreedyMigrationPlanner implements MigrationPlanner {
 					List<ForeignKey> outgoingForeignKeys = oldTable.getForeignKeys();
 					for (ForeignKey foreignKey : outgoingForeignKeys) {
 						String oldReferredTableId = foreignKey.getReferredTableName();
-						String oldReferredTableName = tableMapping.getTableName(from, oldReferredTableId);
-						String newReferredTableId = tableMapping.getTableId(to, oldReferredTableName);
+						TableRef oldReferredTableRef = refLog.getTableRefById(from, oldReferredTableId);
+						TableRef newReferredTableRef = refLog.getTableRef(to, oldReferredTableRef.getName());
 
-						Table newReferredTable = catalog.getTable(newReferredTableId);
+						Table newReferredTable = catalog.getTable(newReferredTableRef.getTableId());
 						newTable.addForeignKey(foreignKey.getReferencingColumns())
 								.named(foreignKey.getForeignKeyName())
 								.onUpdate(foreignKey.getOnUpdate())

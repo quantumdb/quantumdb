@@ -18,6 +18,7 @@ import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.ForeignKey;
 import io.quantumdb.core.schema.definitions.Identity;
 import io.quantumdb.core.schema.definitions.Table;
+import io.quantumdb.core.state.RefLog;
 import io.quantumdb.core.utils.QueryBuilder;
 import io.quantumdb.core.utils.RandomHasher;
 import lombok.AccessLevel;
@@ -26,21 +27,21 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class SelectiveMigratorFunction {
 
-	static MigratorFunction createMigrator(NullRecords nullRecords, DataMapping mapping, long batchSize, Stage stage,
-			Set<String> migratedColumns, Set<String> columnsToBeMigrated) {
+	static MigratorFunction createMigrator(NullRecords nullRecords, RefLog refLog, Table from, Table to,
+			long batchSize, Stage stage, Set<String> migratedColumns, Set<String> columnsToBeMigrated) {
 
 		if (migratedColumns.isEmpty()) {
-			return createInsertMigrator(nullRecords, mapping, batchSize, stage, columnsToBeMigrated);
+			return createInsertMigrator(nullRecords, refLog, from, to, batchSize, stage, columnsToBeMigrated);
 		}
 		else {
-			return createUpdateMigrator(mapping, batchSize, stage, columnsToBeMigrated);
+			return createUpdateMigrator(refLog, from, to, batchSize, stage, columnsToBeMigrated);
 		}
 	}
 
-	private static MigratorFunction createUpdateMigrator(DataMapping mapping, long batchSize, Stage stage,
-			Set<String> columnsToBeMigrated) {
+	private static MigratorFunction createUpdateMigrator(RefLog refLog, Table from, Table to, long batchSize,
+			Stage stage, Set<String> columnsToBeMigrated) {
 
-		List<Column> identityColumns = mapping.getSourceTable().getIdentityColumns();
+		List<Column> identityColumns = from.getIdentityColumns();
 		Map<String, String> functionParameterMapping = Maps.newHashMap();
 		for (int i = 0; i < identityColumns.size(); i++) {
 			functionParameterMapping.put(identityColumns.get(i).getName(), "q" + i);
@@ -72,7 +73,7 @@ public class SelectiveMigratorFunction {
 		createStatement.append("  DECLARE r record;");
 		createStatement.append("  BEGIN");
 		createStatement.append("	FOR r IN");
-		createStatement.append("	  SELECT * FROM " + mapping.getSourceTable().getName());
+		createStatement.append("	  SELECT * FROM " + from.getName());
 
 		if (stage != Stage.INITIAL) {
 			createStatement.append("		WHERE");
@@ -97,12 +98,11 @@ public class SelectiveMigratorFunction {
 			}
 		}
 
-		Table targetTable = mapping.getTargetTable();
 		Map<String, String> columnsToMigrate = mapping.getColumnMappings().cellSet().stream()
 				.filter(cell -> columnsToBeMigrated.contains(cell.getColumnKey()))
 				.map(entry -> {
 					String newColumnName = entry.getColumnKey();
-					Column newColumn = targetTable.getColumn(newColumnName);
+					Column newColumn = to.getColumn(newColumnName);
 					return new SimpleImmutableEntry<>(newColumn, entry.getRowKey());
 				})
 				.collect(Collectors.toMap(entry -> "\"" + entry.getKey().getName() + "\"",
