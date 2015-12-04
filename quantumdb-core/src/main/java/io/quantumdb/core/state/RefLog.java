@@ -286,4 +286,8 @@ public class RefLog {
 		return mapping;
 	}
 
+	public Map<ColumnRef, ColumnRef> getMapping(TableRef from, TableRef to) {
+
+	}
+
 }
