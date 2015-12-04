@@ -6,6 +6,7 @@ import static com.google.common.base.Preconditions.checkState;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -37,7 +38,7 @@ public class RefLog {
 			this.tableId = tableId;
 			this.refLog = refLog;
 			this.versions = Sets.newHashSet(version);
-			this.columns = Maps.newHashMap();
+			this.columns = Maps.newLinkedHashMap();
 			this.outboundSyncs = Sets.newHashSet();
 			this.inboundSyncs = Sets.newHashSet();
 
@@ -49,7 +50,7 @@ public class RefLog {
 			return ImmutableSet.copyOf(outboundSyncs);
 		}
 
-		public ImmutableSet<SyncRef> getInboundSync() {
+		public ImmutableSet<SyncRef> getInboundSyncs() {
 			return ImmutableSet.copyOf(inboundSyncs);
 		}
 
@@ -108,7 +109,7 @@ public class RefLog {
 	@Data
 	public static class ColumnRef {
 
-		private final ImmutableSet<ColumnRef> basedOn;
+		private final Set<ColumnRef> basedOn;
 		private final Set<ColumnRef> basisFor;
 
 		private String name;
@@ -132,6 +133,10 @@ public class RefLog {
 
 		public ImmutableSet<ColumnRef> getBasisFor() {
 			return ImmutableSet.copyOf(basisFor);
+		}
+
+		public ImmutableSet<ColumnRef> getBasedOn() {
+			return ImmutableSet.copyOf(basedOn);
 		}
 
 	}
@@ -235,6 +240,21 @@ public class RefLog {
 		return tableRef;
 	}
 
+	public void dropTable(TableRef tableRef) {
+		List<Version> versions = tables.entries().stream()
+				.filter(entry -> entry.getValue().equals(tableRef))
+				.map(Entry::getKey)
+				.collect(Collectors.toList());
+
+		versions.forEach(version -> tables.remove(version, tableRef));
+		tableRef.inboundSyncs.forEach(syncRef -> syncRef.getSource().outboundSyncs.remove(syncRef));
+		tableRef.outboundSyncs.forEach(syncRef -> syncRef.getTarget().inboundSyncs.remove(syncRef));
+		tableRef.getColumns().forEach((k, v) -> {
+			v.getBasisFor().forEach(columnRef -> columnRef.basedOn.remove(v));
+			v.getBasedOn().forEach(columnRef -> columnRef.basisFor.remove(v));
+		});
+	}
+
 	public RefLog addTable(String name, String tableId, Version version, Collection<ColumnRef> columns) {
 		long matches = tables.get(version).stream()
 				.filter(table -> table.getName().equals(name))
@@ -262,7 +282,7 @@ public class RefLog {
 		return this;
 	}
 
-	public Multimap<TableRef, TableRef> getMapping(Version from, Version to) {
+	public Multimap<TableRef, TableRef> getTableMapping(Version from, Version to) {
 		Multimap<TableRef, TableRef> mapping = HashMultimap.create();
 		getTableRefs(from).forEach(tableRef -> {
 			Version currentVersion = from;
@@ -286,8 +306,68 @@ public class RefLog {
 		return mapping;
 	}
 
-	public Map<ColumnRef, ColumnRef> getMapping(TableRef from, TableRef to) {
+	public Map<ColumnRef, ColumnRef> getColumnMapping(TableRef from, TableRef to) {
+		Multimap<ColumnRef, ColumnRef> mapping = HashMultimap.create();
+		from.getColumns().forEach((k, v) -> mapping.put(v, v));
 
+		while (true) {
+			Multimap<ColumnRef, ColumnRef> pending = HashMultimap.create();
+			for (ColumnRef source : mapping.keySet()) {
+				Collection<ColumnRef> targets = mapping.get(source);
+				targets.stream()
+						.filter(target -> !target.getTable().equals(to))
+						.forEach(target -> pending.put(source, target));
+			}
+
+			if (pending.isEmpty()) {
+				break;
+			}
+
+			pending.entries().forEach(entry -> {
+				mapping.remove(entry.getKey(), entry.getValue());
+
+				Set<ColumnRef> nextColumns = entry.getValue().getBasisFor();
+				if (!nextColumns.isEmpty()) {
+					mapping.putAll(entry.getKey(), nextColumns);
+				}
+			});
+		}
+
+		return mapping.entries().stream()
+				.collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+	}
+
+	public ImmutableSet<Version> getVersions() {
+		return ImmutableSet.copyOf(tables.keySet());
 	}
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

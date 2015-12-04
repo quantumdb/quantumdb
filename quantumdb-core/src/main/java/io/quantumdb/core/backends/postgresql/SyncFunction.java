@@ -1,5 +1,7 @@
 package io.quantumdb.core.backends.postgresql;
 
+import static io.quantumdb.core.utils.RandomHasher.generateHash;
+
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,16 +12,16 @@ import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Table.Cell;
 import io.quantumdb.core.backends.postgresql.migrator.NullRecords;
-import io.quantumdb.core.migration.utils.DataMapping;
-import io.quantumdb.core.migration.utils.DataMapping.Transformation;
+import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.ForeignKey;
 import io.quantumdb.core.schema.definitions.Identity;
 import io.quantumdb.core.schema.definitions.Table;
+import io.quantumdb.core.state.RefLog;
+import io.quantumdb.core.state.RefLog.ColumnRef;
+import io.quantumdb.core.state.RefLog.TableRef;
 import io.quantumdb.core.utils.QueryBuilder;
-import io.quantumdb.core.utils.RandomHasher;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Setter;
@@ -27,11 +29,12 @@ import lombok.Setter;
 @Data
 public class SyncFunction {
 
-	private final String sourceTableId;
-	private final String targetTableId;
+	private final TableRef source;
+	private final TableRef target;
 	private final String functionName;
 	private final String triggerName;
-	private final DataMapping dataMapping;
+	private final RefLog refLog;
+	private final Catalog catalog;
 	private final NullRecords nullRecords;
 
 	@Setter(AccessLevel.NONE)
@@ -46,34 +49,33 @@ public class SyncFunction {
 	@Setter(AccessLevel.NONE)
 	private ImmutableMap<String, String> updateIdentitiesForInserts;
 
-	public SyncFunction(DataMapping dataMapping, NullRecords nullRecords) {
-		this(dataMapping, nullRecords, "sync_" + RandomHasher.generateHash(), "trig_" + RandomHasher.generateHash());
+	public SyncFunction(RefLog refLog, TableRef source, TableRef target, Catalog catalog, NullRecords nullRecords) {
+		this(refLog, source, target, catalog, nullRecords, "sync_" + generateHash(), "trig_" + generateHash());
 	}
 
-	public SyncFunction(DataMapping dataMapping, NullRecords nullRecords, String functionName, String triggerName) {
-		this.dataMapping = dataMapping;
+	public SyncFunction(RefLog refLog, TableRef source, TableRef target, Catalog catalog, NullRecords nullRecords,
+			String functionName, String triggerName) {
+
+		this.refLog = refLog;
 		this.nullRecords = nullRecords;
-		this.sourceTableId = dataMapping.getSourceTable().getName();
-		this.targetTableId = dataMapping.getTargetTable().getName();
+		this.source = source;
+		this.target = target;
+		this.catalog = catalog;
 		this.functionName = functionName;
 		this.triggerName = triggerName;
 	}
 
 	public void setColumnsToMigrate(Set<String> columnsToMigrate) {
-		Table sourceTable = dataMapping.getSourceTable();
-		Table targetTable = dataMapping.getTargetTable();
+		Table sourceTable = catalog.getTable(source.getTableId());
+		Table targetTable = catalog.getTable(target.getTableId());
+		Map<ColumnRef, ColumnRef> columnMapping = refLog.getColumnMapping(source, target);
 
-		List<Cell<String, String, Transformation>> entries = dataMapping.getColumnMappings().cellSet().stream()
-				.filter(cell -> {
-					Column column = sourceTable.getColumn(cell.getRowKey());
-					return columnsToMigrate.contains(cell.getColumnKey()) || column.isIdentity();
+		Map<String, String> mapping = columnMapping.entrySet().stream()
+				.filter(entry -> {
+					Column column = sourceTable.getColumn(entry.getKey().getName());
+					return columnsToMigrate.contains(entry.getValue().getName()) || column.isIdentity();
 				})
-				.collect(Collectors.toList());
-
-		Map<String, String> mapping = entries.stream()
-				.collect(Collectors.toMap(Cell::getColumnKey, Cell::getRowKey,
-						(u, v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
-						Maps::newLinkedHashMap));
+				.collect(Collectors.toMap(entry -> entry.getKey().getName(), entry -> entry.getValue().getName()));
 
 		Map<String, String> expressions = mapping.entrySet().stream()
 				.collect(Collectors.toMap(entry -> "\"" + entry.getKey() + "\"",
@@ -87,9 +89,9 @@ public class SyncFunction {
 			if (foreignKey.isNotNullable() && !mapping.keySet().containsAll(foreignKeyColumns)) {
 				Table referredTable = foreignKey.getReferredTable();
 				Identity identity = nullRecords.getIdentity(referredTable);
-				LinkedHashMap<String, String> columnMapping = foreignKey.getColumnMapping();
+				LinkedHashMap<String, String> columnMappings = foreignKey.getColumnMapping();
 				for (String columnName : foreignKeyColumns) {
-					String referencedColumn = columnMapping.get(columnName);
+					String referencedColumn = columnMappings.get(columnName);
 
 					Column column = targetTable.getColumn(columnName);
 					String value = column.getDefaultValue();
@@ -108,13 +110,13 @@ public class SyncFunction {
 		this.insertExpressions = ImmutableMap.copyOf(expressions);
 		this.updateExpressions = ImmutableMap.copyOf(insertExpressions);
 
-		this.updateIdentitiesForInserts = ImmutableMap.copyOf(dataMapping.getTargetTable().getIdentityColumns().stream()
+		this.updateIdentitiesForInserts = ImmutableMap.copyOf(targetTable.getIdentityColumns().stream()
 				.collect(Collectors.toMap(column -> "\"" + column.getName() + "\"",
 						column -> "NEW.\"" + mapping.get(column.getName()) + "\"",
 						(u, v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
 						Maps::newLinkedHashMap)));
 
-		this.updateIdentities = ImmutableMap.copyOf(dataMapping.getTargetTable().getIdentityColumns().stream()
+		this.updateIdentities = ImmutableMap.copyOf(targetTable.getIdentityColumns().stream()
 				.collect(Collectors.toMap(column -> "\"" + column.getName() + "\"",
 						column -> "OLD.\"" + mapping.get(column.getName()) + "\"",
 						(u, v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
@@ -128,12 +130,12 @@ public class SyncFunction {
 				.append("BEGIN")
 				.append("   IF TG_OP = 'INSERT' THEN")
 				.append("	   LOOP")
-				.append("		   UPDATE " + targetTableId)
+				.append("		   UPDATE " + target.getTableId())
 				.append("			   SET " + represent(updateIdentitiesForInserts, " = ", ", "))
 				.append("			   WHERE " + represent(updateIdentitiesForInserts, " = ", " AND ") + ";")
 				.append("		   IF found THEN EXIT; END IF;")
 				.append("		   BEGIN")
-				.append("			   INSERT INTO " + targetTableId)
+				.append("			   INSERT INTO " + target.getTableId())
 				.append("				   (" + represent(insertExpressions, Entry::getKey, ", ") + ") VALUES")
 				.append("				   (" + represent(insertExpressions, Entry::getValue, ", ") + ");")
 				.append("			   EXIT;")
@@ -142,12 +144,12 @@ public class SyncFunction {
 				.append("	   END LOOP;")
 				.append("   ELSIF TG_OP = 'UPDATE' THEN")
 				.append("	   LOOP")
-				.append("		   UPDATE " + targetTableId)
+				.append("		   UPDATE " + target.getTableId())
 				.append("			   SET " + represent(updateExpressions, " = ", ", "))
 				.append("			   WHERE " + represent(updateIdentities, " = ", " AND ") + ";")
 				.append("		   IF found THEN EXIT; END IF;")
 				.append("		   BEGIN")
-				.append("			   INSERT INTO " + targetTableId)
+				.append("			   INSERT INTO " + target.getTableId())
 				.append("				   (" + represent(insertExpressions, Entry::getKey, ", ") + ") VALUES")
 				.append("				   (" + represent(insertExpressions, Entry::getValue, ", ") + ");")
 				.append("			   EXIT;")
@@ -155,7 +157,7 @@ public class SyncFunction {
 				.append("		   END;")
 				.append("	   END LOOP;")
 				.append("   ELSIF TG_OP = 'DELETE' THEN")
-				.append("	   DELETE FROM " + targetTableId)
+				.append("	   DELETE FROM " + target.getTableId())
 				.append("		   WHERE " + represent(updateIdentities, " = ", " AND ") + ";")
 				.append("   END IF;")
 				.append("   RETURN NEW;")
@@ -179,7 +181,7 @@ public class SyncFunction {
 		return new QueryBuilder()
 				.append("CREATE TRIGGER " + triggerName)
 				.append("AFTER INSERT OR UPDATE OR DELETE")
-				.append("ON " + sourceTableId)
+				.append("ON " + source.getTableId())
 				.append("FOR EACH ROW")
 				.append("WHEN (pg_trigger_depth() = 0)")
 				.append("EXECUTE PROCEDURE " + functionName + "();");

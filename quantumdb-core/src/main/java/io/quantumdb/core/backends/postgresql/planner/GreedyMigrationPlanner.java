@@ -444,7 +444,7 @@ public class GreedyMigrationPlanner implements MigrationPlanner {
 			log.trace("Creating ghost tables for: " + tableIdsToExpand);
 
 			List<String> tableIdsToMirror = Lists.newArrayList(tableIdsToExpand);
-			Multimap<TableRef, TableRef> ghostedTableIds = refLog.getMapping(from, to);
+			Multimap<TableRef, TableRef> ghostedTableIds = refLog.getTableMapping(from, to);
 			Set<String> createdGhostTableIds = Sets.newHashSet();
 
 			while(!tableIdsToMirror.isEmpty()) {

@@ -9,8 +9,6 @@ import java.util.stream.Collectors;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Table.Cell;
 import io.quantumdb.core.backends.postgresql.MigratorFunction.Stage;
 import io.quantumdb.core.backends.postgresql.migrator.NullRecords;
 import io.quantumdb.core.schema.definitions.Column;
@@ -18,6 +16,7 @@ import io.quantumdb.core.schema.definitions.ForeignKey;
 import io.quantumdb.core.schema.definitions.Identity;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.state.RefLog;
+import io.quantumdb.core.state.RefLog.ColumnRef;
 import io.quantumdb.core.state.RefLog.TableRef;
 import io.quantumdb.core.utils.QueryBuilder;
 import io.quantumdb.core.utils.RandomHasher;
@@ -100,14 +99,16 @@ public class SelectiveMigratorFunction {
 			}
 		}
 
-		refLog.getMapping(source, target);
+		TableRef sourceRef = refLog.getTableRefById(from, source.getName());
+		TableRef targetRef = refLog.getTableRefById(to, target.getName());
+		Map<ColumnRef, ColumnRef> columnMapping = refLog.getColumnMapping(sourceRef, targetRef);
 
-		Map<String, String> columnsToMigrate = mapping.getColumnMappings().cellSet().stream()
-				.filter(cell -> columnsToBeMigrated.contains(cell.getColumnKey()))
+		Map<String, String> columnsToMigrate = columnMapping.entrySet().stream()
+				.filter(entry -> columnsToBeMigrated.contains(entry.getKey().getName()))
 				.map(entry -> {
-					String newColumnName = entry.getColumnKey();
+					String newColumnName = entry.getValue().getName();
 					Column newColumn = target.getColumn(newColumnName);
-					return new SimpleImmutableEntry<>(newColumn, entry.getRowKey());
+					return new SimpleImmutableEntry<>(newColumn, entry.getKey().getName());
 				})
 				.collect(Collectors.toMap(entry -> "\"" + entry.getKey().getName() + "\"",
 						entry -> "\"" + entry.getValue() + "\""));
@@ -123,11 +124,13 @@ public class SelectiveMigratorFunction {
 				})
 				.collect(Collectors.joining(", "));
 
-		String identityCondition = mapping.getSourceTable().getIdentityColumns().stream()
+		String identityCondition = source.getIdentityColumns().stream()
 				.map(column -> {
-					com.google.common.collect.Table<String, String, Transformation> columnMappings = mapping.getColumnMappings();
-					Set<String> mappedColumnNames = columnMappings.row(column.getName()).keySet();
-					String mappedColumnName = mappedColumnNames.iterator().next();
+					String mappedColumnName = columnMapping.entrySet().stream()
+							.filter(entry -> entry.getKey().getName().equals(column.getName()))
+							.map(entry -> entry.getValue().getName())
+							.findFirst().get();
+
 					return "\"" + mappedColumnName + "\" = r.\"" + column.getName() + "\"";
 				})
 				.collect(Collectors.joining(" AND "));
@@ -178,10 +181,14 @@ public class SelectiveMigratorFunction {
 				.map(column -> functionParameterMapping.get(column.getName()) + " " + column.getType().toString())
 				.collect(Collectors.toList());
 
-		Map<String, String> values = mapping.getColumnMappings().cellSet().stream()
-				.filter(entry -> columns.contains(entry.getColumnKey()))
-				.collect(Collectors.toMap(Cell::getColumnKey,
-						entry -> "r.\"" + entry.getRowKey() + "\"",
+		TableRef sourceRef = refLog.getTableRefById(from, source.getName());
+		TableRef targetRef = refLog.getTableRefById(to, target.getName());
+		Map<ColumnRef, ColumnRef> columnMapping = refLog.getColumnMapping(sourceRef, targetRef);
+
+		Map<String, String> values = columnMapping.entrySet().stream()
+				.filter(entry -> columns.contains(entry.getKey().getName()))
+				.collect(Collectors.toMap(entry -> entry.getValue().getName(),
+						entry -> "r.\"" + entry.getKey().getName() + "\"",
 						(u, v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
 						Maps::newLinkedHashMap));
 
@@ -191,9 +198,9 @@ public class SelectiveMigratorFunction {
 			if (foreignKey.isNotNullable() && !values.keySet().containsAll(foreignKeyColumns)) {
 				Table referredTable = foreignKey.getReferredTable();
 				Identity identity = nullRecords.getIdentity(referredTable);
-				LinkedHashMap<String, String> columnMapping = foreignKey.getColumnMapping();
+				LinkedHashMap<String, String> columnMappings = foreignKey.getColumnMapping();
 				for (String columnName : foreignKeyColumns) {
-					String referencedColumn = columnMapping.get(columnName);
+					String referencedColumn = columnMappings.get(columnName);
 					Column column = target.getColumn(columnName);
 
 					String value = column.getDefaultValue();
