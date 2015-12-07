@@ -24,6 +24,7 @@ import io.quantumdb.core.schema.definitions.ColumnType.Type;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.state.RefLog;
 import io.quantumdb.core.utils.QueryBuilder;
+import io.quantumdb.core.versioning.Version;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -40,20 +41,20 @@ class TableDataMigrator {
 		this.refLog = refLog;
 	}
 
-	void migrateData(NullRecords nullRecords, Table from, Table to, Set<String> migratedColumns,
-			Set<String> columnsToMigrate) throws SQLException, InterruptedException {
+	void migrateData(NullRecords nullRecords, Table source, Table target, Version from, Version to,
+			Set<String> migratedColumns, Set<String> columnsToMigrate) throws SQLException, InterruptedException {
 
-		Map<String, Object> highestId = queryHighestId();
+		Map<String, Object> highestId = queryHighestId(source);
 		if (highestId == null) {
-			log.info("Table: {} is empty -> nothing to migrate...", from.getName());
+			log.info("Table: {} is empty -> nothing target migrate...", source.getName());
 			return;
 		}
-		log.info("Migrating data in table: {} to: {}", from.getName(), to.getName());
+		log.info("Migrating data in table: {} target: {}", source.getName(), target.getName());
 
 		MigratorFunction initialMigrator = SelectiveMigratorFunction.createMigrator(nullRecords, refLog,
-				BATCH_SIZE, Stage.INITIAL, migratedColumns, columnsToMigrate);
+				source, target, from, to, BATCH_SIZE, Stage.INITIAL, migratedColumns, columnsToMigrate);
 		MigratorFunction successiveMigrator = SelectiveMigratorFunction.createMigrator(nullRecords, refLog,
-				BATCH_SIZE, Stage.CONSECUTIVE, migratedColumns, columnsToMigrate);
+				source, target, from, to, BATCH_SIZE, Stage.CONSECUTIVE, migratedColumns, columnsToMigrate);
 
 		if (initialMigrator == null) {
 			return;
@@ -86,7 +87,7 @@ class TableDataMigrator {
 					ResultSet resultSet = statement.executeQuery(migrator.toString());
 
 					if (resultSet.next()) {
-						lastProcessedId.putAll(readIdentity(from, resultSet));
+						lastProcessedId.putAll(readIdentity(source, resultSet));
 						if (greaterThanOrEqualsTo(lastProcessedId, highestId)) {
 							break;
 						}
@@ -98,14 +99,14 @@ class TableDataMigrator {
 				}
 
 				long innerEnd = System.currentTimeMillis();
-				log.info("Migration data from: {} to: {}, now at identity: {}, took: {} ms", from.getName(),
-						to.getName(), lastProcessedId, innerEnd - innerStart);
+				log.info("Migration data source: {} target: {}, now at identity: {}, took: {} ms", source.getName(),
+						target.getName(), lastProcessedId, innerEnd - innerStart);
 
 				Thread.sleep(WAIT_TIME);
 			}
 
 			long end = System.currentTimeMillis();
-			log.info("Migrating records from: {} to: {} took: {} ms", from.getName(), to.getName(), end - start);
+			log.info("Migrating records source: {} target: {} took: {} ms", source.getName(), target.getName(), end - start);
 
 			execute(connection, initialMigrator.getDropStatement());
 			execute(connection, successiveMigrator.getDropStatement());

@@ -1,31 +1,30 @@
 package io.quantumdb.core.migration.operations;
 
-import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
-import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
-import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
 import static io.quantumdb.core.backends.postgresql.PostgresTypes.bool;
 import static io.quantumdb.core.backends.postgresql.PostgresTypes.date;
 import static io.quantumdb.core.backends.postgresql.PostgresTypes.integer;
 import static io.quantumdb.core.backends.postgresql.PostgresTypes.varchar;
+import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
+import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
+import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
 import static org.junit.Assert.assertEquals;
 
-import io.quantumdb.core.migration.utils.DataMappings;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.schema.operations.AddColumn;
 import io.quantumdb.core.schema.operations.SchemaOperations;
+import io.quantumdb.core.state.RefLog;
+import io.quantumdb.core.state.RefLog.TableRef;
 import io.quantumdb.core.versioning.Changelog;
-import io.quantumdb.core.versioning.TableMapping;
 import org.junit.Before;
 import org.junit.Test;
 
 public class AddColumnMigratorTest {
 
+	private RefLog refLog;
 	private Catalog catalog;
 	private Changelog changelog;
-	private TableMapping tableMapping;
-	private DataMappings dataMappings;
 	private AddColumnMigrator migrator;
 
 	@Before
@@ -36,8 +35,7 @@ public class AddColumnMigratorTest {
 						.addColumn(new Column("name", varchar(255), NOT_NULL)));
 
 		this.changelog = new Changelog();
-		this.tableMapping = TableMapping.bootstrap(changelog.getRoot(), catalog);
-		this.dataMappings = new DataMappings(tableMapping, catalog);
+		this.refLog = RefLog.init(catalog, changelog.getRoot());
 
 		this.migrator = new AddColumnMigrator();
 	}
@@ -46,7 +44,7 @@ public class AddColumnMigratorTest {
 	public void testExpandForAddingSingleColumn() {
 		AddColumn operation = SchemaOperations.addColumn("users", "date_of_birth", date(), "NULL");
 		changelog.addChangeSet("Michael de Jong", "Added 'date_of_birth' column to 'users' table.", operation);
-		migrator.migrate(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
+		migrator.migrate(catalog, refLog, changelog.getLastAdded(), operation);
 
 		Table originalTable = catalog.getTable("users");
 		Table ghostTable = getGhostTable(originalTable);
@@ -63,11 +61,11 @@ public class AddColumnMigratorTest {
 	public void testExpandForAddingMultipleColumns() {
 		AddColumn operation1 = SchemaOperations.addColumn("users", "date_of_birth", date(), "NULL");
 		changelog.addChangeSet("Michael de Jong", "Added 'date_of_birth' column to 'users' table.", operation1);
-		migrator.migrate(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation1);
+		migrator.migrate(catalog, refLog, changelog.getLastAdded(), operation1);
 
 		AddColumn operation2 = SchemaOperations.addColumn("users", "activated", bool(), "TRUE");
 		changelog.addChangeSet("Michael de Jong", "Added 'activated' column to 'users' table.", operation2);
-		migrator.migrate(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation2);
+		migrator.migrate(catalog, refLog, changelog.getLastAdded(), operation2);
 
 		Table originalTable = catalog.getTable("users");
 		Table ghostTable = getGhostTable(originalTable);
@@ -83,7 +81,8 @@ public class AddColumnMigratorTest {
 	}
 
 	private Table getGhostTable(Table table) {
-		String tableId = tableMapping.getTableId(changelog.getLastAdded(), table.getName());
+		TableRef tableRef = refLog.getTableRef(changelog.getLastAdded(), table.getName());
+		String tableId = tableRef.getTableId();
 		return catalog.getTable(tableId);
 	}
 

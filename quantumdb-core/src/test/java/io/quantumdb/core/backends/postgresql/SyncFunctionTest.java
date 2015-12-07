@@ -20,6 +20,10 @@ import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Identity;
 import io.quantumdb.core.schema.definitions.Table;
+import io.quantumdb.core.state.RefLog;
+import io.quantumdb.core.state.RefLog.ColumnRef;
+import io.quantumdb.core.state.RefLog.TableRef;
+import io.quantumdb.core.versioning.Changelog;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -154,15 +158,25 @@ public class SyncFunctionTest {
 		catalog.addTable(other);
 		catalog.addTable(ghost);
 
-		DataMapping dataMapping = new DataMapping(original, ghost);
-		dataMapping.setColumnMapping("id", "id", Transformation.createNop());
-		dataMapping.setColumnMapping("other_id", "other_id", Transformation.createNop());
-		dataMapping.setColumnMapping("name", "full_name", Transformation.createNop());
+		Changelog changelog = new Changelog();
+		RefLog refLog = RefLog.init(catalog, changelog.getRoot());
+
+		ColumnRef usersId = new ColumnRef("id");
+		ColumnRef usersOtherId = new ColumnRef("other_id");
+		ColumnRef usersName = new ColumnRef("name");
+		TableRef source = refLog.addTable(original.getName(), original.getName(), changelog.getRoot(),
+				Lists.newArrayList(usersId, usersOtherId, usersName));
+
+		ColumnRef users2Id = new ColumnRef("id", Sets.newHashSet(usersId));
+		ColumnRef users2OtherId = new ColumnRef("other_id", Sets.newHashSet(usersOtherId));
+		ColumnRef users2Name = new ColumnRef("full_name", Sets.newHashSet(usersName));
+		TableRef target = refLog.addTable(original.getName(), original.getName(), changelog.getRoot(),
+				Lists.newArrayList(users2Id, users2OtherId, users2Name));
 
 		NullRecords nullRecords = Mockito.mock(NullRecords.class);
 		Mockito.when(nullRecords.getIdentity(other)).thenReturn(new Identity("id", 0));
 
-		SyncFunction syncFunction = new SyncFunction(dataMapping, nullRecords);
+		SyncFunction syncFunction = new SyncFunction(refLog, source, target, catalog, nullRecords);
 		syncFunction.setColumnsToMigrate(list("id", "full_name"));
 
 		assertThat(syncFunction.getInsertExpressions(), is(ImmutableMap.of("\"id\"", "NEW.\"id\"", "\"other_id\"", "0", "\"full_name\"", "NEW.\"name\"")));

@@ -255,7 +255,7 @@ public class RefLog {
 		});
 	}
 
-	public RefLog addTable(String name, String tableId, Version version, Collection<ColumnRef> columns) {
+	public TableRef addTable(String name, String tableId, Version version, Collection<ColumnRef> columns) {
 		long matches = tables.get(version).stream()
 				.filter(table -> table.getName().equals(name))
 				.count();
@@ -265,8 +265,7 @@ public class RefLog {
 					+ " is already present for version: " + version.getId());
 		}
 
-		new TableRef(this, name, tableId, version, columns);
-		return this;
+		return new TableRef(this, name, tableId, version, columns);
 	}
 
 	public RefLog addSync(String name, String functionName, Map<ColumnRef, ColumnRef> columns) {

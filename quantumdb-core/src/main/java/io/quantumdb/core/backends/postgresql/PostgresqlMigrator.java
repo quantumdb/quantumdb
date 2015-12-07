@@ -263,7 +263,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 					Table source = catalog.getTable(entry.getKey().getTableId());
 					Table target = catalog.getTable(entry.getValue().getTableId());
 					TableDataMigrator tableDataMigrator = new TableDataMigrator(backend, refLog);
-					tableDataMigrator.migrateData(nullRecords, source, target, migratedColumns, columnsToMigrate);
+					tableDataMigrator.migrateData(nullRecords, source, target, from, to, migratedColumns, columnsToMigrate);
 				}
 			}
 		}

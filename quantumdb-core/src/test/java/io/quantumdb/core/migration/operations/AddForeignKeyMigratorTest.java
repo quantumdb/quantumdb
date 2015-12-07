@@ -1,29 +1,28 @@
 package io.quantumdb.core.migration.operations;
 
+import static io.quantumdb.core.backends.postgresql.PostgresTypes.integer;
+import static io.quantumdb.core.backends.postgresql.PostgresTypes.varchar;
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
 import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
-import static io.quantumdb.core.backends.postgresql.PostgresTypes.integer;
-import static io.quantumdb.core.backends.postgresql.PostgresTypes.varchar;
 import static org.junit.Assert.assertEquals;
 
-import io.quantumdb.core.migration.utils.DataMappings;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.schema.operations.AddForeignKey;
 import io.quantumdb.core.schema.operations.SchemaOperations;
+import io.quantumdb.core.state.RefLog;
+import io.quantumdb.core.state.RefLog.TableRef;
 import io.quantumdb.core.versioning.Changelog;
-import io.quantumdb.core.versioning.TableMapping;
 import org.junit.Before;
 import org.junit.Test;
 
 public class AddForeignKeyMigratorTest {
 
+	private RefLog refLog;
 	private Catalog catalog;
 	private Changelog changelog;
-	private TableMapping tableMapping;
-	private DataMappings dataMappings;
 	private AddForeignKeyMigrator migrator;
 
 	@Before
@@ -37,9 +36,7 @@ public class AddForeignKeyMigratorTest {
 						.addColumn(new Column("author", integer(), NOT_NULL)));
 
 		this.changelog = new Changelog();
-		this.tableMapping = TableMapping.bootstrap(changelog.getRoot(), catalog);
-		this.dataMappings = new DataMappings(tableMapping, catalog);
-
+		this.refLog = RefLog.init(catalog, changelog.getRoot());
 		this.migrator = new AddForeignKeyMigrator();
 	}
 
@@ -47,7 +44,7 @@ public class AddForeignKeyMigratorTest {
 	public void testExpandForAddingSingleColumn() {
 		AddForeignKey operation = SchemaOperations.addForeignKey("posts", "author").referencing("users", "id");
 		changelog.addChangeSet("Michael de Jong", "Added 'date_of_birth' column to 'users' table.", operation);
-		migrator.migrate(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
+		migrator.migrate(catalog, refLog, changelog.getLastAdded(), operation);
 
 		Table usersTable = catalog.getTable("users");
 		Table originalTable = catalog.getTable("posts");
@@ -63,8 +60,8 @@ public class AddForeignKeyMigratorTest {
 	}
 
 	private Table getGhostTable(Table table) {
-		String tableId = tableMapping.getTableId(changelog.getLastAdded(), table.getName());
-		return catalog.getTable(tableId);
+		TableRef tableRef = refLog.getTableRef(changelog.getLastAdded(), table.getName());
+		return catalog.getTable(tableRef.getTableId());
 	}
 
 }

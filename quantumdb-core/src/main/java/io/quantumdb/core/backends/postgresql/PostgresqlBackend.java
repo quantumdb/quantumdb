@@ -9,13 +9,12 @@ import java.sql.SQLException;
 import io.quantumdb.core.backends.Backend;
 import io.quantumdb.core.backends.postgresql.migrator.TableCreator;
 import io.quantumdb.core.schema.definitions.Catalog;
+import io.quantumdb.core.state.RefLog;
 import io.quantumdb.core.versioning.Changelog;
 import io.quantumdb.core.versioning.ChangelogBackend;
 import io.quantumdb.core.versioning.MigrationFunctions;
 import io.quantumdb.core.versioning.PersistentMigrationFunctions;
-import io.quantumdb.core.versioning.PersistentTableMapping;
 import io.quantumdb.core.versioning.State;
-import io.quantumdb.core.versioning.TableMapping;
 import io.quantumdb.core.versioning.Version;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -48,9 +47,9 @@ public class PostgresqlBackend implements Backend {
 			Changelog changelog = changelogBackend.load(this);
 			Catalog catalog = new CatalogLoader(connection).load(jdbcCatalog);
 			MigrationFunctions functions = new PersistentMigrationFunctions(connect());
-			TableMapping tableMapping = new PersistentTableMapping(changelog, connect());
+			RefLog refLog = new RefLog(); // TODO: Load RefLog from db.
 
-			return new State(catalog, tableMapping, functions, changelog);
+			return new State(catalog, refLog, functions, changelog);
 		}
 	}
 

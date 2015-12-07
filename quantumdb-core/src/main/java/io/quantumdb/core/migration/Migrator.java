@@ -12,7 +12,6 @@ import io.quantumdb.core.backends.DatabaseMigrator.MigrationException;
 import io.quantumdb.core.migration.utils.VersionTraverser;
 import io.quantumdb.core.versioning.Changelog;
 import io.quantumdb.core.versioning.State;
-import io.quantumdb.core.versioning.TableMapping;
 import io.quantumdb.core.versioning.Version;
 import lombok.extern.slf4j.Slf4j;
 
@@ -30,8 +29,9 @@ public class Migrator {
 
 		State state = loadState();
 		Changelog changelog = state.getChangelog();
-		TableMapping tableMapping = state.getTableMapping();
-		Set<Version> versions = tableMapping.getVersions();
+		Version from = changelog.getVersion(sourceVersionId);
+		Version to = changelog.getVersion(targetVersionId);
+		Set<Version> versions = Sets.newHashSet(VersionTraverser.findPath(from, to).get());
 
 		Set<String> origins = Sets.newHashSet(changelog.getRoot().getId());
 		if (!versions.isEmpty()) {
@@ -50,9 +50,6 @@ public class Migrator {
 			return;
 		}
 
-		Version from = changelog.getVersion(sourceVersionId);
-		Version to = changelog.getVersion(targetVersionId);
-
 		verifyPathAndState(state, from, to);
 
 		backend.getMigrator().migrate(state, from, to);
@@ -68,8 +65,7 @@ public class Migrator {
 	}
 
 	private void verifyPathAndState(State state, Version from, Version to) {
-		TableMapping tableMapping = state.getTableMapping();
-		Set<Version> versions = tableMapping.getVersions();
+		Set<Version> versions = Sets.newHashSet(VersionTraverser.findPath(from, to).get());
 
 		if (!versions.isEmpty()) {
 			boolean atCorrectVersion = versions.contains(from);
