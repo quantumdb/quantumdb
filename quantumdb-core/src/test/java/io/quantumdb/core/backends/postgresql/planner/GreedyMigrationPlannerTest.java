@@ -38,10 +38,10 @@ import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.ForeignKey;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.schema.operations.SchemaOperation;
+import io.quantumdb.core.state.RefLog;
 import io.quantumdb.core.versioning.Changelog;
 import io.quantumdb.core.versioning.MigrationFunctions;
 import io.quantumdb.core.versioning.State;
-import io.quantumdb.core.versioning.TableMapping;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Rule;
 import org.junit.Test;
@@ -1327,7 +1327,7 @@ public class GreedyMigrationPlannerTest {
 	}
 
 	private final Catalog catalog;
-	private final TableMapping tableMapping;
+	private final RefLog refLog;
 	private final MigrationFunctions functions;
 	private final Changelog changelog;
 	private final int expectedPlanSize;
@@ -1344,15 +1344,14 @@ public class GreedyMigrationPlannerTest {
 		this.functions = new MigrationFunctions();
 		this.catalog = scenario.get();
 
-		this.tableMapping = TableMapping.bootstrap(changelog.getRoot(), catalog);
-		State state = new State(catalog, tableMapping, functions, changelog);
+		this.refLog = RefLog.init(catalog, changelog.getRoot());
+		State state = new State(catalog, refLog, functions, changelog);
 
 		changelog.addChangeSet("Michael de Jong", operation);
 
 		GreedyMigrationPlanner planner = new GreedyMigrationPlanner();
 		this.plan = planner.createPlan(state, changelog.getRoot(), changelog.getLastAdded());
 		log.info("Constructed migration plan: \n" + plan);
-		log.info("The new tableMapping will be: \n" + state.getTableMapping());
 	}
 
 	@Test
@@ -1537,7 +1536,7 @@ public class GreedyMigrationPlannerTest {
 	}
 
 	private String getTableId(String tableId) {
-		return tableMapping.getTableId(changelog.getLastAdded(), tableId);
+		return refLog.getTableRef(changelog.getLastAdded(), tableId).getTableId();
 	}
 
 	public Table table(String tableId) {

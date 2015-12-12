@@ -4,6 +4,14 @@ import static io.quantumdb.core.backends.postgresql.PostgresTypes.date;
 import static io.quantumdb.core.backends.postgresql.PostgresTypes.floats;
 import static io.quantumdb.core.backends.postgresql.PostgresTypes.integer;
 import static io.quantumdb.core.backends.postgresql.PostgresTypes.varchar;
+import static io.quantumdb.core.backends.postgresql.integration.videostores.PostgresqlBaseScenario.CUSTOMERS_ID;
+import static io.quantumdb.core.backends.postgresql.integration.videostores.PostgresqlBaseScenario.FILMS_ID;
+import static io.quantumdb.core.backends.postgresql.integration.videostores.PostgresqlBaseScenario.INVENTORY_ID;
+import static io.quantumdb.core.backends.postgresql.integration.videostores.PostgresqlBaseScenario.PAYCHECKS_ID;
+import static io.quantumdb.core.backends.postgresql.integration.videostores.PostgresqlBaseScenario.PAYMENTS_ID;
+import static io.quantumdb.core.backends.postgresql.integration.videostores.PostgresqlBaseScenario.RENTALS_ID;
+import static io.quantumdb.core.backends.postgresql.integration.videostores.PostgresqlBaseScenario.STAFF_ID;
+import static io.quantumdb.core.backends.postgresql.integration.videostores.PostgresqlBaseScenario.STORES_ID;
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
 import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
@@ -12,6 +20,7 @@ import static org.junit.Assert.assertEquals;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -20,8 +29,9 @@ import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.schema.operations.SchemaOperations;
+import io.quantumdb.core.state.RefLog;
+import io.quantumdb.core.state.RefLog.TableRef;
 import io.quantumdb.core.versioning.State;
-import io.quantumdb.core.versioning.TableMapping;
 import io.quantumdb.core.versioning.Version;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -53,40 +63,40 @@ public class RenameCustomersTable {
 
 	@Test
 	public void verifyTableStructure() {
-		TableMapping mapping = state.getTableMapping();
+		RefLog refLog = state.getRefLog();
 
-		Table stores = new Table(mapping.getTableId(origin, "stores"))
+		Table stores = new Table(refLog.getTableRef(origin, "stores").getTableId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL))
 				.addColumn(new Column("manager_id", integer(), NOT_NULL));
 
-		Table staff = new Table(mapping.getTableId(origin, "staff"))
+		Table staff = new Table(refLog.getTableRef(origin, "staff").getTableId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL))
 				.addColumn(new Column("store_id", integer(), NOT_NULL));
 
-		Table customers = new Table(mapping.getTableId(origin, "customers"))
+		Table customers = new Table(refLog.getTableRef(origin, "customers").getTableId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL))
 				.addColumn(new Column("store_id", integer(), NOT_NULL))
 				.addColumn(new Column("referred_by", integer()));
 
-		Table films = new Table(mapping.getTableId(origin, "films"))
+		Table films = new Table(refLog.getTableRef(origin, "films").getTableId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL));
 
-		Table inventory = new Table(mapping.getTableId(origin, "inventory"))
+		Table inventory = new Table(refLog.getTableRef(origin, "inventory").getTableId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("store_id", integer(), NOT_NULL))
 				.addColumn(new Column("film_id", integer(), NOT_NULL));
 
-		Table paychecks = new Table(mapping.getTableId(origin, "paychecks"))
+		Table paychecks = new Table(refLog.getTableRef(origin, "paychecks").getTableId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("staff_id", integer(), NOT_NULL))
 				.addColumn(new Column("date", date(), NOT_NULL))
 				.addColumn(new Column("amount", floats(), NOT_NULL));
 
-		Table payments = new Table(mapping.getTableId(origin, "payments"))
+		Table payments = new Table(refLog.getTableRef(origin, "payments").getTableId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("staff_id", integer()))
 				.addColumn(new Column("customer_id", integer(), NOT_NULL))
@@ -94,7 +104,7 @@ public class RenameCustomersTable {
 				.addColumn(new Column("date", date(), NOT_NULL))
 				.addColumn(new Column("amount", floats(), NOT_NULL));
 
-		Table rentals = new Table(mapping.getTableId(origin, "rentals"))
+		Table rentals = new Table(refLog.getTableRef(origin, "rentals").getTableId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("staff_id", integer()))
 				.addColumn(new Column("customer_id", integer(), NOT_NULL))
@@ -125,31 +135,34 @@ public class RenameCustomersTable {
 
 	@Test
 	public void verifyTableMappings() {
-		TableMapping tableMapping = state.getTableMapping();
+		RefLog refLog = state.getRefLog();
 
-		Map<String, String> originTableIds = tableMapping.getTableMapping(origin);
-		Map<String, String> targetTableIds = tableMapping.getTableMapping(target);
+		Map<String, String> originTableIds = refLog.getTableRefs(origin).stream()
+				.collect(Collectors.toMap(TableRef::getTableId, TableRef::getName));
+
+		Map<String, String> targetTableIds = refLog.getTableRefs(target).stream()
+				.collect(Collectors.toMap(TableRef::getTableId, TableRef::getName));
 
 		Map<String, String> expectedOriginTableIds = ImmutableMap.<String, String>builder()
-				.put(PostgresqlBaseScenario.STORES_ID, "stores")
-				.put(PostgresqlBaseScenario.STAFF_ID, "staff")
-				.put(PostgresqlBaseScenario.CUSTOMERS_ID, "customers")
-				.put(PostgresqlBaseScenario.FILMS_ID, "films")
-				.put(PostgresqlBaseScenario.INVENTORY_ID, "inventory")
-				.put(PostgresqlBaseScenario.PAYCHECKS_ID, "paychecks")
-				.put(PostgresqlBaseScenario.PAYMENTS_ID, "payments")
-				.put(PostgresqlBaseScenario.RENTALS_ID, "rentals")
+				.put(STORES_ID, "stores")
+				.put(STAFF_ID, "staff")
+				.put(CUSTOMERS_ID, "customers")
+				.put(FILMS_ID, "films")
+				.put(INVENTORY_ID, "inventory")
+				.put(PAYCHECKS_ID, "paychecks")
+				.put(PAYMENTS_ID, "payments")
+				.put(RENTALS_ID, "rentals")
 				.build();
 
 		Map<String, String>expectedTargetTableIds = ImmutableMap.<String, String>builder()
-				.put(PostgresqlBaseScenario.STORES_ID, "stores")
-				.put(PostgresqlBaseScenario.STAFF_ID, "staff")
-				.put(PostgresqlBaseScenario.CUSTOMERS_ID, "clients")
-				.put(PostgresqlBaseScenario.FILMS_ID, "films")
-				.put(PostgresqlBaseScenario.INVENTORY_ID, "inventory")
-				.put(PostgresqlBaseScenario.PAYCHECKS_ID, "paychecks")
-				.put(PostgresqlBaseScenario.PAYMENTS_ID, "payments")
-				.put(PostgresqlBaseScenario.RENTALS_ID, "rentals")
+				.put(STORES_ID, "stores")
+				.put(STAFF_ID, "staff")
+				.put(CUSTOMERS_ID, "clients")
+				.put(FILMS_ID, "films")
+				.put(INVENTORY_ID, "inventory")
+				.put(PAYCHECKS_ID, "paychecks")
+				.put(PAYMENTS_ID, "payments")
+				.put(RENTALS_ID, "rentals")
 				.build();
 
 		assertEquals(expectedOriginTableIds, originTableIds);

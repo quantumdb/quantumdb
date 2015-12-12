@@ -14,8 +14,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.quantumdb.core.backends.postgresql.migrator.NullRecords;
-import io.quantumdb.core.migration.utils.DataMapping;
-import io.quantumdb.core.migration.utils.DataMapping.Transformation;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Identity;
@@ -44,11 +42,21 @@ public class SyncFunctionTest {
 		catalog.addTable(original);
 		catalog.addTable(ghost);
 
-		DataMapping dataMapping = new DataMapping(original, ghost);
-		dataMapping.setColumnMapping("id", "id", Transformation.createNop());
-		dataMapping.setColumnMapping("name", "name", Transformation.createNop());
+		Changelog changelog = new Changelog();
+		RefLog refLog = RefLog.init(catalog, changelog.getRoot());
 
-		SyncFunction syncFunction = new SyncFunction(dataMapping, new NullRecords());
+		ColumnRef usersId = new ColumnRef("id");
+		ColumnRef usersName = new ColumnRef("name");
+		TableRef source = refLog.addTable(original.getName(), original.getName(), changelog.getRoot(),
+				Lists.newArrayList(usersId, usersName));
+
+		ColumnRef users2Id = new ColumnRef("id", Sets.newHashSet(usersId));
+		ColumnRef users2Name = new ColumnRef("name", Sets.newHashSet(usersName));
+		TableRef target = refLog.addTable(original.getName(), original.getName(), changelog.getRoot(),
+				Lists.newArrayList(users2Id, users2Name));
+
+		NullRecords nullRecords = Mockito.mock(NullRecords.class);
+		SyncFunction syncFunction = new SyncFunction(refLog, source, target, catalog, nullRecords);
 		syncFunction.setColumnsToMigrate(list("id", "name", "email"));
 
 		assertThat(syncFunction.getInsertExpressions(), is(ImmutableMap.of("\"id\"", "NEW.\"id\"", "\"name\"", "NEW.\"name\"")));
@@ -70,11 +78,21 @@ public class SyncFunctionTest {
 		catalog.addTable(original);
 		catalog.addTable(ghost);
 
-		DataMapping dataMapping = new DataMapping(original, ghost);
-		dataMapping.setColumnMapping("id", "id", Transformation.createNop());
-		dataMapping.setColumnMapping("name", "full_name", Transformation.createNop());
+		Changelog changelog = new Changelog();
+		RefLog refLog = RefLog.init(catalog, changelog.getRoot());
 
-		SyncFunction syncFunction = new SyncFunction(dataMapping, new NullRecords());
+		ColumnRef usersId = new ColumnRef("id");
+		ColumnRef usersName = new ColumnRef("name");
+		TableRef source = refLog.addTable(original.getName(), original.getName(), changelog.getRoot(),
+				Lists.newArrayList(usersId, usersName));
+
+		ColumnRef users2Id = new ColumnRef("id", Sets.newHashSet(usersId));
+		ColumnRef users2Name = new ColumnRef("full_name", Sets.newHashSet(usersName));
+		TableRef target = refLog.addTable(original.getName(), original.getName(), changelog.getRoot(),
+				Lists.newArrayList(users2Id, users2Name));
+
+		NullRecords nullRecords = Mockito.mock(NullRecords.class);
+		SyncFunction syncFunction = new SyncFunction(refLog, source, target, catalog, nullRecords);
 		syncFunction.setColumnsToMigrate(list("id", "full_name"));
 
 		assertThat(syncFunction.getInsertExpressions(), is(ImmutableMap.of("\"id\"", "NEW.\"id\"", "\"full_name\"", "NEW.\"name\"")));
@@ -96,11 +114,21 @@ public class SyncFunctionTest {
 		catalog.addTable(original);
 		catalog.addTable(ghost);
 
-		DataMapping dataMapping = new DataMapping(original, ghost);
-		dataMapping.setColumnMapping("id", "user_id", Transformation.createNop());
-		dataMapping.setColumnMapping("name", "name", Transformation.createNop());
+		Changelog changelog = new Changelog();
+		RefLog refLog = RefLog.init(catalog, changelog.getRoot());
 
-		SyncFunction syncFunction = new SyncFunction(dataMapping, new NullRecords());
+		ColumnRef usersId = new ColumnRef("id");
+		ColumnRef usersName = new ColumnRef("name");
+		TableRef source = refLog.addTable(original.getName(), original.getName(), changelog.getRoot(),
+				Lists.newArrayList(usersId, usersName));
+
+		ColumnRef users2Id = new ColumnRef("user_id", Sets.newHashSet(usersId));
+		ColumnRef users2Name = new ColumnRef("name", Sets.newHashSet(usersName));
+		TableRef target = refLog.addTable(original.getName(), original.getName(), changelog.getRoot(),
+				Lists.newArrayList(users2Id, users2Name));
+
+		NullRecords nullRecords = Mockito.mock(NullRecords.class);
+		SyncFunction syncFunction = new SyncFunction(refLog, source, target, catalog, nullRecords);
 		syncFunction.setColumnsToMigrate(list("user_id", "name"));
 
 		assertThat(syncFunction.getInsertExpressions(), is(ImmutableMap.of("\"user_id\"", "NEW.\"id\"", "\"name\"", "NEW.\"name\"")));
@@ -122,11 +150,21 @@ public class SyncFunctionTest {
 		catalog.addTable(original);
 		catalog.addTable(ghost);
 
-		DataMapping dataMapping = new DataMapping(original, ghost);
-		dataMapping.setColumnMapping("id", "id", Transformation.createNop());
-		dataMapping.setColumnMapping("name", "name", Transformation.createNop());
+		Changelog changelog = new Changelog();
+		RefLog refLog = RefLog.init(catalog, changelog.getRoot());
 
-		SyncFunction syncFunction = new SyncFunction(dataMapping, new NullRecords());
+		ColumnRef usersId = new ColumnRef("id");
+		ColumnRef usersName = new ColumnRef("name");
+		TableRef source = refLog.addTable(original.getName(), original.getName(), changelog.getRoot(),
+				Lists.newArrayList(usersId, usersName));
+
+		ColumnRef users2Id = new ColumnRef("id", Sets.newHashSet(usersId));
+		ColumnRef users2Name = new ColumnRef("name", Sets.newHashSet(usersName));
+		TableRef target = refLog.addTable(original.getName(), original.getName(), changelog.getRoot(),
+				Lists.newArrayList(users2Id, users2Name));
+
+		NullRecords nullRecords = Mockito.mock(NullRecords.class);
+		SyncFunction syncFunction = new SyncFunction(refLog, source, target, catalog, nullRecords);
 		syncFunction.setColumnsToMigrate(list("id", "name"));
 
 		assertThat(syncFunction.getInsertExpressions(), is(ImmutableMap.of("\"id\"", "NEW.\"id\"", "\"name\"", "NEW.\"name\"")));

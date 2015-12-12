@@ -23,11 +23,6 @@ public class RandomHasherTest {
 		assertNotEquals(hash1, hash2);
 	}
 
-	@Test(expected = IllegalArgumentException.class)
-	public void testGeneratingUniqueTableIdWithNullInputThrowsException() {
-		RandomHasher.generateTableId(null);
-	}
-
 	@Test
 	public void testGeneratingUniqueTableIdWithEmptyTableMapping() {
 		TableMapping tableMapping = new TableMapping();
