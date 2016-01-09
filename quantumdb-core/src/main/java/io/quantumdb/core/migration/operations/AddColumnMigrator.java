@@ -1,6 +1,7 @@
 package io.quantumdb.core.migration.operations;
 
 import io.quantumdb.core.schema.definitions.Catalog;
+import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.schema.operations.AddColumn;
 import io.quantumdb.core.state.RefLog;
 import io.quantumdb.core.state.RefLog.TableRef;
@@ -17,8 +18,8 @@ class AddColumnMigrator implements SchemaOperationMigrator<AddColumn> {
 		TransitiveTableMirrorer.mirror(catalog, refLog, version, tableName);
 
 		TableRef tableRef = refLog.getTableRef(version, tableName);
-		catalog.getTable(tableRef.getTableId())
-				.addColumn(operation.getColumnDefinition().createColumn());
+		Table table = catalog.getTable(tableRef.getTableId());
+		table.addColumn(operation.getColumnDefinition().createColumn());
 	}
 
 }

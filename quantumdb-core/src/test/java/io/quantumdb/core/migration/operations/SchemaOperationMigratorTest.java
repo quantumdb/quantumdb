@@ -16,7 +16,7 @@ import io.quantumdb.core.versioning.Version;
 import org.junit.Before;
 import org.junit.Test;
 
-public class SchemaOperationInterpreterTest {
+public class SchemaOperationMigratorTest {
 
 	private RefLog refLog;
 	private Catalog catalog;

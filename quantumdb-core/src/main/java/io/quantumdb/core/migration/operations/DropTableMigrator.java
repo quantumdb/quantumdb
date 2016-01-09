@@ -12,7 +12,7 @@ public class DropTableMigrator implements SchemaOperationMigrator<DropTable> {
 
 	@Override
 	public void migrate(Catalog catalog, RefLog refLog, Version version, DropTable operation) {
-		refLog.prepareFork(version);
+		refLog.fork(version);
 		refLog.dropTable(version, operation.getTableName());
 	}
 

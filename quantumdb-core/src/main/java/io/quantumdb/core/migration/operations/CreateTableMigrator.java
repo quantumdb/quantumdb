@@ -20,7 +20,7 @@ class CreateTableMigrator implements SchemaOperationMigrator<CreateTable> {
 		String tableId = RandomHasher.generateTableId(refLog);
 		String tableName = operation.getTableName();
 
-		refLog.prepareFork(version);
+		refLog.fork(version);
 		refLog.addTable(tableName, tableId, version, operation.getColumns().stream()
 				.map(column -> new ColumnRef(column.getName()))
 				.collect(Collectors.toList()));

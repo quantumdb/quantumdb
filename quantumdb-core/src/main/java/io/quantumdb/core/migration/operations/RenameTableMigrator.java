@@ -13,7 +13,7 @@ public class RenameTableMigrator implements SchemaOperationMigrator<RenameTable>
 
 	@Override
 	public void migrate(Catalog catalog, RefLog refLog, Version version, RenameTable operation) {
-		refLog.prepareFork(version);
+		refLog.fork(version);
 		TableRef tableRef = refLog.getTableRef(version, operation.getTableName());
 		tableRef.rename(operation.getNewTableName());
 	}

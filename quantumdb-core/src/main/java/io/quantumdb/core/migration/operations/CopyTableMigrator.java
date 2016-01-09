@@ -20,9 +20,9 @@ class CopyTableMigrator implements SchemaOperationMigrator<CopyTable> {
 		String sourceTableName = operation.getSourceTableName();
 		String targetTableName = operation.getTargetTableName();
 
-		refLog.prepareFork(version);
+		refLog.fork(version);
 		TableRef sourceTableRef = refLog.getTableRef(version.getParent(), sourceTableName);
-		refLog.copyTable(version, sourceTableName, targetTableName, tableId);
+		refLog.replaceTable(version, sourceTableName, targetTableName, tableId);
 
 		Table sourceTable = catalog.getTable(sourceTableRef.getTableId());
 		Table targetTable = sourceTable.copy().rename(tableId);

@@ -49,6 +49,11 @@ public class GreedyMigrationPlanner implements MigrationPlanner {
 				.orElseThrow(() -> new IllegalStateException("No path from " + from.getId() + " to " + to.getId()));
 
 		migrationPath.remove(from);
+
+		log.debug("Planning the execution of the following operations:");
+		migrationPath.stream()
+				.forEach(v -> log.debug("\t{} - {}", v.getId(), v.getSchemaOperation()));
+
 		migrationPath.stream()
 				.filter(version -> version.getParent() != null)
 				.forEachOrdered(version -> migrator.migrate(version, version.getSchemaOperation()));
@@ -444,16 +449,17 @@ public class GreedyMigrationPlanner implements MigrationPlanner {
 			log.trace("Creating ghost tables for: " + tableIdsToExpand);
 
 			List<String> tableIdsToMirror = Lists.newArrayList(tableIdsToExpand);
-			Multimap<TableRef, TableRef> ghostedTableIds = refLog.getTableMapping(from, to);
+			Multimap<TableRef, TableRef> ghostedTableIds = refLog.getTableMapping(from, to, true);
 			Set<String> createdGhostTableIds = Sets.newHashSet();
 
 			while(!tableIdsToMirror.isEmpty()) {
 				String tableId = tableIdsToMirror.remove(0);
-				if (ghostedTableIds.containsKey(tableId)) {
+				if (ghostedTableIds.entries().stream()
+						.anyMatch(entry -> entry.getKey().getTableId().equals(tableId))) {
 					continue;
 				}
 
-				TableRef tableRef = refLog.getTableRefById(to, tableId);
+				TableRef tableRef = refLog.getTableRefById(from, tableId);
 				Table table = catalog.getTable(tableRef.getTableId());
 
 				String newTableId = RandomHasher.generateTableId(refLog);
@@ -516,7 +522,7 @@ public class GreedyMigrationPlanner implements MigrationPlanner {
 					});
 				}
 				else {
-					List<ForeignKey> outgoingForeignKeys = oldTable.getForeignKeys();
+					List<ForeignKey> outgoingForeignKeys = Lists.newArrayList(oldTable.getForeignKeys());
 					for (ForeignKey foreignKey : outgoingForeignKeys) {
 						String oldReferredTableId = foreignKey.getReferredTableName();
 						TableRef oldReferredTableRef = refLog.getTableRefById(from, oldReferredTableId);

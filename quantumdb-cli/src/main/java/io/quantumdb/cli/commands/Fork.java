@@ -20,7 +20,7 @@ public class Fork extends Command {
 
 	@Override
 	public Identifier getIdentifier() {
-		return new Identifier("prepareFork", "Forks an existing database schema, and applies a set of operations to the prepareFork.");
+		return new Identifier("fork", "Forks an existing database schema, and applies a set of operations to the fork.");
 	}
 
 	public void perform(CliWriter writer, List<String> arguments) {
@@ -54,7 +54,7 @@ public class Fork extends Command {
 			if (versions.size() == 1) {
 				return versions.get(0);
 			}
-			throw new CliException("You must specify a version to prepareFork from!");
+			throw new CliException("You must specify a version to fork from!");
 		}
 		return changelog.getVersion(arguments.remove(0));
 	}

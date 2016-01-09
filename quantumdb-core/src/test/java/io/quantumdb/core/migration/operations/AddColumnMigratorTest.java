@@ -77,7 +77,7 @@ public class AddColumnMigratorTest {
 				.addColumn(new Column("activated", bool(), "TRUE"));
 
 		assertEquals(3, catalog.getTables().size());
-		assertEquals(expectedGhostTable, ghostTable);
+ 		assertEquals(expectedGhostTable, ghostTable);
 	}
 
 	private Table getGhostTable(Table table) {

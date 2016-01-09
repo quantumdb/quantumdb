@@ -78,8 +78,10 @@ public class SyncFunction {
 				.collect(Collectors.toMap(entry -> entry.getKey().getName(), entry -> entry.getValue().getName()));
 
 		Map<String, String> expressions = mapping.entrySet().stream()
-				.collect(Collectors.toMap(entry -> "\"" + entry.getKey() + "\"",
-						entry -> "NEW.\"" + entry.getValue() + "\"",
+//				.collect(Collectors.toMap(entry -> "\"" + entry.getKey() + "\"",
+				.collect(Collectors.toMap(entry -> "\"" + entry.getValue() + "\"",
+						entry -> "NEW.\"" + entry.getKey() + "\"",
+//						entry -> "NEW.\"" + entry.getValue() + "\"",
 						(u, v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
 						Maps::newLinkedHashMap));
 
@@ -112,15 +114,23 @@ public class SyncFunction {
 
 		this.updateIdentitiesForInserts = ImmutableMap.copyOf(targetTable.getIdentityColumns().stream()
 				.collect(Collectors.toMap(column -> "\"" + column.getName() + "\"",
-						column -> "NEW.\"" + mapping.get(column.getName()) + "\"",
+						column -> "NEW.\"" + reverseLookup(mapping, column.getName()) + "\"",
 						(u, v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
 						Maps::newLinkedHashMap)));
 
 		this.updateIdentities = ImmutableMap.copyOf(targetTable.getIdentityColumns().stream()
 				.collect(Collectors.toMap(column -> "\"" + column.getName() + "\"",
-						column -> "OLD.\"" + mapping.get(column.getName()) + "\"",
+						column -> "OLD.\"" + reverseLookup(mapping, column.getName()) + "\"",
 						(u, v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
 						Maps::newLinkedHashMap)));
+	}
+
+	private String reverseLookup(Map<String, String> mapping, String value) {
+		return mapping.entrySet().stream()
+				.filter(entry -> entry.getValue().equals(value))
+				.findFirst()
+				.map(Entry::getKey)
+				.get();
 	}
 
 	public QueryBuilder createFunctionStatement() {

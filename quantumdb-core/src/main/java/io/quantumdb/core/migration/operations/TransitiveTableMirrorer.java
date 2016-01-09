@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.ForeignKey;
@@ -20,7 +21,7 @@ import lombok.NoArgsConstructor;
 class TransitiveTableMirrorer {
 
 	static Set<String> mirror(Catalog catalog, RefLog refLog, Version version, String... tableNames) {
-		refLog.prepareFork(version);
+		refLog.fork(version);
 		Version parentVersion = version.getParent();
 		Set<String> mirrored = Sets.newHashSet();
 
@@ -56,7 +57,7 @@ class TransitiveTableMirrorer {
 			Table oldTable = catalog.getTable(oldTableId);
 			Table newTable = catalog.getTable(newTableId);
 
-			List<ForeignKey> outgoingForeignKeys = oldTable.getForeignKeys();
+			List<ForeignKey> outgoingForeignKeys = Lists.newArrayList(oldTable.getForeignKeys());
 			for (ForeignKey foreignKey : outgoingForeignKeys) {
 				String oldReferredTableId = foreignKey.getReferredTableName();
 				String oldReferredTableName = refLog.getTableRefById(parentVersion, oldReferredTableId).getName();
