@@ -13,7 +13,6 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
-import com.google.common.collect.Table.Cell;
 import io.quantumdb.core.backends.DatabaseMigrator;
 import io.quantumdb.core.backends.postgresql.migrator.NullRecords;
 import io.quantumdb.core.backends.postgresql.migrator.TableCreator;
@@ -28,7 +27,6 @@ import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.state.RefLog;
 import io.quantumdb.core.state.RefLog.TableRef;
 import io.quantumdb.core.utils.QueryBuilder;
-import io.quantumdb.core.versioning.MigrationFunctions;
 import io.quantumdb.core.versioning.State;
 import io.quantumdb.core.versioning.Version;
 import lombok.extern.slf4j.Slf4j;
@@ -66,8 +64,8 @@ class PostgresqlMigrator implements DatabaseMigrator {
 
 		log.info("Determined the following tables will be dropped: {}", tablesToDrop);
 		try (Connection connection = backend.connect()) {
-			dropTriggers(connection, state.getFunctions(), tablesToDrop);
-			dropFunctions(connection, state.getFunctions(), tablesToDrop);
+//			dropTriggers(connection, state.getFunctions(), tablesToDrop);
+//			dropFunctions(connection, state.getFunctions(), tablesToDrop);
 			dropTables(connection, refLog, tablesToDrop);
 			backend.persistState(state);
 		}
@@ -76,43 +74,43 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		}
 	}
 
-	private void dropTriggers(Connection connection, MigrationFunctions migrationFunctions,
-			List<TableRef> tablesToDrop) throws SQLException {
-
-		for (TableRef table : tablesToDrop) {
-			String tableId = table.getTableId();
-
-			com.google.common.collect.Table<String, String, String> triggers = migrationFunctions.getTriggers(tableId);
-			for (Cell<String, String, String> function : triggers.cellSet()) {
-				String triggerName = function.getValue();
-				String sourceTableId = function.getRowKey();
-				String targetTableId = function.getColumnKey();
-				try (Statement statement = connection.createStatement()) {
-					statement.execute("DROP TRIGGER " + triggerName + " ON " + sourceTableId + ";");
-				}
-				migrationFunctions.removeTrigger(sourceTableId, targetTableId);
-			}
-		}
-	}
-
-	private void dropFunctions(Connection connection, MigrationFunctions migrationFunctions,
-			List<TableRef> tablesToDrop) throws SQLException {
-
-		for (TableRef table : tablesToDrop) {
-			String tableId = table.getTableId();
-
-			com.google.common.collect.Table<String, String, String> functions = migrationFunctions.getFunctions(tableId);
-			for (Cell<String, String, String> function : functions.cellSet()) {
-				String functionName = function.getValue();
-				String sourceTableId = function.getRowKey();
-				String targetTableId = function.getColumnKey();
-				try (Statement statement = connection.createStatement()) {
-					statement.execute("DROP FUNCTION " + functionName + "();");
-				}
-				migrationFunctions.removeFunction(sourceTableId, targetTableId);
-			}
-		}
-	}
+//	private void dropTriggers(Connection connection, MigrationFunctions migrationFunctions,
+//			List<TableRef> tablesToDrop) throws SQLException {
+//
+//		for (TableRef table : tablesToDrop) {
+//			String tableId = table.getTableId();
+//
+//			com.google.common.collect.Table<String, String, String> triggers = migrationFunctions.getTriggers(tableId);
+//			for (Cell<String, String, String> function : triggers.cellSet()) {
+//				String triggerName = function.getValue();
+//				String sourceTableId = function.getRowKey();
+//				String targetTableId = function.getColumnKey();
+//				try (Statement statement = connection.createStatement()) {
+//					statement.execute("DROP TRIGGER " + triggerName + " ON " + sourceTableId + ";");
+//				}
+//				migrationFunctions.removeTrigger(sourceTableId, targetTableId);
+//			}
+//		}
+//	}
+//
+//	private void dropFunctions(Connection connection, MigrationFunctions migrationFunctions,
+//			List<TableRef> tablesToDrop) throws SQLException {
+//
+//		for (TableRef table : tablesToDrop) {
+//			String tableId = table.getTableId();
+//
+//			com.google.common.collect.Table<String, String, String> functions = migrationFunctions.getFunctions(tableId);
+//			for (Cell<String, String, String> function : functions.cellSet()) {
+//				String functionName = function.getValue();
+//				String sourceTableId = function.getRowKey();
+//				String targetTableId = function.getColumnKey();
+//				try (Statement statement = connection.createStatement()) {
+//					statement.execute("DROP FUNCTION " + functionName + "();");
+//				}
+//				migrationFunctions.removeFunction(sourceTableId, targetTableId);
+//			}
+//		}
+//	}
 
 	private void dropTables(Connection connection, RefLog refLog, List<TableRef> tablesToDrop) throws SQLException {
 		for (TableRef table : tablesToDrop) {
@@ -297,7 +295,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 			String sourceTableId = source.getTableId();
 			String targetTableId = target.getTableId();
 
-			MigrationFunctions functions = state.getFunctions();
+//			MigrationFunctions functions = state.getFunctions();
 			SyncFunction syncFunction = syncFunctions.get(sourceTableId, targetTableId);
 			if (syncFunction == null) {
 				syncFunction = new SyncFunction(refLog, source, target, catalog, nullRecords);
@@ -306,18 +304,18 @@ class PostgresqlMigrator implements DatabaseMigrator {
 
 				log.info("Creating sync function: {} for table: {}", syncFunction.getFunctionName(), sourceTableId);
 				execute(connection, syncFunction.createFunctionStatement());
-				functions.putFunction(sourceTableId, targetTableId, syncFunction.getFunctionName());
+//				functions.putFunction(sourceTableId, targetTableId, syncFunction.getFunctionName());
 
 				log.info("Creating trigger: {} for table: {}", syncFunction.getTriggerName(), sourceTableId);
 				execute(connection, syncFunction.createTriggerStatement());
-				functions.putTrigger(sourceTableId, targetTableId, syncFunction.getTriggerName());
+//				functions.putTrigger(sourceTableId, targetTableId, syncFunction.getTriggerName());
 			}
 			else {
 				syncFunction.setColumnsToMigrate(columns);
 
 				log.info("Updating sync function: {} for table: {}", syncFunction.getFunctionName(), sourceTableId);
 				execute(connection, syncFunction.createFunctionStatement());
-				functions.putFunction(sourceTableId, targetTableId, syncFunction.getFunctionName());
+//				functions.putFunction(sourceTableId, targetTableId, syncFunction.getFunctionName());
 			}
 		}
 

@@ -9,7 +9,6 @@ public class State {
 
 	private final Catalog catalog;
 	private final RefLog refLog;
-	private final MigrationFunctions functions;
 	private final Changelog changelog;
 
 }

@@ -40,7 +40,6 @@ import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.schema.operations.SchemaOperation;
 import io.quantumdb.core.state.RefLog;
 import io.quantumdb.core.versioning.Changelog;
-import io.quantumdb.core.versioning.MigrationFunctions;
 import io.quantumdb.core.versioning.State;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Rule;
@@ -1328,7 +1327,7 @@ public class GreedyMigrationPlannerTest {
 
 	private final Catalog catalog;
 	private final RefLog refLog;
-	private final MigrationFunctions functions;
+//	private final MigrationFunctions functions;
 	private final Changelog changelog;
 	private final int expectedPlanSize;
 	private final int expectedGhostTables;
@@ -1341,11 +1340,11 @@ public class GreedyMigrationPlannerTest {
 		this.expectedGhostTables = expectedGhostTables;
 
 		this.changelog = new Changelog();
-		this.functions = new MigrationFunctions();
+//		this.functions = new MigrationFunctions();
 		this.catalog = scenario.get();
 
 		this.refLog = RefLog.init(catalog, changelog.getRoot());
-		State state = new State(catalog, refLog, functions, changelog);
+		State state = new State(catalog, refLog, changelog);
 
 		changelog.addChangeSet("Michael de Jong", operation);
 

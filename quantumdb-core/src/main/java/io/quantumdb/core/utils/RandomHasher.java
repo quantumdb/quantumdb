@@ -8,7 +8,6 @@ import java.util.stream.Collectors;
 
 import io.quantumdb.core.state.RefLog;
 import io.quantumdb.core.state.RefLog.TableRef;
-import io.quantumdb.core.versioning.TableMapping;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -29,17 +28,6 @@ public class RandomHasher {
 		}
 
 		return builder.toString();
-	}
-
-	public static String generateTableId(TableMapping tableMapping) {
-		checkArgument(tableMapping != null, "You must specify a 'tableMapping'.");
-
-		Set<String> tableIds = tableMapping.getTableIds();
-		String hash = "table_" + generateHash();
-		while (tableIds.contains(hash)) {
-			hash = "table_" + generateHash();
-		}
-		return hash;
 	}
 
 	public static String generateTableId(RefLog refLog) {

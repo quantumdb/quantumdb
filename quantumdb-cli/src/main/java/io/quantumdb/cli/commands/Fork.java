@@ -40,7 +40,7 @@ public class Fork extends Command {
 			backend.getMigrator().migrate(state, from, to);
 
 			state = loadState(backend);
-			writeDatabaseState(writer, state.getTableMapping());
+			writeDatabaseState(writer, state.getRefLog());
 		}
 		catch (MigrationException | IOException | CliException e) {
 			log.error(e.getMessage(), e);
@@ -50,7 +50,7 @@ public class Fork extends Command {
 
 	private Version getOriginVersion(List<String> arguments, State state, Changelog changelog) throws CliException {
 		if (arguments.isEmpty()) {
-			List<Version> versions = Lists.newArrayList(state.getTableMapping().getVersions());
+			List<Version> versions = Lists.newArrayList(state.getRefLog().getVersions());
 			if (versions.size() == 1) {
 				return versions.get(0);
 			}

@@ -4,7 +4,8 @@ import static com.google.common.base.Strings.isNullOrEmpty;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 
-import io.quantumdb.core.versioning.TableMapping;
+import com.google.common.collect.Lists;
+import io.quantumdb.core.state.RefLog;
 import io.quantumdb.core.versioning.Version;
 import org.junit.Test;
 
@@ -25,18 +26,18 @@ public class RandomHasherTest {
 
 	@Test
 	public void testGeneratingUniqueTableIdWithEmptyTableMapping() {
-		TableMapping tableMapping = new TableMapping();
-		String tableId = RandomHasher.generateTableId(tableMapping);
+		RefLog refLog = new RefLog();
+		String tableId = RandomHasher.generateTableId(refLog);
 		assertFalse(isNullOrEmpty(tableId));
 	}
 
 	@Test
 	public void testGeneratingUniqueTableIdWithFilledTableMapping() {
-		TableMapping tableMapping = new TableMapping();
+		RefLog refLog = new RefLog();
 		Version version = new Version(RandomHasher.generateHash(), null);
-		tableMapping.add(version, "users", "users");
+		refLog.addTable("users", "users", version, Lists.newArrayList());
 
-		String tableId = RandomHasher.generateTableId(tableMapping);
+		String tableId = RandomHasher.generateTableId(refLog);
 		assertFalse(isNullOrEmpty(tableId));
 		assertNotEquals("users", tableId);
 	}

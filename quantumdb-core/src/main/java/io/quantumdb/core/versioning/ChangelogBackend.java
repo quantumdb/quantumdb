@@ -14,14 +14,14 @@ import com.google.common.collect.Sets;
 import io.quantumdb.core.backends.Backend;
 import io.quantumdb.core.schema.operations.SchemaOperation;
 import io.quantumdb.core.utils.RandomHasher;
-import io.quantumdb.core.versioning.ChangeLogDataBackend.ChangeLogEntry;
+import io.quantumdb.core.versioning.ChangelogDataBackend.ChangeLogEntry;
 import io.quantumdb.core.versioning.ChangeSetDataBackend.ChangeSetEntry;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class ChangelogBackend {
 
-	private final ChangeLogDataBackend changeLogBackend = new ChangeLogDataBackend();
+	private final ChangelogDataBackend changeLogBackend = new ChangelogDataBackend();
 	private final ChangeSetDataBackend changeSetBackend = new ChangeSetDataBackend();
 
 	public Changelog load(Backend backend) throws SQLException {

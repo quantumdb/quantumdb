@@ -38,11 +38,11 @@ import io.quantumdb.core.schema.operations.MergeTable;
 import io.quantumdb.core.schema.operations.PartitionTable;
 import io.quantumdb.core.schema.operations.RenameTable;
 import io.quantumdb.core.schema.operations.SchemaOperation;
-import io.quantumdb.core.versioning.ChangeLogDataBackend.ChangeLogEntry;
+import io.quantumdb.core.versioning.ChangelogDataBackend.ChangeLogEntry;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-class ChangeLogDataBackend implements PrimaryKeyBackend<String, ChangeLogEntry> {
+class ChangelogDataBackend implements PrimaryKeyBackend<String, ChangeLogEntry> {
 
 	static class ChangeLogEntry {
 

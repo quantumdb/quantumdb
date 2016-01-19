@@ -12,7 +12,6 @@ import io.quantumdb.core.backends.Config;
 import io.quantumdb.core.backends.DatabaseMigrator.MigrationException;
 import io.quantumdb.core.versioning.Changelog;
 import io.quantumdb.core.versioning.State;
-import io.quantumdb.core.versioning.TableMapping;
 import io.quantumdb.core.versioning.Version;
 import lombok.extern.slf4j.Slf4j;
 
@@ -55,8 +54,7 @@ public class Drop extends Command {
 			backend.getMigrator().drop(state, version);
 
 			state = loadState(backend);
-			TableMapping tableMapping = state.getTableMapping();
-			writeDatabaseState(writer, tableMapping);
+			writeDatabaseState(writer, state.getRefLog());
 		}
 		catch (MigrationException | IOException | CliException | SQLException e) {
 			log.error(e.getMessage(), e);

@@ -12,8 +12,6 @@ import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.state.RefLog;
 import io.quantumdb.core.versioning.Changelog;
 import io.quantumdb.core.versioning.ChangelogBackend;
-import io.quantumdb.core.versioning.MigrationFunctions;
-import io.quantumdb.core.versioning.PersistentMigrationFunctions;
 import io.quantumdb.core.versioning.State;
 import io.quantumdb.core.versioning.Version;
 import lombok.SneakyThrows;
@@ -46,10 +44,9 @@ public class PostgresqlBackend implements Backend {
 		try (Connection connection = connect()) {
 			Changelog changelog = changelogBackend.load(this);
 			Catalog catalog = new CatalogLoader(connection).load(jdbcCatalog);
-			MigrationFunctions functions = new PersistentMigrationFunctions(connect());
 			RefLog refLog = new RefLog(); // TODO: Load RefLog from db.
 
-			return new State(catalog, refLog, functions, changelog);
+			return new State(catalog, refLog, changelog);
 		}
 	}
 

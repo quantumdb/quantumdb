@@ -1,5 +1,6 @@
 package io.quantumdb.core.versioning;
 
+import static io.quantumdb.core.backends.postgresql.PostgresTypes.bigint;
 import static io.quantumdb.core.backends.postgresql.PostgresTypes.date;
 import static io.quantumdb.core.backends.postgresql.PostgresTypes.text;
 import static io.quantumdb.core.backends.postgresql.PostgresTypes.varchar;
@@ -47,8 +48,9 @@ class BackendUtils {
 		boolean changelogExists = tableExists(metaData, "quantumdb_changelog");
 		boolean changesetsExists = tableExists(metaData, "quantumdb_changesets");
 		boolean tableMappingsExists = tableExists(metaData, "quantumdb_tablemappings");
-		boolean functionsExists = tableExists(metaData, "quantumdb_functions");
-		boolean triggersExists = tableExists(metaData, "quantumdb_triggers");
+		boolean tableColumnsExists = tableExists(metaData, "quantumdb_tablecolumns");
+		boolean columnMappingsExists = tableExists(metaData, "quantumdb_columnmappings");
+		boolean syncFunctionsExists = tableExists(metaData, "quantumdb_syncfunctions");
 
 		Set<Table> tables = Sets.newHashSet();
 		Table changelog = new Table("quantumdb_changelog")
@@ -62,20 +64,39 @@ class BackendUtils {
 				.addColumn(new Column("created", date(), Hint.NOT_NULL))
 				.addColumn(new Column("description", text()));
 
-		Table tableMappings = new Table("quantumdb_tablemappings")
-				.addColumn(new Column("table_name", varchar(255), Hint.IDENTITY, Hint.NOT_NULL))
-				.addColumn(new Column("table_id", varchar(255), Hint.NOT_NULL))
+		Table tableIds = new Table("quantumdb_tableids")
+				.addColumn(new Column("id", bigint(), Hint.NOT_NULL, Hint.IDENTITY))
+				.addColumn(new Column("table_name", varchar(255), Hint.NOT_NULL))
+				.addColumn(new Column("table_id", varchar(255), Hint.NOT_NULL));
+
+		Table tableStates = new Table("quantumdb_tablestates")
+				.addColumn(new Column("table_id", bigint(), Hint.IDENTITY, Hint.NOT_NULL))
 				.addColumn(new Column("version_id", varchar(32), Hint.IDENTITY, Hint.NOT_NULL));
 
-		Table functions = new Table("quantumdb_functions")
-				.addColumn(new Column("source_table_id", varchar(255), Hint.IDENTITY, Hint.NOT_NULL))
-				.addColumn(new Column("target_table_id", varchar(255), Hint.IDENTITY, Hint.NOT_NULL))
-				.addColumn(new Column("function_name", varchar(255)));
+		Table tableColumns = new Table("quantumdb_tablecolumns")
+				.addColumn(new Column("id", bigint(), Hint.IDENTITY, Hint.NOT_NULL))
+				.addColumn(new Column("table_id", bigint(), Hint.NOT_NULL))
+				.addColumn(new Column("column_name", varchar(255), Hint.NOT_NULL));
 
-		Table triggers = new Table("quantumdb_triggers")
-				.addColumn(new Column("source_table_id", varchar(255), Hint.IDENTITY, Hint.NOT_NULL))
-				.addColumn(new Column("target_table_id", varchar(255), Hint.IDENTITY, Hint.NOT_NULL))
+		Table tableMappings = new Table("quantumdb_tablemappings")
+				.addColumn(new Column("id", bigint(), Hint.IDENTITY, Hint.NOT_NULL))
+				.addColumn(new Column("source_table_id", bigint(), Hint.NOT_NULL))
+				.addColumn(new Column("target_table_id", bigint(), Hint.NOT_NULL));
+
+		Table columnMappings = new Table("quantumdb_columnmappings")
+				.addColumn(new Column("id", bigint(), Hint.IDENTITY, Hint.NOT_NULL))
+				.addColumn(new Column("source_column_id", bigint(), Hint.NOT_NULL))
+				.addColumn(new Column("target_column_id", bigint(), Hint.NOT_NULL));
+
+		Table triggers = new Table("quantumdb_syncfunctions")
+				.addColumn(new Column("id", bigint(), Hint.IDENTITY, Hint.NOT_NULL))
+				.addColumn(new Column("table_mapping_id", bigint(), Hint.NOT_NULL))
+				.addColumn(new Column("function_name", varchar(255)))
 				.addColumn(new Column("trigger_name", varchar(255)));
+
+		Table columns = new Table("quantumdb_syncfunctioncolumns")
+				.addColumn(new Column("sync_function_id", bigint(), Hint.IDENTITY, Hint.NOT_NULL))
+				.addColumn(new Column("column_mapping_id", bigint(), Hint.IDENTITY, Hint.NOT_NULL));
 
 		changelog.addForeignKey("parent_version_id").referencing(changelog, "version_id");
 		changesets.addForeignKey("version_id").referencing(changelog, "version_id");
@@ -89,12 +110,6 @@ class BackendUtils {
 		}
 		if (!tableMappingsExists) {
 			tables.add(tableMappings);
-		}
-		if (!functionsExists) {
-			tables.add(functions);
-		}
-		if (!triggersExists) {
-			tables.add(triggers);
 		}
 
 		if (!tables.isEmpty()) {
