@@ -2,8 +2,8 @@ package io.quantumdb.core.migration.operations;
 
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.operations.RenameTable;
-import io.quantumdb.core.state.RefLog;
-import io.quantumdb.core.state.RefLog.TableRef;
+import io.quantumdb.core.versioning.RefLog;
+import io.quantumdb.core.versioning.RefLog.TableRef;
 import io.quantumdb.core.versioning.Version;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;

@@ -5,7 +5,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 
 import com.google.common.collect.Lists;
-import io.quantumdb.core.state.RefLog;
+import io.quantumdb.core.versioning.RefLog;
 import io.quantumdb.core.versioning.Version;
 import org.junit.Test;
 

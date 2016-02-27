@@ -6,8 +6,8 @@ import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import io.quantumdb.core.state.RefLog;
-import io.quantumdb.core.state.RefLog.TableRef;
+import io.quantumdb.core.versioning.RefLog;
+import io.quantumdb.core.versioning.RefLog.TableRef;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 

@@ -15,7 +15,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.quantumdb.core.backends.postgresql.planner.Operation.Type;
 import io.quantumdb.core.schema.definitions.Table;
-import io.quantumdb.core.state.RefLog;
+import io.quantumdb.core.versioning.RefLog;
 import lombok.Data;
 
 @Data

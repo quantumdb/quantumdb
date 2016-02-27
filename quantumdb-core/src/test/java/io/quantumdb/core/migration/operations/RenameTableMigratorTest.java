@@ -13,7 +13,7 @@ import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.schema.operations.RenameTable;
 import io.quantumdb.core.schema.operations.SchemaOperations;
-import io.quantumdb.core.state.RefLog;
+import io.quantumdb.core.versioning.RefLog;
 import io.quantumdb.core.versioning.Changelog;
 import org.junit.Before;
 import org.junit.Test;

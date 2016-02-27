@@ -7,7 +7,7 @@ import io.quantumdb.cli.utils.CliException;
 import io.quantumdb.cli.utils.CliWriter;
 import io.quantumdb.cli.utils.CliWriter.Context;
 import io.quantumdb.core.backends.Backend;
-import io.quantumdb.core.state.RefLog;
+import io.quantumdb.core.versioning.RefLog;
 import io.quantumdb.core.versioning.ChangeSet;
 import io.quantumdb.core.versioning.State;
 import io.quantumdb.core.versioning.Version;

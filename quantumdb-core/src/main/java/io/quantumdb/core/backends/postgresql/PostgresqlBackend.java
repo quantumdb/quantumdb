@@ -6,21 +6,19 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import io.quantumdb.core.backends.Backend;
 import io.quantumdb.core.backends.postgresql.migrator.TableCreator;
 import io.quantumdb.core.schema.definitions.Catalog;
-import io.quantumdb.core.state.RefLog;
-import io.quantumdb.core.versioning.Changelog;
-import io.quantumdb.core.versioning.ChangelogBackend;
+import io.quantumdb.core.versioning.Backend;
+import io.quantumdb.core.versioning.QuantumTables;
 import io.quantumdb.core.versioning.State;
 import io.quantumdb.core.versioning.Version;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class PostgresqlBackend implements Backend {
+public class PostgresqlBackend implements io.quantumdb.core.backends.Backend {
 
-	private final ChangelogBackend changelogBackend;
+	private final Backend backend;
 
 	private final String jdbcUrl;
 	private final String jdbcUser;
@@ -30,7 +28,7 @@ public class PostgresqlBackend implements Backend {
 
 	public PostgresqlBackend(String jdbcUrl, String jdbcUser, String jdbcPass, String jdbcCatalog, String driver) {
 		this.driver = driver;
-		this.changelogBackend = new ChangelogBackend();
+		this.backend = new Backend();
 
 		this.jdbcUrl = jdbcUrl;
 		this.jdbcUser = jdbcUser;
@@ -42,11 +40,9 @@ public class PostgresqlBackend implements Backend {
 	public State loadState() throws SQLException {
 		log.trace("Loading state from database...");
 		try (Connection connection = connect()) {
-			Changelog changelog = changelogBackend.load(this);
+			QuantumTables.prepare(connection);
 			Catalog catalog = new CatalogLoader(connection).load(jdbcCatalog);
-			RefLog refLog = new RefLog(); // TODO: Load RefLog from db.
-
-			return new State(catalog, refLog, changelog);
+			return backend.load(connection, catalog);
 		}
 	}
 
@@ -54,7 +50,11 @@ public class PostgresqlBackend implements Backend {
 	public void persistState(State state) throws SQLException {
 		log.info("Persisting state to database...");
 
-		changelogBackend.persist(this, state.getChangelog());
+		try (Connection connection = connect()) {
+			connection.setAutoCommit(false);
+			backend.persist(connection, state);
+			connection.commit();
+		}
 	}
 
 	@Override

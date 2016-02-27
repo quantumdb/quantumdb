@@ -16,7 +16,7 @@ import io.quantumdb.core.schema.operations.DropIndex;
 import io.quantumdb.core.schema.operations.DropTable;
 import io.quantumdb.core.schema.operations.RenameTable;
 import io.quantumdb.core.schema.operations.SchemaOperation;
-import io.quantumdb.core.state.RefLog;
+import io.quantumdb.core.versioning.RefLog;
 import io.quantumdb.core.versioning.Version;
 import lombok.Getter;
 

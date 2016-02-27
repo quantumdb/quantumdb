@@ -20,7 +20,7 @@ import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.schema.operations.SchemaOperations;
-import io.quantumdb.core.state.RefLog;
+import io.quantumdb.core.versioning.RefLog;
 import io.quantumdb.core.versioning.State;
 import io.quantumdb.core.versioning.Version;
 import org.junit.BeforeClass;

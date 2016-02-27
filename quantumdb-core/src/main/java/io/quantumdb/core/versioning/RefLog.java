@@ -1,4 +1,4 @@
-package io.quantumdb.core.state;
+package io.quantumdb.core.versioning;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
@@ -14,23 +14,26 @@ import java.util.stream.Collectors;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import io.quantumdb.core.schema.definitions.Catalog;
-import io.quantumdb.core.versioning.Version;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 
 @Slf4j
+@ToString
+@EqualsAndHashCode
 public class RefLog {
 
 	@Data
-	@ToString(exclude = { "columns" })
+	@ToString(of = { "tableId", "name", "versions", "columns" })
 	public static class TableRef {
 
 		private String name;
@@ -40,7 +43,6 @@ public class RefLog {
 		private final Set<SyncRef> outboundSyncs;
 		private final Set<SyncRef> inboundSyncs;
 		private final RefLog refLog;
-		private boolean exists;
 
 		private TableRef(RefLog refLog, String name, String tableId, Version version, Collection<ColumnRef> columns) {
 			this.name = name;
@@ -50,7 +52,6 @@ public class RefLog {
 			this.columns = Maps.newLinkedHashMap();
 			this.outboundSyncs = Sets.newHashSet();
 			this.inboundSyncs = Sets.newHashSet();
-			this.exists = false;
 
 			columns.forEach(column -> {
 				column.table = this;
@@ -88,14 +89,14 @@ public class RefLog {
 					.collect(Collectors.toSet());
 		}
 
-		private TableRef markAsPresent(Version version) {
+		TableRef markAsPresent(Version version) {
 			versions.add(version);
 			refLog.tables.put(version, this);
 			log.debug("Marked TableRef: {} ({}) as present in version: {}", name, tableId, version.getId());
 			return this;
 		}
 
-		private TableRef markAsAbsent(Version version) {
+		TableRef markAsAbsent(Version version) {
 //			checkArgument(versions.contains(version));
 			versions.remove(version);
 			refLog.tables.remove(version, this);
@@ -156,7 +157,7 @@ public class RefLog {
 	}
 
 	@Data
-	@ToString(exclude = { "basedOn", "basisFor" })
+	@ToString(of = { "name" })
 	public static class ColumnRef {
 
 		private final Set<ColumnRef> basedOn;
@@ -198,6 +199,9 @@ public class RefLog {
 				if (table != null) {
 					builder.append(table.getName(), otherRef.getTable().getName());
 				}
+				else if (otherRef.getTable() != null) {
+					return false;
+				}
 
 				return builder.isEquals();
 			}
@@ -218,6 +222,7 @@ public class RefLog {
 	}
 
 	@Data
+	@ToString(of = { "name", "functionName", "columnMapping", "source", "target" })
 	public static class SyncRef {
 
 		private final String name;
@@ -263,8 +268,15 @@ public class RefLog {
 				if (source != null) {
 					builder.append(source.getName(), otherRef.getSource().getName());
 				}
+				else if (otherRef.getSource() != null) {
+					return false;
+				}
+
 				if (target != null) {
 					builder.append(target.getName(), otherRef.getTarget().getName());
+				}
+				else if (otherRef.getTarget() != null) {
+					return false;
 				}
 
 				return builder.isEquals();
@@ -318,7 +330,7 @@ public class RefLog {
 	 * Creates a new RefLog object.
 	 */
 	public RefLog() {
-		this.tables = HashMultimap.create();
+		this.tables = LinkedHashMultimap.create();
 	}
 
 	/**

@@ -1,7 +1,6 @@
 package io.quantumdb.core.versioning;
 
 import io.quantumdb.core.schema.definitions.Catalog;
-import io.quantumdb.core.state.RefLog;
 import lombok.Data;
 
 @Data

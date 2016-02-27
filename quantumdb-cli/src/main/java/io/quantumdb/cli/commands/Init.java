@@ -12,7 +12,7 @@ import io.quantumdb.cli.utils.CliWriter.Context;
 import io.quantumdb.core.backends.Backend;
 import io.quantumdb.core.backends.Config;
 import io.quantumdb.core.schema.definitions.Catalog;
-import io.quantumdb.core.state.RefLog;
+import io.quantumdb.core.versioning.RefLog;
 import io.quantumdb.core.versioning.Changelog;
 import io.quantumdb.core.versioning.State;
 import lombok.extern.slf4j.Slf4j;
