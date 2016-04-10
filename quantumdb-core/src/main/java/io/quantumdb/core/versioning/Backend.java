@@ -18,14 +18,12 @@ import java.util.stream.Collectors;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Table;
 import com.google.gson.Gson;
-import io.quantumdb.core.backends.postgresql.PostgresqlBackend;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.operations.SchemaOperation;
 import io.quantumdb.core.utils.RandomHasher;
@@ -35,38 +33,6 @@ import io.quantumdb.core.versioning.RefLog.TableRef;
 import lombok.Data;
 
 public class Backend {
-
-	public static void main(String[] args) throws SQLException {
-		String url = "jdbc:postgresql://localhost:5432";
-		String user = "test";
-		String pass = "test";
-		String database = "test";
-		String driver = "org.postgresql.Driver";
-
-		PostgresqlBackend backend = new PostgresqlBackend(url, user, pass, database, driver);
-		State state = backend.loadState();
-		RefLog refLog = state.getRefLog();
-
-		Changelog changelog = state.getChangelog();
-		ColumnRef id = new ColumnRef("id");
-		ColumnRef name = new ColumnRef("name");
-		refLog.addTable("users", RandomHasher.generateHash(), changelog.getRoot(),
-				Lists.newArrayList(id, name));
-
-		ColumnRef id2 = new ColumnRef("id", Lists.newArrayList(id));
-		ColumnRef name2 = new ColumnRef("name", Lists.newArrayList(name));
-		refLog.addTable("users2", RandomHasher.generateHash(), changelog.getRoot(),
-				Lists.newArrayList(id2, name2));
-
-		refLog.addSync("test", "test2", ImmutableMap.of(id, id2, name, name2));
-
-		backend.persistState(state);
-		state = backend.loadState();
-
-		System.out.println(refLog);
-		System.out.println(state.getRefLog());
-		System.out.println(refLog.equals(state.getRefLog()));
-	}
 
 	@Data
 	private static class TableId {
@@ -178,6 +144,8 @@ public class Backend {
 				toDo.add(version.getChild());
 			}
 		}
+
+		addSynchronizers(connection, refLog, columnMappings);
 
 		return new State(catalog, refLog, changelog);
 	}
@@ -821,6 +789,60 @@ public class Backend {
 			}
 		}
 		return results;
+	}
+
+	private void addSynchronizers(Connection connection, RefLog refLog, List<TableColumnMapping> columnMappings) throws SQLException {
+		Map<Long, TableColumnMapping> columnMapping = columnMappings.stream()
+				.collect(Collectors.toMap(TableColumnMapping::getId, Function.identity()));
+
+		Multimap<Long, Long> syncColumMappings = HashMultimap.create();
+		try (Statement statement = connection.createStatement()) {
+			String query = "SELECT * FROM quantumdb_synchronizer_columns;";
+
+			ResultSet resultSet = statement.executeQuery(query);
+			while (resultSet.next()) {
+				long synchronizerId = resultSet.getLong("synchronizer_id");
+				long columnMappingId = resultSet.getLong("column_mapping_id");
+				syncColumMappings.put(synchronizerId, columnMappingId);
+			}
+		}
+
+		try (Statement statement = connection.createStatement()) {
+			String query = "SELECT * FROM quantumdb_synchronizers;";
+
+			ResultSet resultSet = statement.executeQuery(query);
+			while (resultSet.next()) {
+				long id = resultSet.getLong("id");
+				String sourceTableId = resultSet.getString("source_table_id");
+				String targetTableId = resultSet.getString("target_table_id");
+				String triggerName = resultSet.getString("trigger_name");
+				String functionName = resultSet.getString("function_name");
+
+				Map<ColumnRef, ColumnRef> mappingsForSynchronizer = syncColumMappings.get(id).stream()
+						.map(columnMapping::get)
+						.collect(Collectors.toMap(entry -> {
+							TableColumn source = entry.getSource();
+							if (!source.getTable().getTableId().equals(sourceTableId)) {
+								throw new IllegalStateException("The column mapping of synchronizer: " + id
+										+ " originates to a table: " + source.getTable().getTableId()
+										+ " other than the source table: " + sourceTableId);
+							}
+							TableRef ref = refLog.getTableRefById(source.getTable().getTableId());
+							return ref.getColumns().get(source.getColumn());
+						}, entry -> {
+							TableColumn target = entry.getTarget();
+							if (!target.getTable().getTableId().equals(targetTableId)) {
+								throw new IllegalStateException("The column mapping of synchronizer: " + id
+										+ " targets into a table: " + target.getTable().getTableId()
+										+ " other than the target table: " + targetTableId);
+							}
+							TableRef ref = refLog.getTableRefById(target.getTable().getTableId());
+							return ref.getColumns().get(target.getColumn());
+						}));
+
+				refLog.addSync(triggerName, functionName, mappingsForSynchronizer);
+			}
+		}
 	}
 
 }

@@ -99,8 +99,8 @@ public class SelectiveMigratorFunction {
 			}
 		}
 
-		TableRef sourceRef = refLog.getTableRefById(from, source.getName());
-		TableRef targetRef = refLog.getTableRefById(to, target.getName());
+		TableRef sourceRef = refLog.getTableRefById(source.getName());
+		TableRef targetRef = refLog.getTableRefById(target.getName());
 		Map<ColumnRef, ColumnRef> columnMapping = refLog.getColumnMapping(sourceRef, targetRef);
 
 		Map<String, String> columnsToMigrate = columnMapping.entrySet().stream()
@@ -181,8 +181,8 @@ public class SelectiveMigratorFunction {
 				.map(column -> functionParameterMapping.get(column.getName()) + " " + column.getType().toString())
 				.collect(Collectors.toList());
 
-		TableRef sourceRef = refLog.getTableRefById(from, source.getName());
-		TableRef targetRef = refLog.getTableRefById(to, target.getName());
+		TableRef sourceRef = refLog.getTableRefById(source.getName());
+		TableRef targetRef = refLog.getTableRefById(target.getName());
 		Map<ColumnRef, ColumnRef> columnMapping = refLog.getColumnMapping(sourceRef, targetRef);
 
 		Map<String, String> values = columnMapping.entrySet().stream()

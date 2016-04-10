@@ -12,9 +12,9 @@ import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.schema.operations.CreateTable;
 import io.quantumdb.core.schema.operations.SchemaOperations;
+import io.quantumdb.core.versioning.Changelog;
 import io.quantumdb.core.versioning.RefLog;
 import io.quantumdb.core.versioning.RefLog.TableRef;
-import io.quantumdb.core.versioning.Changelog;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -51,7 +51,7 @@ public class CreateTableMigratorTest {
 				.addColumn(new Column("name", varchar(255), NOT_NULL));
 
 		assertEquals(expectedGhostTable, ghostTable);
-		assertEquals("users", refLog.getTableRefById(changelog.getLastAdded(), ghostTable.getName()).getName());
+		assertEquals("users", refLog.getTableRefById(ghostTable.getName()).getName());
 	}
 
 }

@@ -69,7 +69,7 @@ public class GreedyMigrationPlanner implements MigrationPlanner {
 		Set<String> newTableIds = Sets.difference(postTableIds, preTableIds);
 
 		log.debug("The following ghost tables will be created: " + newTableIds.stream()
-				.collect(Collectors.toMap(Function.identity(), (id) -> refLog.getTableRefById(to, id).getName())));
+				.collect(Collectors.toMap(Function.identity(), (id) -> refLog.getTableRefById(id).getName())));
 
 		return new Planner(state, from, to, newTableIds, migrator.getRefLog()).createPlan();
 	}
@@ -459,7 +459,7 @@ public class GreedyMigrationPlanner implements MigrationPlanner {
 					continue;
 				}
 
-				TableRef tableRef = refLog.getTableRefById(from, tableId);
+				TableRef tableRef = refLog.getTableRefById(tableId);
 				Table table = catalog.getTable(tableRef.getTableId());
 
 				String newTableId = RandomHasher.generateTableId(refLog);
@@ -510,7 +510,7 @@ public class GreedyMigrationPlanner implements MigrationPlanner {
 					foreignKeysToFix.forEach(fk -> {
 						fk.drop();
 						String referredTableId = fk.getReferredTableName();
-						TableRef referredTableRef = refLog.getTableRefById(from, referredTableId);
+						TableRef referredTableRef = refLog.getTableRefById(referredTableId);
 						TableRef mappedTableRef = refLog.getTableRef(to, referredTableRef.getName());
 						Table referredTable = catalog.getTable(mappedTableRef.getTableId());
 
@@ -525,7 +525,7 @@ public class GreedyMigrationPlanner implements MigrationPlanner {
 					List<ForeignKey> outgoingForeignKeys = Lists.newArrayList(oldTable.getForeignKeys());
 					for (ForeignKey foreignKey : outgoingForeignKeys) {
 						String oldReferredTableId = foreignKey.getReferredTableName();
-						TableRef oldReferredTableRef = refLog.getTableRefById(from, oldReferredTableId);
+						TableRef oldReferredTableRef = refLog.getTableRefById(oldReferredTableId);
 						TableRef newReferredTableRef = refLog.getTableRef(to, oldReferredTableRef.getName());
 
 						Table newReferredTable = catalog.getTable(newReferredTableRef.getTableId());

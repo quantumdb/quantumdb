@@ -94,6 +94,23 @@ public class QuantumTables {
 		return version;
 	}
 
+	public static void dropEverything(Connection connection) throws SQLException {
+		connection.setAutoCommit(false);
+
+		try {
+			Statement statement = connection.createStatement();
+			statement.executeUpdate("DROP SCHEMA public CASCADE;");
+			statement.executeUpdate("CREATE SCHEMA public;");
+			statement.executeUpdate("ALTER SCHEMA public OWNER TO CURRENT_USER;");
+			statement.close();
+			connection.commit();
+		}
+		catch (SQLException e) {
+			connection.rollback();
+			throw e;
+		}
+	}
+
 	private static void setVersion(Connection connection, int version) throws SQLException {
 		String query = "UPDATE quantumdb_config SET value = ? WHERE name = ?;";
 		try (PreparedStatement statement = connection.prepareStatement(query)) {

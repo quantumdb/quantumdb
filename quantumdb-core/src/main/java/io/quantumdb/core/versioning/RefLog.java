@@ -389,23 +389,20 @@ public class RefLog {
 	}
 
 	/**
-	 * This method retrieves the TableRef object from the RefLog with the specified table ID at the specified
-	 * version. If no such TableRef matches these criteria an IllegalArgumentException will be thrown.
+	 * This method retrieves the TableRef object from the RefLog with the specified table ID. If no TableRef
+	 * matches the criteria an IllegalArgumentException will be thrown.
 	 *
-	 * @param version The version in which the TableRef should be present.
 	 * @param tableId The ID of the table represented by the TableRef.
 	 * @return The retrieved TableRef object.
 	 * @throws IllegalArgumentException When no TableRef matches the specified criteria.
 	 */
-	public TableRef getTableRefById(Version version, String tableId) {
-		checkArgument(version != null, "You must specify a version!");
+	public TableRef getTableRefById(String tableId) {
 		checkArgument(!isNullOrEmpty(tableId), "You must specify a table ID!");
 
-		return tables.get(version).stream()
+		return tables.values().stream()
 				.filter(table -> table.getTableId().equals(tableId))
 				.findFirst()
-				.orElseThrow(() -> new IllegalArgumentException("No table with id: " + tableId
-						+ " at version: " + version.getId()));
+				.orElseThrow(() -> new IllegalArgumentException("No table with id: " + tableId));
 	}
 
 	/**

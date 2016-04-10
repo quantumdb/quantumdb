@@ -12,8 +12,8 @@ import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.schema.operations.CopyTable;
 import io.quantumdb.core.schema.operations.SchemaOperations;
-import io.quantumdb.core.versioning.RefLog;
 import io.quantumdb.core.versioning.Changelog;
+import io.quantumdb.core.versioning.RefLog;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -60,7 +60,7 @@ public class CopyTableMigratorTest {
 
 		assertEquals(expectedGhostTable, ghostTable);
 		assertEquals(expectedOriginalTable, originalTable);
-		assertEquals("customers", refLog.getTableRefById(changelog.getLastAdded(), ghostTable.getName()).getName());
+		assertEquals("customers", refLog.getTableRefById(ghostTable.getName()).getName());
 	}
 
 }

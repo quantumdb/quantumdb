@@ -10,9 +10,9 @@ import com.google.common.collect.Sets;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.ForeignKey;
 import io.quantumdb.core.schema.definitions.Table;
+import io.quantumdb.core.utils.RandomHasher;
 import io.quantumdb.core.versioning.RefLog;
 import io.quantumdb.core.versioning.RefLog.TableRef;
-import io.quantumdb.core.utils.RandomHasher;
 import io.quantumdb.core.versioning.Version;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -45,7 +45,7 @@ class TransitiveTableMirrorer {
 			// Traverse incoming foreign keys
 			Set<String> referencingTableIds = catalog.getTablesReferencingTable(tableRef.getTableId());
 			tablesToMirror.addAll(referencingTableIds.stream()
-					.map(tableId -> refLog.getTableRefById(parentVersion, tableId))
+					.map(tableId -> refLog.getTableRefById(tableId))
 					.collect(Collectors.toList()));
 		}
 
@@ -60,7 +60,7 @@ class TransitiveTableMirrorer {
 			List<ForeignKey> outgoingForeignKeys = Lists.newArrayList(oldTable.getForeignKeys());
 			for (ForeignKey foreignKey : outgoingForeignKeys) {
 				String oldReferredTableId = foreignKey.getReferredTableName();
-				String oldReferredTableName = refLog.getTableRefById(parentVersion, oldReferredTableId).getName();
+				String oldReferredTableName = refLog.getTableRefById(oldReferredTableId).getName();
 				String newReferredTableId = refLog.getTableRef(version, oldReferredTableName).getTableId();
 
 				Table newReferredTable = catalog.getTable(newReferredTableId);
