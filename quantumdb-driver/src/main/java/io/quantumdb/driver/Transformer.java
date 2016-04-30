@@ -19,14 +19,20 @@ class Transformer {
 		this.queryRewriter = queryRewriter;
 
 		if (version != null && !version.isEmpty()) {
-			String query = "SELECT * FROM quantumdb_tablemappings WHERE version_id = ?";
+			String query = new StringBuilder()
+					.append("SELECT t.table_id, t.table_name ")
+					.append("FROM quantumdb_tables t ")
+					.append("LEFT JOIN quantumdb_table_versions v ON v.table_id = t.table_id ")
+					.append("WHERE v.version_id = ?;")
+					.toString();
+
 			try (PreparedStatement statement = connection.prepareStatement(query)) {
 				statement.setString(1, version);
 
 				try (ResultSet resultSet = statement.executeQuery()) {
 					while (resultSet.next()) {
-						String tableName = resultSet.getString("table_name");
 						String tableId = resultSet.getString("table_id");
+						String tableName = resultSet.getString("table_name");
 						tableMapping.put(tableName, tableId);
 					}
 				}

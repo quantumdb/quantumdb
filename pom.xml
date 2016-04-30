@@ -60,7 +60,7 @@
 			<artifactId>jul-to-slf4j</artifactId>
 			<version>1.7.6</version>
 		</dependency>
-		
+
 		<!-- Testing -->
 		<dependency>
 			<groupId>junit</groupId>
