@@ -49,13 +49,13 @@ class MigrationState {
 	}
 
 	public Set<String> getPartiallyMigratedTables() {
-		return migratedColumns.keys().stream()
+		return migratedColumns.keySet().stream()
 				.filter(tableName -> getProgress(tableName) == Progress.PARTIALLY)
 				.collect(Collectors.toSet());
 	}
 
 	public Set<String> getMigratedTables() {
-		return migratedColumns.keys().stream()
+		return migratedColumns.keySet().stream()
 				.filter(tableName -> getProgress(tableName) == Progress.DONE)
 				.collect(Collectors.toSet());
 	}

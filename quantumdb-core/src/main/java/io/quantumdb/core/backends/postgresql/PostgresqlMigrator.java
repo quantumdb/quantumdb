@@ -3,10 +3,7 @@ package io.quantumdb.core.backends.postgresql;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
@@ -14,12 +11,8 @@ import java.util.stream.Collectors;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
-import com.google.common.collect.Table.Cell;
 import io.quantumdb.core.backends.DatabaseMigrator;
 import io.quantumdb.core.backends.postgresql.migrator.NullRecords;
 import io.quantumdb.core.backends.postgresql.migrator.TableCreator;
@@ -28,16 +21,13 @@ import io.quantumdb.core.backends.postgresql.planner.Operation;
 import io.quantumdb.core.backends.postgresql.planner.Plan;
 import io.quantumdb.core.backends.postgresql.planner.PlanValidator;
 import io.quantumdb.core.backends.postgresql.planner.Step;
-import io.quantumdb.core.migration.utils.DataMapping;
-import io.quantumdb.core.migration.utils.DataMappings;
-import io.quantumdb.core.migration.utils.DataMappings.Direction;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Table;
+import io.quantumdb.core.versioning.RefLog;
+import io.quantumdb.core.versioning.RefLog.TableRef;
 import io.quantumdb.core.utils.QueryBuilder;
-import io.quantumdb.core.versioning.MigrationFunctions;
 import io.quantumdb.core.versioning.State;
-import io.quantumdb.core.versioning.TableMapping;
 import io.quantumdb.core.versioning.Version;
 import lombok.extern.slf4j.Slf4j;
 
@@ -52,15 +42,12 @@ class PostgresqlMigrator implements DatabaseMigrator {
 
 	@Override
 	public void migrate(State state, Version from, Version to) throws MigrationException {
-		Set<Version> preMigration = state.getTableMapping().getVersions();
+		RefLog refLog = state.getRefLog();
+		Set<Version> preMigration = refLog.getVersions();
 		Plan plan = new GreedyMigrationPlanner().createPlan(state, from, to);
 
 		PlanValidator.validate(plan);
-
-		log.info("Constructed migration plan: \n{}", plan);
-		log.info("The new tableMapping will be: \n{}", state.getTableMapping());
-
-		Set<Version> postMigration = state.getTableMapping().getVersions();
+		Set<Version> postMigration = refLog.getVersions();
 		Set<Version> intermediateVersions = Sets.newHashSet(Sets.difference(postMigration, preMigration));
 		intermediateVersions.remove(to);
 
@@ -69,25 +56,17 @@ class PostgresqlMigrator implements DatabaseMigrator {
 
 	@Override
 	public void drop(State state, Version version) throws MigrationException {
-		TableMapping tableMapping = state.getTableMapping();
-		Map<String, String> mappingAtVersion = tableMapping.getTableMapping(version);
-
-		Map<String, String> tablesToDrop = Maps.newHashMap();
-		for (String tableId : mappingAtVersion.keySet()) {
-			String tableName = mappingAtVersion.get(tableId);
-
-			Set<Version> versions = tableMapping.getVersions(tableId);
-			Set<Version> otherVersions = Sets.difference(versions, Sets.newHashSet(version));
-			if (otherVersions.isEmpty()) {
-				tablesToDrop.put(tableName, tableId);
-			}
-		}
+		RefLog refLog = state.getRefLog();
+		List<TableRef> tablesToDrop = refLog.getTableRefs().stream()
+				.filter(tableRef -> tableRef.getVersions().contains(version))
+				.filter(tableRef -> tableRef.getVersions().size() == 1)
+				.collect(Collectors.toList());
 
 		log.info("Determined the following tables will be dropped: {}", tablesToDrop);
 		try (Connection connection = backend.connect()) {
-			dropTriggers(connection, state.getFunctions(), tablesToDrop);
-			dropFunctions(connection, state.getFunctions(), tablesToDrop);
-			dropTables(connection, version, tableMapping, tablesToDrop);
+//			dropTriggers(connection, state.getFunctions(), tablesToDrop);
+//			dropFunctions(connection, state.getFunctions(), tablesToDrop);
+			dropTables(connection, refLog, tablesToDrop);
 			backend.persistState(state);
 		}
 		catch (SQLException e) {
@@ -95,68 +74,60 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		}
 	}
 
-	private void dropTriggers(Connection connection, MigrationFunctions migrationFunctions,
-			Map<String, String> tablesToDrop) throws SQLException {
+//	private void dropTriggers(Connection connection, MigrationFunctions migrationFunctions,
+//			List<TableRef> tablesToDrop) throws SQLException {
+//
+//		for (TableRef table : tablesToDrop) {
+//			String tableId = table.getTableId();
+//
+//			com.google.common.collect.Table<String, String, String> triggers = migrationFunctions.getTriggers(tableId);
+//			for (Cell<String, String, String> function : triggers.cellSet()) {
+//				String triggerName = function.getValue();
+//				String sourceTableId = function.getRowKey();
+//				String targetTableId = function.getColumnKey();
+//				try (Statement statement = connection.createStatement()) {
+//					statement.execute("DROP TRIGGER " + triggerName + " ON " + sourceTableId + ";");
+//				}
+//				migrationFunctions.removeTrigger(sourceTableId, targetTableId);
+//			}
+//		}
+//	}
+//
+//	private void dropFunctions(Connection connection, MigrationFunctions migrationFunctions,
+//			List<TableRef> tablesToDrop) throws SQLException {
+//
+//		for (TableRef table : tablesToDrop) {
+//			String tableId = table.getTableId();
+//
+//			com.google.common.collect.Table<String, String, String> functions = migrationFunctions.getFunctions(tableId);
+//			for (Cell<String, String, String> function : functions.cellSet()) {
+//				String functionName = function.getValue();
+//				String sourceTableId = function.getRowKey();
+//				String targetTableId = function.getColumnKey();
+//				try (Statement statement = connection.createStatement()) {
+//					statement.execute("DROP FUNCTION " + functionName + "();");
+//				}
+//				migrationFunctions.removeFunction(sourceTableId, targetTableId);
+//			}
+//		}
+//	}
 
-		for (Entry<String, String> entry : tablesToDrop.entrySet()) {
-			String tableId = entry.getValue();
-
-			com.google.common.collect.Table<String, String, String> triggers = migrationFunctions.getTriggers(tableId);
-			for (Cell<String, String, String> function : triggers.cellSet()) {
-				String triggerName = function.getValue();
-				String sourceTableId = function.getRowKey();
-				String targetTableId = function.getColumnKey();
-				try (Statement statement = connection.createStatement()) {
-					statement.execute("DROP TRIGGER " + triggerName + " ON " + sourceTableId + ";");
-				}
-				migrationFunctions.removeTrigger(sourceTableId, targetTableId);
-			}
-		}
-	}
-
-	private void dropFunctions(Connection connection, MigrationFunctions migrationFunctions,
-			Map<String, String> tablesToDrop) throws SQLException {
-
-		for (Entry<String, String> entry : tablesToDrop.entrySet()) {
-			String tableId = entry.getValue();
-
-			com.google.common.collect.Table<String, String, String> functions = migrationFunctions.getFunctions(tableId);
-			for (Cell<String, String, String> function : functions.cellSet()) {
-				String functionName = function.getValue();
-				String sourceTableId = function.getRowKey();
-				String targetTableId = function.getColumnKey();
-				try (Statement statement = connection.createStatement()) {
-					statement.execute("DROP FUNCTION " + functionName + "();");
-				}
-				migrationFunctions.removeFunction(sourceTableId, targetTableId);
-			}
-		}
-	}
-
-	private void dropTables(Connection connection, Version version, TableMapping tableMapping,
-			Map<String, String> tablesToDrop) throws SQLException {
-
-		for (Entry<String, String> entry : tablesToDrop.entrySet()) {
-			String tableName = entry.getKey();
-			String tableId = entry.getValue();
-
+	private void dropTables(Connection connection, RefLog refLog, List<TableRef> tablesToDrop) throws SQLException {
+		for (TableRef table : tablesToDrop) {
+			String tableId = table.getTableId();
 			try (Statement statement = connection.createStatement()) {
 				statement.execute("DROP TABLE " + tableId + " CASCADE;");
 			}
-			tableMapping.remove(version, tableName);
-		}
 
-		for (String tableName : tableMapping.getTableNames(version)) {
-			tableMapping.remove(version, tableName);
+			refLog.dropTable(table);
 		}
-
 	}
 
 	static class InternalPlanner {
 
 		private final Plan plan;
 		private final Set<Version> intermediateVersions;
-		private final DataMappings dataMappings;
+		private final RefLog refLog;
 		private final State state;
 		private final NullRecords nullRecords;
 		private final Multimap<Table, String> migratedColumns;
@@ -173,7 +144,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 			this.backend = backend;
 			this.plan = plan;
 			this.intermediateVersions = intermediateVersions;
-			this.dataMappings = plan.getDataMappings();
+			this.refLog = plan.getRefLog();
 			this.state = state;
 			this.nullRecords = new NullRecords();
 			this.migratedColumns = HashMultimap.create();
@@ -202,7 +173,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 
 			synchronizeBackwards();
 
-			intermediateVersions.forEach(state.getTableMapping()::remove);
+//			intermediateVersions.forEach(state.getTableMapping()::remove);
 
 			persistState();
 		}
@@ -268,9 +239,13 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		private void synchronizeForwards(Table targetTable, Set<String> targetColumns) throws SQLException {
 			log.info("Creating forward sync function for table: {}...", targetTable.getName());
 			try (Connection connection = backend.connect()) {
-				for (DataMapping dataMapping : listDataMappings(Direction.FORWARDS)) {
-					if (dataMapping.getTargetTable().equals(targetTable)) {
-						ensureSyncFunctionExists(connection, dataMapping, targetColumns);
+				Catalog catalog = state.getCatalog();
+				Multimap<TableRef, TableRef> tableMapping = state.getRefLog().getTableMapping(from, to);
+				for (Entry<TableRef, TableRef> entry : tableMapping.entries()) {
+					if (entry.getValue().getTableId().equals(targetTable.getName())) {
+						TableRef source = entry.getKey();
+						TableRef target = entry.getValue();
+						ensureSyncFunctionExists(connection, refLog, source, target, catalog, targetColumns);
 					}
 				}
 			}
@@ -279,10 +254,14 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		private void copyData(Table targetTable, Set<String> migratedColumns, Set<String> columnsToMigrate)
 				throws SQLException, InterruptedException {
 
-			for (DataMapping dataMapping : listDataMappings(Direction.FORWARDS)) {
-				if (dataMapping.getTargetTable().equals(targetTable)) {
-					TableDataMigrator tableDataMigrator = new TableDataMigrator(backend, dataMapping);
-					tableDataMigrator.migrateData(nullRecords, migratedColumns, columnsToMigrate);
+			Catalog catalog = state.getCatalog();
+			Multimap<TableRef, TableRef> tableMapping = state.getRefLog().getTableMapping(from, to);
+			for (Entry<TableRef, TableRef> entry : tableMapping.entries()) {
+				if (entry.getValue().getTableId().equals(targetTable.getName())) {
+					Table source = catalog.getTable(entry.getKey().getTableId());
+					Table target = catalog.getTable(entry.getValue().getTableId());
+					TableDataMigrator tableDataMigrator = new TableDataMigrator(backend, refLog);
+					tableDataMigrator.migrateData(nullRecords, source, target, from, to, migratedColumns, columnsToMigrate);
 				}
 			}
 		}
@@ -290,13 +269,19 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		private void synchronizeBackwards() throws MigrationException {
 			log.info("Creating backwards sync functions...");
 			try (Connection connection = backend.connect()) {
-				for (DataMapping dataMapping : listDataMappings(DataMappings.Direction.BACKWARDS)) {
-					Set<String> columns = dataMapping.getTargetTable().getColumns().stream()
+				Catalog catalog = state.getCatalog();
+				Multimap<TableRef, TableRef> tableMapping = state.getRefLog().getTableMapping(from, to);
+				for (Entry<TableRef, TableRef> entry : tableMapping.entries()) {
+					TableRef source = entry.getKey();
+					TableRef target = entry.getValue();
+					Table targetTable = catalog.getTable(target.getTableId());
+
+					Set<String> columns = targetTable.getColumns().stream()
 							.map(Column::getName)
 							.collect(Collectors.toSet());
 
-					log.info("Creating backward sync function for table: {}...", dataMapping.getTargetTable().getName());
-					ensureSyncFunctionExists(connection, dataMapping, columns);
+					log.info("Creating backward sync function for table: {}...", target.getName());
+					ensureSyncFunctionExists(connection, refLog, source, target, catalog, columns);
 				}
 			}
 			catch (SQLException e) {
@@ -304,88 +289,33 @@ class PostgresqlMigrator implements DatabaseMigrator {
 			}
 		}
 
-		private List<DataMapping> listDataMappings(Direction direction) {
-			TableMapping tableMapping = state.getTableMapping();
-			Version target = direction == Direction.FORWARDS ? from : to;
-			ImmutableSet<String> tableIds = tableMapping.getTableIds(target);
-			Multimap<String, String> ghostTableIdMapping = tableMapping.getGhostTableIdMapping(from, to);
+		void ensureSyncFunctionExists(Connection connection, RefLog refLog, TableRef source,
+				TableRef target, Catalog catalog, Set<String> columns) throws SQLException {
 
-			Catalog catalog = state.getCatalog();
+			String sourceTableId = source.getTableId();
+			String targetTableId = target.getTableId();
 
-			List<DataMapping> results = Lists.newArrayList();
-			for (String tableId : tableIds) {
-				Table table = catalog.getTable(tableId);
-
-				if (direction == Direction.BACKWARDS) {
-					dataMappings.getTransitiveDataMappings(table, direction).stream()
-							.filter(mapping -> ghostTableIdMapping.containsKey(mapping.getTargetTable().getName()))
-							.forEach(results::add);
-				}
-				else {
-					dataMappings.getTransitiveDataMappings(table, direction).stream()
-							.filter(mapping -> ghostTableIdMapping.containsValue(mapping.getTargetTable().getName()))
-							.forEach(results::add);
-				}
-			}
-
-			Collections.sort(results, new Comparator<DataMapping>() {
-				@Override
-				public int compare(DataMapping o1, DataMapping o2) {
-					String t1 = o1.getTargetTable().getName();
-					String t2 = o2.getTargetTable().getName();
-
-					List<Step> migrationSteps = plan.getSteps();
-					for (Step step : migrationSteps) {
-						Set<String> tableNames = step.getOperation().getTables().stream()
-								.map(Table::getName)
-								.collect(Collectors.toSet());
-
-						if (tableNames.contains(t1)) {
-							if (tableNames.contains(t2)) {
-								return 0;
-							}
-							else {
-								return -1;
-							}
-						}
-						else {
-							if (tableNames.contains(t2)) {
-								return 1;
-							}
-						}
-					}
-					return 0;
-				}
-			});
-
-			return results;
-		}
-
-		void ensureSyncFunctionExists(Connection connection, DataMapping dataMapping, Set<String> columns) throws SQLException {
-			String sourceTableId = dataMapping.getSourceTable().getName();
-			String targetTableId = dataMapping.getTargetTable().getName();
-
-			MigrationFunctions functions = state.getFunctions();
+//			MigrationFunctions functions = state.getFunctions();
 			SyncFunction syncFunction = syncFunctions.get(sourceTableId, targetTableId);
 			if (syncFunction == null) {
-				syncFunction = new SyncFunction(dataMapping, nullRecords);
+				syncFunction = new SyncFunction(refLog, source, target, catalog, nullRecords);
 				syncFunction.setColumnsToMigrate(columns);
 				syncFunctions.put(sourceTableId, targetTableId, syncFunction);
 
 				log.info("Creating sync function: {} for table: {}", syncFunction.getFunctionName(), sourceTableId);
 				execute(connection, syncFunction.createFunctionStatement());
-				functions.putFunction(sourceTableId, targetTableId, syncFunction.getFunctionName());
+//				functions.putFunction(sourceTableId, targetTableId, syncFunction.getFunctionName());
 
 				log.info("Creating trigger: {} for table: {}", syncFunction.getTriggerName(), sourceTableId);
 				execute(connection, syncFunction.createTriggerStatement());
-				functions.putTrigger(sourceTableId, targetTableId, syncFunction.getTriggerName());
+//				functions.putTrigger(sourceTableId, targetTableId, syncFunction.getTriggerName());
 			}
 			else {
 				syncFunction.setColumnsToMigrate(columns);
 
 				log.info("Updating sync function: {} for table: {}", syncFunction.getFunctionName(), sourceTableId);
 				execute(connection, syncFunction.createFunctionStatement());
-				functions.putFunction(sourceTableId, targetTableId, syncFunction.getFunctionName());
+//				functions.putFunction(sourceTableId, targetTableId, syncFunction.getFunctionName());
 			}
 		}
 

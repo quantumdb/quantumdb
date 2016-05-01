@@ -7,8 +7,7 @@ import lombok.Data;
 public class State {
 
 	private final Catalog catalog;
-	private final TableMapping tableMapping;
-	private final MigrationFunctions functions;
+	private final RefLog refLog;
 	private final Changelog changelog;
 
 }

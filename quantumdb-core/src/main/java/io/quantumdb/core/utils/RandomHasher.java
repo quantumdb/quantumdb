@@ -4,8 +4,10 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.Random;
 import java.util.Set;
+import java.util.stream.Collectors;
 
-import io.quantumdb.core.versioning.TableMapping;
+import io.quantumdb.core.versioning.RefLog;
+import io.quantumdb.core.versioning.RefLog.TableRef;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -28,10 +30,13 @@ public class RandomHasher {
 		return builder.toString();
 	}
 
-	public static String generateTableId(TableMapping tableMapping) {
-		checkArgument(tableMapping != null, "You must specify a 'tableMapping'.");
+	public static String generateTableId(RefLog refLog) {
+		checkArgument(refLog != null, "You must specify a 'refLog'.");
 
-		Set<String> tableIds = tableMapping.getTableIds();
+		Set<String> tableIds = refLog.getTableRefs().stream()
+				.map(TableRef::getTableId)
+				.collect(Collectors.toSet());
+
 		String hash = "table_" + generateHash();
 		while (tableIds.contains(hash)) {
 			hash = "table_" + generateHash();

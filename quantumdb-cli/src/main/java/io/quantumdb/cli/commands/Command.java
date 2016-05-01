@@ -7,9 +7,9 @@ import io.quantumdb.cli.utils.CliException;
 import io.quantumdb.cli.utils.CliWriter;
 import io.quantumdb.cli.utils.CliWriter.Context;
 import io.quantumdb.core.backends.Backend;
+import io.quantumdb.core.versioning.RefLog;
 import io.quantumdb.core.versioning.ChangeSet;
 import io.quantumdb.core.versioning.State;
-import io.quantumdb.core.versioning.TableMapping;
 import io.quantumdb.core.versioning.Version;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -52,11 +52,11 @@ public abstract class Command {
 		}
 	}
 
-	void writeDatabaseState(CliWriter writer, TableMapping tableMapping) {
+	void writeDatabaseState(CliWriter writer, RefLog refLog) {
 		writer.write("Database is operating at version(s):", Context.SUCCESS);
 		writer.indent(1);
 
-		for (Version version : tableMapping.getVersions()) {
+		for (Version version : refLog.getVersions()) {
 			ChangeSet changeSet = version.getChangeSet();
 			writer.write(version.getId() + ": " + changeSet.getDescription(), Context.SUCCESS);
 		}

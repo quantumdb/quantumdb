@@ -10,8 +10,11 @@ import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
 
 import java.sql.Date;
 import java.sql.SQLException;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.quantumdb.core.backends.Backend;
 import io.quantumdb.core.backends.Config;
@@ -22,10 +25,11 @@ import io.quantumdb.core.migration.Migrator;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Table;
+import io.quantumdb.core.versioning.RefLog;
+import io.quantumdb.core.versioning.RefLog.ColumnRef;
 import io.quantumdb.core.utils.BatchInserter;
 import io.quantumdb.core.versioning.Changelog;
 import io.quantumdb.core.versioning.State;
-import io.quantumdb.core.versioning.TableMapping;
 import lombok.Getter;
 
 @Getter
@@ -44,7 +48,7 @@ public class PostgresqlBaseScenario extends PostgresqlDatabase {
 	private Catalog catalog;
 	private Migrator migrator;
 	private Changelog changelog;
-	private TableMapping tableMapping;
+	private RefLog refLog;
 	private State state;
 
 	@Override
@@ -142,15 +146,23 @@ public class PostgresqlBaseScenario extends PostgresqlDatabase {
 
 		// Register pre-existing tables in root version.
 		catalog = state.getCatalog();
-		tableMapping = state.getTableMapping();
-		tableMapping.add(changelog.getRoot(), "stores", STORES_ID);
-		tableMapping.add(changelog.getRoot(), "staff", STAFF_ID);
-		tableMapping.add(changelog.getRoot(), "customers", CUSTOMERS_ID);
-		tableMapping.add(changelog.getRoot(), "films", FILMS_ID);
-		tableMapping.add(changelog.getRoot(), "inventory", INVENTORY_ID);
-		tableMapping.add(changelog.getRoot(), "paychecks", PAYCHECKS_ID);
-		tableMapping.add(changelog.getRoot(), "payments", PAYMENTS_ID);
-		tableMapping.add(changelog.getRoot(), "rentals", RENTALS_ID);
+		refLog = state.getRefLog();
+
+		Map<String, String> tableIds = Maps.newHashMap();
+		tableIds.put("stores", STORES_ID);
+		tableIds.put("staff", STAFF_ID);
+		tableIds.put("customers", CUSTOMERS_ID);
+		tableIds.put("films", FILMS_ID);
+		tableIds.put("inventory", INVENTORY_ID);
+		tableIds.put("paychecks", PAYCHECKS_ID);
+		tableIds.put("payments", PAYMENTS_ID);
+		tableIds.put("rentals", RENTALS_ID);
+
+		catalog.getTables().forEach(table -> {
+			refLog.addTable(table.getName(), tableIds.get(table.getName()), changelog.getRoot(), table.getColumns().stream()
+					.map(column -> new ColumnRef(column.getName()))
+					.collect(Collectors.toList()));
+		});
 
 		backend.persistState(state);
 		migrator = new Migrator(backend);

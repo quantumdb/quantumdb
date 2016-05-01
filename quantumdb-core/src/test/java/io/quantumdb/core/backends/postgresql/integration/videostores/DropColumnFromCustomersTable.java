@@ -4,6 +4,14 @@ import static io.quantumdb.core.backends.postgresql.PostgresTypes.date;
 import static io.quantumdb.core.backends.postgresql.PostgresTypes.floats;
 import static io.quantumdb.core.backends.postgresql.PostgresTypes.integer;
 import static io.quantumdb.core.backends.postgresql.PostgresTypes.varchar;
+import static io.quantumdb.core.backends.postgresql.integration.videostores.PostgresqlBaseScenario.CUSTOMERS_ID;
+import static io.quantumdb.core.backends.postgresql.integration.videostores.PostgresqlBaseScenario.FILMS_ID;
+import static io.quantumdb.core.backends.postgresql.integration.videostores.PostgresqlBaseScenario.INVENTORY_ID;
+import static io.quantumdb.core.backends.postgresql.integration.videostores.PostgresqlBaseScenario.PAYCHECKS_ID;
+import static io.quantumdb.core.backends.postgresql.integration.videostores.PostgresqlBaseScenario.PAYMENTS_ID;
+import static io.quantumdb.core.backends.postgresql.integration.videostores.PostgresqlBaseScenario.RENTALS_ID;
+import static io.quantumdb.core.backends.postgresql.integration.videostores.PostgresqlBaseScenario.STAFF_ID;
+import static io.quantumdb.core.backends.postgresql.integration.videostores.PostgresqlBaseScenario.STORES_ID;
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
 import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
@@ -19,8 +27,8 @@ import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.schema.operations.SchemaOperations;
+import io.quantumdb.core.versioning.RefLog;
 import io.quantumdb.core.versioning.State;
-import io.quantumdb.core.versioning.TableMapping;
 import io.quantumdb.core.versioning.Version;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -52,42 +60,42 @@ public class DropColumnFromCustomersTable {
 
 	@Test
 	public void verifyTableStructure() {
-		TableMapping mapping = state.getTableMapping();
+		RefLog refLog = state.getRefLog();
 
 		// Original tables and foreign keys.
 
-		Table stores = new Table(mapping.getTableId(origin, "stores"))
+		Table stores = new Table(refLog.getTableRef(origin, "stores").getTableId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL))
 				.addColumn(new Column("manager_id", integer(), NOT_NULL));
 
-		Table staff = new Table(mapping.getTableId(origin, "staff"))
+		Table staff = new Table(refLog.getTableRef(origin, "staff").getTableId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL))
 				.addColumn(new Column("store_id", integer(), NOT_NULL));
 
-		Table customers = new Table(mapping.getTableId(origin, "customers"))
+		Table customers = new Table(refLog.getTableRef(origin, "customers").getTableId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL))
 				.addColumn(new Column("store_id", integer(), NOT_NULL))
 				.addColumn(new Column("referred_by", integer()));
 
-		Table films = new Table(mapping.getTableId(origin, "films"))
+		Table films = new Table(refLog.getTableRef(origin, "films").getTableId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL));
 
-		Table inventory = new Table(mapping.getTableId(origin, "inventory"))
+		Table inventory = new Table(refLog.getTableRef(origin, "inventory").getTableId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("store_id", integer(), NOT_NULL))
 				.addColumn(new Column("film_id", integer(), NOT_NULL));
 
-		Table paychecks = new Table(mapping.getTableId(origin, "paychecks"))
+		Table paychecks = new Table(refLog.getTableRef(origin, "paychecks").getTableId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("staff_id", integer(), NOT_NULL))
 				.addColumn(new Column("date", date(), NOT_NULL))
 				.addColumn(new Column("amount", floats(), NOT_NULL));
 
-		Table payments = new Table(mapping.getTableId(origin, "payments"))
+		Table payments = new Table(refLog.getTableRef(origin, "payments").getTableId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("staff_id", integer()))
 				.addColumn(new Column("customer_id", integer(), NOT_NULL))
@@ -95,7 +103,7 @@ public class DropColumnFromCustomersTable {
 				.addColumn(new Column("date", date(), NOT_NULL))
 				.addColumn(new Column("amount", floats(), NOT_NULL));
 
-		Table rentals = new Table(mapping.getTableId(origin, "rentals"))
+		Table rentals = new Table(refLog.getTableRef(origin, "rentals").getTableId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("staff_id", integer()))
 				.addColumn(new Column("customer_id", integer(), NOT_NULL))
@@ -118,12 +126,12 @@ public class DropColumnFromCustomersTable {
 
 		// New tables and foreign keys.
 
-		Table newCustomers = new Table(mapping.getTableId(target, "customers"))
+		Table newCustomers = new Table(refLog.getTableRef(target, "customers").getTableId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL))
 				.addColumn(new Column("store_id", integer(), NOT_NULL));
 
-		Table newPayments = new Table(mapping.getTableId(target, "payments"))
+		Table newPayments = new Table(refLog.getTableRef(target, "payments").getTableId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("staff_id", integer()))
 				.addColumn(new Column("customer_id", integer(), NOT_NULL))
@@ -131,7 +139,7 @@ public class DropColumnFromCustomersTable {
 				.addColumn(new Column("date", date(), NOT_NULL))
 				.addColumn(new Column("amount", floats(), NOT_NULL));
 
-		Table newRentals = new Table(mapping.getTableId(target, "rentals"))
+		Table newRentals = new Table(refLog.getTableRef(target, "rentals").getTableId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("staff_id", integer()))
 				.addColumn(new Column("customer_id", integer(), NOT_NULL))
@@ -157,19 +165,19 @@ public class DropColumnFromCustomersTable {
 
 	@Test
 	public void verifyTableMappings() {
-		TableMapping tableMapping = state.getTableMapping();
+		RefLog refLog = state.getRefLog();
 
 		// Unchanged tables
-		assertEquals(PostgresqlBaseScenario.STORES_ID, tableMapping.getTableId(target, "stores"));
-		assertEquals(PostgresqlBaseScenario.STAFF_ID, tableMapping.getTableId(target, "staff"));
-		assertEquals(PostgresqlBaseScenario.FILMS_ID, tableMapping.getTableId(target, "films"));
-		assertEquals(PostgresqlBaseScenario.INVENTORY_ID, tableMapping.getTableId(target, "inventory"));
-		assertEquals(PostgresqlBaseScenario.PAYCHECKS_ID, tableMapping.getTableId(target, "paychecks"));
+		assertEquals(STORES_ID, refLog.getTableRef(target, "stores").getTableId());
+		assertEquals(STAFF_ID, refLog.getTableRef(target, "staff").getTableId());
+		assertEquals(FILMS_ID, refLog.getTableRef(target, "films").getTableId());
+		assertEquals(INVENTORY_ID, refLog.getTableRef(target, "inventory").getTableId());
+		assertEquals(PAYCHECKS_ID, refLog.getTableRef(target, "paychecks").getTableId());
 
 		// Ghosted tables
-		assertNotEquals(PostgresqlBaseScenario.CUSTOMERS_ID, tableMapping.getTableId(target, "customers"));
-		assertNotEquals(PostgresqlBaseScenario.PAYMENTS_ID, tableMapping.getTableId(target, "payments"));
-		assertNotEquals(PostgresqlBaseScenario.RENTALS_ID, tableMapping.getTableId(target, "rentals"));
+		assertNotEquals(CUSTOMERS_ID, refLog.getTableRef(target, "customers").getTableId());
+		assertNotEquals(PAYMENTS_ID, refLog.getTableRef(target, "payments").getTableId());
+		assertNotEquals(RENTALS_ID, refLog.getTableRef(target, "rentals").getTableId());
 	}
 
 }

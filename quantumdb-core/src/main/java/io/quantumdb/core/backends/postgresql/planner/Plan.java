@@ -14,8 +14,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.quantumdb.core.backends.postgresql.planner.Operation.Type;
-import io.quantumdb.core.migration.utils.DataMappings;
 import io.quantumdb.core.schema.definitions.Table;
+import io.quantumdb.core.versioning.RefLog;
 import lombok.Data;
 
 @Data
@@ -90,8 +90,8 @@ public class Plan {
 					.findFirst();
 		}
 
-		public Plan build(DataMappings dataMappings, Set<Table> ghostTables) {
-			return new Plan(Lists.newArrayList(steps), dataMappings, ghostTables);
+		public Plan build(RefLog refLog, Set<Table> ghostTables) {
+			return new Plan(Lists.newArrayList(steps), refLog, ghostTables);
 		}
 
 	}
@@ -101,12 +101,12 @@ public class Plan {
 	}
 
 	private final ImmutableList<Step> steps;
-	private final DataMappings dataMappings;
+	private final RefLog refLog;
 	private final ImmutableSet<Table> ghostTables;
 
-	public Plan(List<Step> steps, DataMappings dataMappings, Set<Table> ghostTables) {
+	public Plan(List<Step> steps, RefLog refLog, Set<Table> ghostTables) {
 		this.steps = ImmutableList.copyOf(steps);
-		this.dataMappings = dataMappings;
+		this.refLog = refLog;
 		this.ghostTables = ImmutableSet.copyOf(ghostTables);
 	}
 

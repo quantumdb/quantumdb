@@ -8,22 +8,21 @@ import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
 import static io.quantumdb.core.schema.operations.SchemaOperations.dropForeignKey;
 import static org.junit.Assert.assertEquals;
 
-import io.quantumdb.core.migration.utils.DataMappings;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.schema.operations.DropForeignKey;
+import io.quantumdb.core.versioning.RefLog;
+import io.quantumdb.core.versioning.RefLog.TableRef;
 import io.quantumdb.core.versioning.Changelog;
-import io.quantumdb.core.versioning.TableMapping;
 import org.junit.Before;
 import org.junit.Test;
 
 public class DropForeignKeyMigratorTest {
 
+	private RefLog refLog;
 	private Catalog catalog;
 	private Changelog changelog;
-	private TableMapping tableMapping;
-	private DataMappings dataMappings;
 	private DropForeignKeyMigrator migrator;
 
 	@Before
@@ -43,8 +42,7 @@ public class DropForeignKeyMigratorTest {
 				.referencing(users, "id");
 
 		this.changelog = new Changelog();
-		this.tableMapping = TableMapping.bootstrap(changelog.getRoot(), catalog);
-		this.dataMappings = new DataMappings(tableMapping, catalog);
+		this.refLog = RefLog.init(catalog, changelog.getRoot());
 
 		this.migrator = new DropForeignKeyMigrator();
 	}
@@ -53,7 +51,7 @@ public class DropForeignKeyMigratorTest {
 	public void testExpandForDroppingForeignKey() {
 		DropForeignKey operation = dropForeignKey("posts", "post_author");
 		changelog.addChangeSet("Michael de Jong", "Drop author foreign key from posts table.", operation);
-		migrator.migrate(catalog, tableMapping, dataMappings, changelog.getLastAdded(), operation);
+		migrator.migrate(catalog, refLog, changelog.getLastAdded(), operation);
 
 		Table originalTable = catalog.getTable("posts");
 		Table ghostTable = getGhostTable(originalTable);
@@ -66,7 +64,8 @@ public class DropForeignKeyMigratorTest {
 	}
 
 	private Table getGhostTable(Table table) {
-		String tableId = tableMapping.getTableId(changelog.getLastAdded(), table.getName());
+		TableRef tableRef = refLog.getTableRef(changelog.getLastAdded(), table.getName());
+		String tableId = tableRef.getTableId();
 		return catalog.getTable(tableId);
 	}
 

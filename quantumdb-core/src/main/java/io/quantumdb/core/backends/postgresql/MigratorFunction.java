@@ -7,7 +7,7 @@ import lombok.Data;
 @Data
 public class MigratorFunction {
 
-	public static enum Stage {
+	public enum Stage {
 		INITIAL, CONSECUTIVE
 	}
 

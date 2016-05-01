@@ -1,29 +1,5 @@
 package io.quantumdb.cli.commands;
 
-import static io.quantumdb.core.backends.postgresql.PostgresTypes.bigint;
-import static io.quantumdb.core.backends.postgresql.PostgresTypes.bool;
-import static io.quantumdb.core.backends.postgresql.PostgresTypes.date;
-import static io.quantumdb.core.backends.postgresql.PostgresTypes.integer;
-import static io.quantumdb.core.backends.postgresql.PostgresTypes.text;
-import static io.quantumdb.core.backends.postgresql.PostgresTypes.timestamp;
-import static io.quantumdb.core.backends.postgresql.PostgresTypes.uuid;
-import static io.quantumdb.core.backends.postgresql.PostgresTypes.varchar;
-import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
-import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
-import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
-import static io.quantumdb.core.schema.definitions.ForeignKey.Action.CASCADE;
-import static io.quantumdb.core.schema.definitions.ForeignKey.Action.SET_NULL;
-import static io.quantumdb.core.schema.operations.SchemaOperations.addColumn;
-import static io.quantumdb.core.schema.operations.SchemaOperations.addForeignKey;
-import static io.quantumdb.core.schema.operations.SchemaOperations.alterColumn;
-import static io.quantumdb.core.schema.operations.SchemaOperations.createIndex;
-import static io.quantumdb.core.schema.operations.SchemaOperations.createTable;
-import static io.quantumdb.core.schema.operations.SchemaOperations.dropColumn;
-import static io.quantumdb.core.schema.operations.SchemaOperations.dropForeignKey;
-import static io.quantumdb.core.schema.operations.SchemaOperations.dropIndex;
-import static io.quantumdb.core.schema.operations.SchemaOperations.dropTable;
-import static io.quantumdb.core.schema.operations.SchemaOperations.renameTable;
-
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -36,11 +12,9 @@ import io.quantumdb.cli.utils.CliWriter.Context;
 import io.quantumdb.core.backends.Backend;
 import io.quantumdb.core.backends.Config;
 import io.quantumdb.core.schema.definitions.Catalog;
-import io.quantumdb.core.schema.definitions.Table;
+import io.quantumdb.core.versioning.RefLog;
 import io.quantumdb.core.versioning.Changelog;
 import io.quantumdb.core.versioning.State;
-import io.quantumdb.core.versioning.TableMapping;
-import io.quantumdb.core.versioning.Version;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -79,17 +53,13 @@ public class Init extends Command {
 			writer.write("Found: " + catalog.getSequences().size() + " sequences");
 
 			// Register pre-existing tables in current version.
-			TableMapping mapping = state.getTableMapping();
-			Version current = changelog.getRoot();
-			for (Table table : catalog.getTables()) {
-				mapping.add(current, table.getName(), table.getName());
-			}
+			RefLog refLog = RefLog.init(catalog, changelog.getRoot());
 
 			writer.indent(-1);
 			writer.write("Persisting current state to database...");
 			persistChanges(backend, state);
 
-			writeDatabaseState(writer, state.getTableMapping());
+			writeDatabaseState(writer, refLog);
 
 			config.persist();
 		}

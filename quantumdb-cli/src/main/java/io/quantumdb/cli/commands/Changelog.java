@@ -32,7 +32,7 @@ public class Changelog extends Command {
 			Backend backend = config.getBackend();
 
 			State state = loadState(backend);
-			Set<Version> activeVersions = Sets.newHashSet(state.getTableMapping().getVersions());
+			Set<Version> activeVersions = Sets.newHashSet(state.getRefLog().getVersions());
 			io.quantumdb.core.versioning.Changelog changelog = state.getChangelog();
 
 			ChangeSet changeSet = null;

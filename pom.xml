@@ -60,11 +60,6 @@
 			<artifactId>jul-to-slf4j</artifactId>
 			<version>1.7.6</version>
 		</dependency>
-		<dependency>
-			<groupId>jline</groupId>
-			<artifactId>jline</artifactId>
-			<version>0.9.94</version>
-		</dependency>
 
 		<!-- Testing -->
 		<dependency>

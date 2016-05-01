@@ -3,7 +3,6 @@ package io.quantumdb.core.migration.operations;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableMap;
-import io.quantumdb.core.migration.utils.DataMappings;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.operations.AddColumn;
 import io.quantumdb.core.schema.operations.AddForeignKey;
@@ -17,20 +16,21 @@ import io.quantumdb.core.schema.operations.DropIndex;
 import io.quantumdb.core.schema.operations.DropTable;
 import io.quantumdb.core.schema.operations.RenameTable;
 import io.quantumdb.core.schema.operations.SchemaOperation;
-import io.quantumdb.core.versioning.TableMapping;
+import io.quantumdb.core.versioning.RefLog;
 import io.quantumdb.core.versioning.Version;
+import lombok.Getter;
 
 public class SchemaOperationsMigrator {
 
+	@Getter
+	private final RefLog refLog;
+
 	private final Catalog catalog;
-	private final TableMapping tableMapping;
-	private final DataMappings dataMappings;
 	private final Map<Class<? extends SchemaOperation>, SchemaOperationMigrator<?>> migrators;
 
-	public SchemaOperationsMigrator(Catalog catalog, TableMapping tableMapping) {
+	public SchemaOperationsMigrator(Catalog catalog, RefLog refLog) {
 		this.catalog = catalog;
-		this.tableMapping = tableMapping;
-		this.dataMappings = new DataMappings(tableMapping, catalog);
+		this.refLog = refLog;
 
 		this.migrators = ImmutableMap.<Class<? extends SchemaOperation>, SchemaOperationMigrator<?>>builder()
 				.put(AddColumn.class, new AddColumnMigrator())
@@ -43,13 +43,8 @@ public class SchemaOperationsMigrator {
 				.put(DropTable.class, new DropTableMigrator())
 				.put(DropColumn.class, new DropColumnMigrator())
 				.put(DropForeignKey.class, new DropForeignKeyMigrator())
-//				.put(JoinTable.class, new JoinTableMigrator())
 				.put(RenameTable.class, new RenameTableMigrator())
 				.build();
-	}
-
-	public DataMappings getDataMappings() {
-		return dataMappings;
 	}
 
 	public <T extends SchemaOperation> void migrate(Version version, T operation) {
@@ -58,7 +53,7 @@ public class SchemaOperationsMigrator {
 		if (migrator == null) {
 			throw new UnsupportedOperationException("The operation: " + type + " is not (yet) supported!");
 		}
-		migrator.migrate(catalog, tableMapping, dataMappings, version, operation);
+		migrator.migrate(catalog, refLog, version, operation);
 	}
 
 }

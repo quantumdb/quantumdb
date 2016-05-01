@@ -8,8 +8,8 @@ import io.quantumdb.cli.utils.CliWriter;
 import io.quantumdb.cli.utils.CliWriter.Context;
 import io.quantumdb.core.backends.Backend;
 import io.quantumdb.core.backends.Config;
+import io.quantumdb.core.versioning.RefLog;
 import io.quantumdb.core.versioning.State;
-import io.quantumdb.core.versioning.TableMapping;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -26,8 +26,8 @@ public class Status extends Command {
 			Backend backend = config.getBackend();
 
 			State state = loadState(backend);
-			TableMapping tableMapping = state.getTableMapping();
-			writeDatabaseState(writer, tableMapping);
+			RefLog refLog = state.getRefLog();
+			writeDatabaseState(writer, refLog);
 		}
 		catch (IOException | CliException e) {
 			log.error(e.getMessage(), e);

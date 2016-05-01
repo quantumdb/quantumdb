@@ -19,10 +19,12 @@ import com.google.common.collect.Maps;
 import io.quantumdb.core.backends.Backend;
 import io.quantumdb.core.backends.postgresql.MigratorFunction.Stage;
 import io.quantumdb.core.backends.postgresql.migrator.NullRecords;
-import io.quantumdb.core.migration.utils.DataMapping;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.ColumnType.Type;
+import io.quantumdb.core.schema.definitions.Table;
+import io.quantumdb.core.versioning.RefLog;
 import io.quantumdb.core.utils.QueryBuilder;
+import io.quantumdb.core.versioning.Version;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -31,28 +33,28 @@ class TableDataMigrator {
 	private static final long BATCH_SIZE = 2_000;
 	private static final long WAIT_TIME = 50;
 
-	private final DataMapping mapping;
+	private final RefLog refLog;
 	private final Backend backend;
 
-	TableDataMigrator(Backend backend, DataMapping mapping) {
+	TableDataMigrator(Backend backend, RefLog refLog) {
 		this.backend = backend;
-		this.mapping = mapping;
+		this.refLog = refLog;
 	}
 
-	void migrateData(NullRecords nullRecords, Set<String> migratedColumns, Set<String> columnsToMigrate)
-			throws SQLException, InterruptedException {
+	void migrateData(NullRecords nullRecords, Table source, Table target, Version from, Version to,
+			Set<String> migratedColumns, Set<String> columnsToMigrate) throws SQLException, InterruptedException {
 
-		Map<String, Object> highestId = queryHighestId();
+		Map<String, Object> highestId = queryHighestId(source);
 		if (highestId == null) {
-			log.info("Table: {} is empty -> nothing to migrate...", mapping.getSourceTable().getName());
+			log.info("Table: {} is empty -> nothing target migrate...", source.getName());
 			return;
 		}
-		log.info("Migrating data in table: {} to: {}", mapping.getSourceTable().getName(), mapping.getTargetTable().getName());
+		log.info("Migrating data in table: {} target: {}", source.getName(), target.getName());
 
-		MigratorFunction initialMigrator = SelectiveMigratorFunction.createMigrator(nullRecords, mapping,
-				BATCH_SIZE, Stage.INITIAL, migratedColumns, columnsToMigrate);
-		MigratorFunction successiveMigrator = SelectiveMigratorFunction.createMigrator(nullRecords, mapping,
-				BATCH_SIZE, Stage.CONSECUTIVE, migratedColumns, columnsToMigrate);
+		MigratorFunction initialMigrator = SelectiveMigratorFunction.createMigrator(nullRecords, refLog,
+				source, target, from, to, BATCH_SIZE, Stage.INITIAL, migratedColumns, columnsToMigrate);
+		MigratorFunction successiveMigrator = SelectiveMigratorFunction.createMigrator(nullRecords, refLog,
+				source, target, from, to, BATCH_SIZE, Stage.CONSECUTIVE, migratedColumns, columnsToMigrate);
 
 		if (initialMigrator == null) {
 			return;
@@ -85,7 +87,7 @@ class TableDataMigrator {
 					ResultSet resultSet = statement.executeQuery(migrator.toString());
 
 					if (resultSet.next()) {
-						lastProcessedId.putAll(readIdentity(resultSet));
+						lastProcessedId.putAll(readIdentity(source, resultSet));
 						if (greaterThanOrEqualsTo(lastProcessedId, highestId)) {
 							break;
 						}
@@ -97,22 +99,14 @@ class TableDataMigrator {
 				}
 
 				long innerEnd = System.currentTimeMillis();
-				log.info("Migration data from: {} to: {}, now at identity: {}, took: {} ms", new Object[] {
-						mapping.getSourceTable().getName(),
-						mapping.getTargetTable().getName(),
-						lastProcessedId,
-						innerEnd - innerStart
-				});
+				log.info("Migration data source: {} target: {}, now at identity: {}, took: {} ms", source.getName(),
+						target.getName(), lastProcessedId, innerEnd - innerStart);
 
 				Thread.sleep(WAIT_TIME);
 			}
 
 			long end = System.currentTimeMillis();
-			log.info("Migrating records from: {} to: {} took: {} ms", new Object[] {
-					mapping.getSourceTable().getName(),
-					mapping.getTargetTable().getName(),
-					end - start
-			});
+			log.info("Migrating records source: {} target: {} took: {} ms", source.getName(), target.getName(), end - start);
 
 			execute(connection, initialMigrator.getDropStatement());
 			execute(connection, successiveMigrator.getDropStatement());
@@ -126,8 +120,8 @@ class TableDataMigrator {
 		return parameterName;
 	}
 
-	private Map<String, Object> queryHighestId() throws SQLException {
-		List<String> identityColumns = mapping.getSourceTable().getIdentityColumns().stream()
+	private Map<String, Object> queryHighestId(Table from) throws SQLException {
+		List<String> identityColumns = from.getIdentityColumns().stream()
 				.map(Column::getName)
 				.collect(Collectors.toList());
 
@@ -135,7 +129,7 @@ class TableDataMigrator {
 			try (Statement statement = connection.createStatement()) {
 				String query = new QueryBuilder()
 						.append("SELECT " + Joiner.on(", ").join(identityColumns))
-						.append("FROM " + mapping.getSourceTable().getName())
+						.append("FROM " + from.getName())
 						.append("ORDER BY " + Joiner.on(" DESC, ").join(identityColumns) + " DESC")
 						.append("LIMIT 1")
 						.toString();
@@ -191,7 +185,7 @@ class TableDataMigrator {
 		return true;
 	}
 
-	private Map<String, Object> readIdentity(ResultSet resultSet) throws SQLException {
+	private Map<String, Object> readIdentity(Table from, ResultSet resultSet) throws SQLException {
 		String result = resultSet.getString(1);
 		result = result.substring(1, result.length() - 1);
 
@@ -220,7 +214,7 @@ class TableDataMigrator {
 		}
 
 		Map<String, Object> identity = Maps.newHashMap();
-		List<Column> identityColumns = mapping.getSourceTable().getIdentityColumns();
+		List<Column> identityColumns = from.getIdentityColumns();
 		for (int i = 0; i < identityColumns.size(); i++) {
 			Column column = identityColumns.get(i);
 			String columnName = column.getName();

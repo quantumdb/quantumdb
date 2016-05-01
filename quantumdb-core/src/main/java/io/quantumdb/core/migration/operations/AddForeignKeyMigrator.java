@@ -1,27 +1,28 @@
 package io.quantumdb.core.migration.operations;
 
-import io.quantumdb.core.migration.utils.DataMappings;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.schema.operations.AddForeignKey;
-import io.quantumdb.core.versioning.TableMapping;
+import io.quantumdb.core.versioning.RefLog;
+import io.quantumdb.core.versioning.RefLog.TableRef;
 import io.quantumdb.core.versioning.Version;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+@NoArgsConstructor(access = AccessLevel.PACKAGE)
 class AddForeignKeyMigrator implements SchemaOperationMigrator<AddForeignKey> {
 
 	@Override
-	public void migrate(Catalog catalog, TableMapping tableMapping, DataMappings dataMappings, Version version,
-			AddForeignKey operation) {
+	public void migrate(Catalog catalog, RefLog refLog, Version version, AddForeignKey operation) {
 		String tableName = operation.getReferringTableName();
-		TransitiveTableMirrorer.mirror(catalog, tableMapping, version, tableName);
-		dataMappings.copy(version);
+		TransitiveTableMirrorer.mirror(catalog, refLog, version, tableName);
 
-		String tableId = tableMapping.getTableId(version, tableName);
-		Table table = catalog.getTable(tableId);
+		TableRef tableRef = refLog.getTableRef(version, tableName);
+		Table table = catalog.getTable(tableRef.getTableId());
 
 		String referencedTableName = operation.getReferencedTableName();
-		String referencedTableId = tableMapping.getTableId(version, referencedTableName);
-		Table referencedTable = catalog.getTable(referencedTableId);
+		TableRef referencedTableRef = refLog.getTableRef(version, referencedTableName);
+		Table referencedTable = catalog.getTable(referencedTableRef.getTableId());
 
 		table.addForeignKey(operation.getReferringColumnNames())
 				.named(operation.getName())
