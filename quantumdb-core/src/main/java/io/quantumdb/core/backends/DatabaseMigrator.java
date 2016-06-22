@@ -1,5 +1,6 @@
 package io.quantumdb.core.backends;
 
+import io.quantumdb.core.migration.Migrator.Stage;
 import io.quantumdb.core.versioning.State;
 import io.quantumdb.core.versioning.Version;
 
@@ -28,6 +29,8 @@ public interface DatabaseMigrator {
 	 * @throws MigrationException In case something prevented the migration.
 	 */
 	void applySchemaChanges(State state, Version from, Version to) throws MigrationException;
+
+	void applyDataChanges(State state, Stage stage) throws MigrationException;
 
 	/**
 	 * Drops the specified version of the database schema.

@@ -113,6 +113,12 @@ public class RefLog {
 			return new TableRef(refLog, name, newTableId, version, newColumns);
 		}
 
+		public TableRef addColumn(ColumnRef column) {
+			columns.put(column.getName(), column);
+			column.setTable(this);
+			return this;
+		}
+
 		public ColumnRef dropColumn(String name) {
 			return columns.remove(name);
 		}
@@ -153,7 +159,6 @@ public class RefLog {
 					.append(tableId)
 					.toHashCode();
 		}
-
 	}
 
 	@Data
@@ -227,7 +232,7 @@ public class RefLog {
 
 		private final String name;
 		private final String functionName;
-		private final ImmutableMap<ColumnRef, ColumnRef> columnMapping;
+		private final Map<ColumnRef, ColumnRef> columnMapping;
 		private final TableRef source;
 		private final TableRef target;
 
@@ -256,6 +261,23 @@ public class RefLog {
 
 			source.outboundSyncs.add(this);
 			target.inboundSyncs.add(this);
+		}
+
+		public ImmutableMap<ColumnRef, ColumnRef> getColumnMapping() {
+			return ImmutableMap.copyOf(columnMapping);
+		}
+
+		public void addColumnMapping(ColumnRef source, ColumnRef target) {
+			columnMapping.put(source, target);
+		}
+
+		public void dropColumnMapping(ColumnRef source, ColumnRef target) {
+			columnMapping.remove(source, target);
+		}
+
+		public void drop() {
+			source.outboundSyncs.remove(this);
+			source.inboundSyncs.remove(this);
 		}
 
 		public boolean equals(Object other) {
@@ -301,27 +323,8 @@ public class RefLog {
 
 	}
 
-	/**
-	 * Creates a new RefLog object based on the specified Catalog and current Version.
-	 *
-	 * @param catalog The Catalog describing the current state of the database.
-	 * @param version The current version of the database.
-	 * @return The constructed RefLog object.
-	 */
 	public static RefLog init(Catalog catalog, Version version) {
-		checkArgument(catalog != null, "You must specify a catalog!");
-		checkArgument(version != null && version.getParent() == null, "You must specify a root version!");
-
-		RefLog refLog = new RefLog();
-		catalog.getTables().forEach(table -> {
-			TableRef tableRef = refLog.addTable(table.getName(), table.getName(), version, table.getColumns().stream()
-					.map(column -> new ColumnRef(column.getName()))
-					.collect(Collectors.toList()));
-
-			log.debug("Added TableRef: {} (id: {}) for version: {} with columns: {}", table.getName(),
-					table.getName(), version, tableRef.getColumns().keySet());
-		});
-		return refLog;
+		return new RefLog().bootstrap(catalog, version);
 	}
 
 	private final Multimap<Version, TableRef> tables;
@@ -331,6 +334,28 @@ public class RefLog {
 	 */
 	public RefLog() {
 		this.tables = LinkedHashMultimap.create();
+	}
+
+	/**
+	 * Initializes this RefLog object based on the specified Catalog and current Version.
+	 *
+	 * @param catalog The Catalog describing the current state of the database.
+	 * @param version The current version of the database.
+	 * @return The constructed RefLog object.
+	 */
+	public RefLog bootstrap(Catalog catalog, Version version) {
+		checkArgument(catalog != null, "You must specify a catalog!");
+		checkArgument(version != null && version.getParent() == null, "You must specify a root version!");
+
+		catalog.getTables().forEach(table -> {
+			TableRef tableRef = addTable(table.getName(), table.getName(), version, table.getColumns().stream()
+					.map(column -> new ColumnRef(column.getName()))
+					.collect(Collectors.toList()));
+
+			log.debug("Added TableRef: {} (id: {}) for version: {} with columns: {}", table.getName(),
+					table.getName(), version, tableRef.getColumns().keySet());
+		});
+		return this;
 	}
 
 	/**
@@ -563,6 +588,8 @@ public class RefLog {
 	 * @return The column mapping between the two TableRefs.
 	 */
 	public Map<ColumnRef, ColumnRef> getColumnMapping(TableRef from, TableRef to) {
+		boolean forwards = isForwards(from, to);
+
 		Multimap<ColumnRef, ColumnRef> mapping = HashMultimap.create();
 		from.getColumns().forEach((k, v) -> mapping.put(v, v));
 
@@ -571,7 +598,10 @@ public class RefLog {
 			for (ColumnRef source : mapping.keySet()) {
 				Collection<ColumnRef> targets = mapping.get(source);
 				targets.stream()
-						.filter(target -> !target.getTable().equals(to))
+						.filter(target -> {
+							TableRef table = target.getTable();
+							return !table.equals(to);
+						})
 						.forEach(target -> pending.put(source, target));
 			}
 
@@ -580,9 +610,17 @@ public class RefLog {
 			}
 
 			pending.entries().forEach(entry -> {
-				mapping.remove(entry.getKey(), entry.getValue());
+				ColumnRef columnRef = entry.getValue();
+				mapping.remove(entry.getKey(), columnRef);
 
-				Set<ColumnRef> nextColumns = entry.getValue().getBasisFor();
+				Set<ColumnRef> nextColumns = null;
+				if (forwards) {
+					nextColumns = columnRef.getBasisFor();
+				}
+				else {
+					nextColumns = columnRef.getBasedOn();
+				}
+
 				if (!nextColumns.isEmpty()) {
 					mapping.putAll(entry.getKey(), nextColumns);
 				}
@@ -591,6 +629,20 @@ public class RefLog {
 
 		return mapping.entries().stream()
 				.collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+	}
+
+	private boolean isForwards(TableRef from, TableRef to) {
+		boolean forwards = false;
+		if (!from.equals(to)) {
+			List<TableRef> toDo = Lists.newLinkedList(from.getBasisFor());
+			while (!toDo.isEmpty()) {
+				TableRef current = toDo.remove(0);
+				if (current.equals(to)) {
+					forwards = true;
+				}
+			}
+		}
+		return forwards;
 	}
 
 	/**
