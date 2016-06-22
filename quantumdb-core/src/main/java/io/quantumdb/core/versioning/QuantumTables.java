@@ -20,7 +20,7 @@ public class QuantumTables {
 			"CREATE TABLE quantumdb_config (name VARCHAR(255) NOT NULL, value VARCHAR(255) NOT NULL, PRIMARY KEY (name));",
 
 			// Creates the "quantumdb_changelog" table which will store all the individual (schema) operations, and their ordering.
-			"CREATE TABLE quantumdb_changelog (version_id VARCHAR(10) NOT NULL, parent_version_id VARCHAR(10), schema_operation TEXT, PRIMARY KEY (version_id));",
+			"CREATE TABLE quantumdb_changelog (version_id VARCHAR(10) NOT NULL, parent_version_id VARCHAR(10), operation_type VARCHAR(16), operation TEXT, PRIMARY KEY (version_id));",
 			"ALTER TABLE quantumdb_changelog ADD CONSTRAINT quantumdb_changelog_parent_version_id FOREIGN KEY (parent_version_id) REFERENCES quantumdb_changelog (version_id);",
 			"ALTER TABLE quantumdb_changelog ADD CONSTRAINT quantumdb_changelog_no_self_reference CHECK (version_id != parent_version_id);",
 

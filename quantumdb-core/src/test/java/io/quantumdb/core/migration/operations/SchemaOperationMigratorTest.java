@@ -10,8 +10,9 @@ import static org.junit.Assert.assertEquals;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Table;
-import io.quantumdb.core.versioning.RefLog;
+import io.quantumdb.core.schema.operations.SchemaOperation;
 import io.quantumdb.core.versioning.Changelog;
+import io.quantumdb.core.versioning.RefLog;
 import io.quantumdb.core.versioning.Version;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,7 +39,7 @@ public class SchemaOperationMigratorTest {
 						.with("id", bigint(), NOT_NULL, AUTO_INCREMENT, IDENTITY));
 
 		Version current = changelog.getLastAdded();
-		migrator.migrate(current, current.getSchemaOperation());
+		migrator.migrate(current, (SchemaOperation) current.getOperation());
 
 		String tableId = refLog.getTableRef(current, "users").getTableId();
 

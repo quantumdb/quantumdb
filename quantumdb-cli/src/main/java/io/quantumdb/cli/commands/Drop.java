@@ -54,7 +54,7 @@ public class Drop extends Command {
 			backend.getMigrator().drop(state, version);
 
 			state = loadState(backend);
-			writeDatabaseState(writer, state.getRefLog());
+			writeDatabaseState(writer, state.getRefLog(), state.getChangelog());
 		}
 		catch (MigrationException | IOException | CliException | SQLException e) {
 			log.error(e.getMessage(), e);

@@ -3,7 +3,7 @@ package io.quantumdb.core.versioning;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Strings.isNullOrEmpty;
 
-import io.quantumdb.core.schema.operations.SchemaOperation;
+import io.quantumdb.core.schema.operations.Operation;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -33,7 +33,7 @@ public class Version implements Comparable<Version> {
 	private ChangeSet changeSet;
 
 	@Setter(AccessLevel.PRIVATE)
-	private SchemaOperation schemaOperation;
+	private Operation operation;
 
 	/**
 	 * Creates a new Version object based on the specified parameters.
@@ -51,11 +51,11 @@ public class Version implements Comparable<Version> {
 	 * @param id	 The unique identifier of this Version object.
 	 * @param parent The parent of this Version object (may be NULL in case of a root Version).
 	 */
-	public Version(String id, Version parent, ChangeSet changeSet, SchemaOperation schemaOperation) {
+	public Version(String id, Version parent, ChangeSet changeSet, Operation operation) {
 		checkArgument(!isNullOrEmpty(id), "You must specify a 'id'.");
 
 		this.id = id;
-		this.schemaOperation = schemaOperation;
+		this.operation = operation;
 		this.changeSet = changeSet;
 		if (parent != null) {
 			this.parent = parent;

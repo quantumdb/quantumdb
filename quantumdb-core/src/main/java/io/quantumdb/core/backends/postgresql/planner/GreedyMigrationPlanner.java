@@ -18,15 +18,16 @@ import io.quantumdb.core.backends.postgresql.planner.Graph.GraphResult;
 import io.quantumdb.core.backends.postgresql.planner.MigrationState.Progress;
 import io.quantumdb.core.backends.postgresql.planner.Operation.Type;
 import io.quantumdb.core.backends.postgresql.planner.Plan.Builder;
+import io.quantumdb.core.migration.VersionTraverser;
 import io.quantumdb.core.migration.operations.SchemaOperationsMigrator;
-import io.quantumdb.core.migration.utils.VersionTraverser;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.ForeignKey;
 import io.quantumdb.core.schema.definitions.Table;
+import io.quantumdb.core.schema.operations.SchemaOperation;
+import io.quantumdb.core.utils.RandomHasher;
 import io.quantumdb.core.versioning.RefLog;
 import io.quantumdb.core.versioning.RefLog.TableRef;
-import io.quantumdb.core.utils.RandomHasher;
 import io.quantumdb.core.versioning.State;
 import io.quantumdb.core.versioning.Version;
 import lombok.extern.slf4j.Slf4j;
@@ -51,12 +52,19 @@ public class GreedyMigrationPlanner implements MigrationPlanner {
 		migrationPath.remove(from);
 
 		log.debug("Planning the execution of the following operations:");
-		migrationPath.stream()
-				.forEach(v -> log.debug("\t{} - {}", v.getId(), v.getSchemaOperation()));
+		for (Version version : migrationPath) {
+			if (version.getOperation() instanceof SchemaOperation) {
+				log.debug("\t{} - {}", version.getId(), version.getOperation());
+			}
+			else {
+				throw new IllegalArgumentException("Cannot execute data operation during schema operations phase: "
+						+ version);
+			}
+		}
 
 		migrationPath.stream()
 				.filter(version -> version.getParent() != null)
-				.forEachOrdered(version -> migrator.migrate(version, version.getSchemaOperation()));
+				.forEachOrdered(version -> migrator.migrate(version, (SchemaOperation) version.getOperation()));
 
 		Set<String> preTableIds = refLog.getTableRefs(from).stream()
 				.map(TableRef::getTableId)

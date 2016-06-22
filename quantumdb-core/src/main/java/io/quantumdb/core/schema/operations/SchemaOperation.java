@@ -1,7 +1,9 @@
 package io.quantumdb.core.schema.operations;
 
-public interface SchemaOperation {
+public interface SchemaOperation extends Operation {
 
-	// Interface for tagging purposes.
+	default Type getType() {
+		return Type.DDL;
+	}
 
 }
