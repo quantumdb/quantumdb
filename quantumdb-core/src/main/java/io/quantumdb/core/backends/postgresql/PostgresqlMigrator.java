@@ -41,7 +41,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 	}
 
 	@Override
-	public void migrate(State state, Version from, Version to) throws MigrationException {
+	public void applySchemaChanges(State state, Version from, Version to) throws MigrationException {
 		RefLog refLog = state.getRefLog();
 		Set<Version> preMigration = refLog.getVersions();
 		Plan plan = new GreedyMigrationPlanner().createPlan(state, from, to);

@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 public class PostgresTypes {
 
 	public static ColumnType from(String type, Integer length) {
-		switch (type) {
+		switch (type.toLowerCase()) {
 			case "oid":
 				return PostgresTypes.oid();
 			case "uuid":

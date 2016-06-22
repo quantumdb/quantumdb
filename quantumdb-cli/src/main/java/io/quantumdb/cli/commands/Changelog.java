@@ -11,6 +11,7 @@ import io.quantumdb.cli.utils.CliWriter;
 import io.quantumdb.cli.utils.CliWriter.Context;
 import io.quantumdb.core.backends.Backend;
 import io.quantumdb.core.backends.Config;
+import io.quantumdb.core.schema.operations.Operation;
 import io.quantumdb.core.schema.operations.SchemaOperation;
 import io.quantumdb.core.versioning.ChangeSet;
 import io.quantumdb.core.versioning.State;
@@ -76,15 +77,15 @@ public class Changelog extends Command {
 		}
 
 		writer.setIndent(1);
-		SchemaOperation schemaOperation = current.getSchemaOperation();
+		Operation operation = current.getOperation();
 
 		StringBuilder builder = new StringBuilder();
 		builder.append(current.getId());
 		if (activeVersions.remove(current)) {
 			builder.append(" (active)");
 		}
-		if (schemaOperation != null) {
-			builder.append(" - " + StringUtils.abbreviate(schemaOperation.toString(), 60));
+		if (operation != null) {
+			builder.append(" - " + StringUtils.abbreviate(operation.toString(), 60));
 		}
 		writer.write(builder.toString());
 	}

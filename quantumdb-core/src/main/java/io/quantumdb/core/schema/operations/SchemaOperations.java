@@ -77,4 +77,8 @@ public class SchemaOperations {
 		return new DropIndex(tableName, columns);
 	}
 
+	public static DataOperation execute(String query) {
+		return new DataOperation(query);
+	}
+
 }

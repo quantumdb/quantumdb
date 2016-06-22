@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -23,9 +24,16 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Table;
+import com.google.common.primitives.Ints;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonSerializer;
+import io.quantumdb.core.backends.postgresql.PostgresTypes;
 import io.quantumdb.core.schema.definitions.Catalog;
-import io.quantumdb.core.schema.operations.SchemaOperation;
+import io.quantumdb.core.schema.definitions.ColumnType;
+import io.quantumdb.core.schema.operations.Operation;
 import io.quantumdb.core.utils.RandomHasher;
 import io.quantumdb.core.versioning.RefLog.ColumnRef;
 import io.quantumdb.core.versioning.RefLog.SyncRef;
@@ -77,7 +85,8 @@ public class Backend {
 	@Data
 	private static class RawChangelogEntry {
 		private final String versionId;
-		private final String schemaOperation;
+		private final String operationType;
+		private final String operation;
 		private final String parentVersionId;
 	}
 
@@ -92,7 +101,31 @@ public class Backend {
 	private final Gson gson;
 
 	public Backend() {
-		this.gson = new Gson();
+		this.gson = new GsonBuilder()
+				.registerTypeAdapter(ColumnType.class, (JsonDeserializer<ColumnType>) (element, type, context) -> {
+					String fullType = element.getAsString().toUpperCase();
+
+					String sqlType = fullType;
+					if (fullType.contains("(")) {
+						sqlType = fullType.substring(0, fullType.indexOf('('));
+					}
+
+					if (fullType.contains("(")) {
+						int beginIndex = fullType.indexOf("(") + 1;
+						int endIndex = fullType.lastIndexOf(")");
+						List<Integer> arguments = Arrays.stream(fullType.substring(beginIndex, endIndex)
+								.split(","))
+								.map(String::trim)
+								.map(Ints::tryParse)
+								.collect(Collectors.toList());
+
+						return PostgresTypes.from(sqlType, arguments.get(0));
+					}
+					return PostgresTypes.from(sqlType, null);
+				})
+				.registerTypeAdapter(ColumnType.class, (JsonSerializer<ColumnType>)
+						(element, type, context) -> new JsonPrimitive(element.getNotation()))
+				.create();
 	}
 
 	public State load(Connection connection, Catalog catalog) throws SQLException {
@@ -168,7 +201,7 @@ public class Backend {
 	}
 
 	private void persistChangelogEntries(Connection connection, Changelog changelog) throws SQLException {
-		Map<String, Version> mapping = Maps.newHashMap();
+		Map<String, Version> mapping = Maps.newLinkedHashMap();
 		List<Version> versions = Lists.newLinkedList();
 		versions.add(changelog.getRoot());
 
@@ -180,11 +213,13 @@ public class Backend {
 			}
 		}
 
+		Operations operations = new Operations();
+
 		try (Statement statement = connection.createStatement()) {
 			String query = "SELECT * FROM quantumdb_changelog;";
 			String deleteQuery = "DELETE FROM quantumdb_changelog WHERE version_id = ?;";
-			String insertQuery = "INSERT INTO quantumdb_changelog (version_id, schema_operation, parent_version_id) VALUES (?, ?, ?);";
-			String updateQuery = "UPDATE quantumdb_changelog SET schema_operation = ?, parent_version_id = ? WHERE version_id = ?;";
+			String insertQuery = "INSERT INTO quantumdb_changelog (version_id, operation_type, operation, parent_version_id) VALUES (?, ?, ?, ?);";
+			String updateQuery = "UPDATE quantumdb_changelog SET operation_type = ?, operation = ?, parent_version_id = ? WHERE version_id = ?;";
 
 			ResultSet resultSet = statement.executeQuery(query);
 			while (resultSet.next()) {
@@ -192,14 +227,26 @@ public class Backend {
 				Version version = mapping.remove(versionId);
 				if (version != null) {
 					try (PreparedStatement update = connection.prepareStatement(updateQuery)) {
-						update.setString(1, gson.toJson(version.getSchemaOperation()));
-						if (version.getParent() == null) {
-							update.setString(2, null);
+						Operation operation = version.getOperation();
+
+						if (operation != null) {
+							update.setString(1, operations.getOperationType(operation.getClass()).orElseThrow(
+									() -> new IllegalArgumentException("There's no such operation as: " + operation.getClass())));
+
+							update.setString(2, gson.toJson(operation));
 						}
 						else {
-							update.setString(2, version.getParent().getId());
+							update.setString(1, null);
+							update.setString(2, null);
 						}
-						update.setString(3, versionId);
+
+						if (version.getParent() == null) {
+							update.setString(3, null);
+						}
+						else {
+							update.setString(3, version.getParent().getId());
+						}
+						update.setString(4, versionId);
 						update.execute();
 					}
 				}
@@ -215,14 +262,26 @@ public class Backend {
 				PreparedStatement insert = connection.prepareStatement(insertQuery);
 				for (Entry<String, Version> entry : mapping.entrySet()) {
 					Version version = entry.getValue();
-					insert.setString(1, entry.getKey());
-					insert.setString(2, gson.toJson(version.getSchemaOperation()));
+					Operation operation = version.getOperation();
 
-					if (version.getParent() == null) {
-						insert.setString(3, null);
+					insert.setString(1, entry.getKey());
+
+					if (operation != null) {
+						insert.setString(2, operations.getOperationType(operation.getClass()).orElseThrow(
+								() -> new IllegalArgumentException("There's no such operation as: " + operation.getClass())));
+
+						insert.setString(3, gson.toJson(operation));
 					}
 					else {
-						insert.setString(3, version.getParent().getId());
+						insert.setString(2, null);
+						insert.setString(3, null);
+					}
+
+					if (version.getParent() == null) {
+						insert.setString(4, null);
+					}
+					else {
+						insert.setString(4, version.getParent().getId());
 					}
 					insert.execute();
 				}
@@ -637,14 +696,16 @@ public class Backend {
 		List<RawChangelogEntry> entries = loadChangelogEntries(connection);
 		Map<String, RawChangeSet> changeSets = loadChangesets(connection);
 
+		Changelog changelog = null;
 		List<RawChangelogEntry> changeSetContents = Lists.newArrayList();
-		Changelog changelog = new Changelog(entries.remove(0).getVersionId());
+		Operations operations = new Operations();
+
 		while (!entries.isEmpty()) {
 			RawChangelogEntry entry = entries.remove(0);
+			changeSetContents.add(entry);
 			boolean finalizeChangeSet = changeSets.containsKey(entry.getVersionId());
 
 			if (entries.isEmpty()) {
-				changeSetContents.add(entry);
 				finalizeChangeSet = true;
 			}
 
@@ -654,10 +715,23 @@ public class Backend {
 				ChangeSet changeSet = new ChangeSet(rawChangeSet.getAuthor(), rawChangeSet.getCreated(), rawChangeSet.getDescription());
 
 				for (RawChangelogEntry entryInSet : changeSetContents) {
-					String parentVersionId = entryInSet.getParentVersionId();
-					Version parentVersion = changelog.getVersion(parentVersionId);
-					SchemaOperation schemaOperation = gson.fromJson(entryInSet.getSchemaOperation(), SchemaOperation.class);
-					changelog.addChangeSet(parentVersion, entryInSet.getVersionId(), changeSet, schemaOperation);
+					String operationType = entryInSet.getOperationType();
+					Operation operation = null;
+					if (operationType != null) {
+						Class<? extends Operation> operationClass = operations.getOperationType(operationType)
+								.orElseThrow(() -> new IllegalArgumentException("No such operation is supported: " + operationType));
+
+						operation = gson.fromJson(entryInSet.getOperation(), operationClass);
+					}
+
+					if (changelog == null) {
+						changelog = new Changelog(entryInSet.getVersionId(), changeSet);
+					}
+					else {
+						String parentVersionId = entryInSet.getParentVersionId();
+						Version parentVersion = changelog.getVersion(parentVersionId);
+						changelog.addChangeSet(parentVersion, entryInSet.getVersionId(), changeSet, operation);
+					}
 				}
 				changeSetContents.clear();
 			}
@@ -665,6 +739,7 @@ public class Backend {
 				changeSetContents.add(entry);
 			}
 		}
+
 		return changelog;
 	}
 
@@ -676,10 +751,11 @@ public class Backend {
 			ResultSet resultSet = statement.executeQuery(query);
 			while (resultSet.next()) {
 				String versionId = resultSet.getString("version_id");
-				String schemaOperation = resultSet.getString("schema_operation");
+				String operationType = resultSet.getString("operation_type");
+				String operation = resultSet.getString("operation");
 				String parentVersionId = resultSet.getString("parent_version_id");
 
-				RawChangelogEntry entry = new RawChangelogEntry(versionId, schemaOperation, parentVersionId);
+				RawChangelogEntry entry = new RawChangelogEntry(versionId, operationType, operation, parentVersionId);
 				if (parentVersionId == null) {
 					root = entry;
 				}
@@ -692,7 +768,7 @@ public class Backend {
 		}
 
 		if (root == null) {
-			root = new RawChangelogEntry(RandomHasher.generateHash(), null, null);
+			root = new RawChangelogEntry(RandomHasher.generateHash(), null, null, null);
 		}
 
 		List<RawChangelogEntry> pointer = Lists.newArrayList(root);
