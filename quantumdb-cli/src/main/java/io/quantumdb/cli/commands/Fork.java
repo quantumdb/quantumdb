@@ -10,6 +10,7 @@ import io.quantumdb.cli.utils.CliWriter.Context;
 import io.quantumdb.core.backends.Backend;
 import io.quantumdb.core.backends.Config;
 import io.quantumdb.core.backends.DatabaseMigrator.MigrationException;
+import io.quantumdb.core.migration.Migrator;
 import io.quantumdb.core.versioning.Changelog;
 import io.quantumdb.core.versioning.State;
 import io.quantumdb.core.versioning.Version;
@@ -37,10 +38,11 @@ public class Fork extends Command {
 
 			writer.write("Forking database from: " + from.getId() + " to: " + to.getId() + "...");
 
-			backend.getMigrator().migrate(state, from, to);
+			Migrator migrator = new Migrator(backend);
+			migrator.migrate(from.getId(), to.getId());
 
 			state = loadState(backend);
-			writeDatabaseState(writer, state.getRefLog());
+			writeDatabaseState(writer, state.getRefLog(), state.getChangelog());
 		}
 		catch (MigrationException | IOException | CliException e) {
 			log.error(e.getMessage(), e);

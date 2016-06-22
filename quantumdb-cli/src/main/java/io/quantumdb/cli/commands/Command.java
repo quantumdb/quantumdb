@@ -1,5 +1,6 @@
 package io.quantumdb.cli.commands;
 
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -30,7 +31,7 @@ public abstract class Command {
 
 	public abstract Identifier getIdentifier();
 
-	public abstract void perform(CliWriter writer, List<String> arguments);
+	public abstract void perform(CliWriter writer, List<String> arguments) throws IOException;
 
 	void persistChanges(Backend backend, State state) throws CliException {
 		try {
@@ -52,11 +53,17 @@ public abstract class Command {
 		}
 	}
 
-	void writeDatabaseState(CliWriter writer, RefLog refLog) {
+	void writeDatabaseState(CliWriter writer, RefLog refLog, io.quantumdb.core.versioning.Changelog changelog) {
 		writer.write("Database is operating at version(s):", Context.SUCCESS);
 		writer.indent(1);
 
 		for (Version version : refLog.getVersions()) {
+			ChangeSet changeSet = version.getChangeSet();
+			writer.write(version.getId() + ": " + changeSet.getDescription(), Context.SUCCESS);
+		}
+
+		if (refLog.getVersions().isEmpty()) {
+			Version version = changelog.getRoot();
 			ChangeSet changeSet = version.getChangeSet();
 			writer.write(version.getId() + ": " + changeSet.getDescription(), Context.SUCCESS);
 		}

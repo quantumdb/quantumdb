@@ -27,7 +27,7 @@ public class Status extends Command {
 
 			State state = loadState(backend);
 			RefLog refLog = state.getRefLog();
-			writeDatabaseState(writer, refLog);
+			writeDatabaseState(writer, refLog, state.getChangelog());
 		}
 		catch (IOException | CliException e) {
 			log.error(e.getMessage(), e);

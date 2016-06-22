@@ -16,6 +16,7 @@ import io.quantumdb.cli.commands.Command.Identifier;
 import io.quantumdb.cli.commands.Drop;
 import io.quantumdb.cli.commands.Fork;
 import io.quantumdb.cli.commands.Init;
+import io.quantumdb.cli.commands.Nuke;
 import io.quantumdb.cli.commands.Query;
 import io.quantumdb.cli.commands.Status;
 import io.quantumdb.cli.utils.CliWriter;
@@ -60,6 +61,7 @@ public class Main {
 				new Changelog(),
 				new Status(),
 				new Fork(),
+				new Nuke(),
 				new Drop(),
 				new Query()
 		);

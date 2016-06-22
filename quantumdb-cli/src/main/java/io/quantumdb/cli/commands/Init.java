@@ -27,17 +27,23 @@ public class Init extends Command {
 
 	public void perform(CliWriter writer, List<String> arguments) {
 		try {
-			String url = arguments.remove(0);
-			String catalogName = arguments.remove(0);
-			String user = arguments.remove(0);
-			String pass = arguments.remove(0);
+			Config config;
+			if (arguments.isEmpty()) {
+				config = Config.load();
+			}
+			else {
+				String url = arguments.isEmpty() ? "" : arguments.remove(0);
+				String catalogName = arguments.isEmpty() ? "" : arguments.remove(0);
+				String user = arguments.isEmpty() ? "" : arguments.remove(0);
+				String pass = arguments.isEmpty() ? "" : arguments.remove(0);
 
-			Config config = new Config();
-			config.setUrl(url);
-			config.setCatalog(catalogName);
-			config.setUser(user);
-			config.setPassword(pass);
-			config.setDriver("org.postgresql.Driver");
+				config = new Config();
+				config.setUrl(url);
+				config.setCatalog(catalogName);
+				config.setUser(user);
+				config.setPassword(pass);
+				config.setDriver("org.postgresql.Driver");
+			}
 
 			Backend backend = config.getBackend();
 
@@ -53,13 +59,15 @@ public class Init extends Command {
 			writer.write("Found: " + catalog.getSequences().size() + " sequences");
 
 			// Register pre-existing tables in current version.
-			RefLog refLog = RefLog.init(catalog, changelog.getRoot());
+			if (state.getRefLog().getVersions().isEmpty()) {
+				state.getRefLog().bootstrap(catalog, changelog.getRoot());
+			}
 
 			writer.indent(-1);
 			writer.write("Persisting current state to database...");
 			persistChanges(backend, state);
 
-			writeDatabaseState(writer, refLog);
+			writeDatabaseState(writer, state.getRefLog(), state.getChangelog());
 
 			config.persist();
 		}
