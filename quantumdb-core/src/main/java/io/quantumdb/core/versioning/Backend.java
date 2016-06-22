@@ -694,7 +694,7 @@ public class Backend {
 
 	private Changelog loadChangelog(Connection connection) throws SQLException {
 		List<RawChangelogEntry> entries = loadChangelogEntries(connection);
-		Map<String, RawChangeSet> changeSets = loadChangesets(connection);
+		Map<String, RawChangeSet> changeSets = loadChangesets(connection, entries);
 
 		Changelog changelog = null;
 		List<RawChangelogEntry> changeSetContents = Lists.newArrayList();
@@ -784,7 +784,9 @@ public class Backend {
 		return sorted;
 	}
 
-	private Map<String, RawChangeSet> loadChangesets(Connection connection) throws SQLException {
+	private Map<String, RawChangeSet> loadChangesets(Connection connection, List<RawChangelogEntry> entries)
+			throws SQLException {
+
 		Map<String, RawChangeSet> changeSets = Maps.newHashMap();
 		try (Statement statement = connection.createStatement()) {
 			String query = "SELECT * FROM quantumdb_changesets;";
@@ -795,11 +797,18 @@ public class Backend {
 				String author = resultSet.getString("author");
 				Date created = resultSet.getTimestamp("created");
 
-				RawChangeSet changeset = new RawChangeSet(versionId, description, author, created);
-				changeSets.put(versionId, changeset);
+				RawChangeSet changeSet = new RawChangeSet(versionId, description, author, created);
+				changeSets.put(versionId, changeSet);
 
 			}
 			resultSet.close();
+		}
+
+		if (changeSets.isEmpty()) {
+			RawChangelogEntry rootEntry = entries.get(0);
+			String versionId = rootEntry.getVersionId();
+			RawChangeSet changeSet = new RawChangeSet(versionId, "Initial state of the database.", "QuantumDB", new Date());
+			changeSets.put(versionId, changeSet);
 		}
 
 		return changeSets;
@@ -916,7 +925,9 @@ public class Backend {
 							return ref.getColumns().get(target.getColumn());
 						}));
 
-				refLog.addSync(triggerName, functionName, mappingsForSynchronizer);
+				if (!mappingsForSynchronizer.isEmpty()) {
+					refLog.addSync(triggerName, functionName, mappingsForSynchronizer);
+				}
 			}
 		}
 	}
