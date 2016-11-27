@@ -9,3 +9,15 @@ target/
 bin/
 
 .quantumdb
+Gemfile.lock
+Puppetfile.lock
+
+.tmp/
+.librarian/
+.vagrant/
+
+modules/apt/
+modules/concat/
+modules/firewall/
+modules/postgresql/
+modules/stdlib/
