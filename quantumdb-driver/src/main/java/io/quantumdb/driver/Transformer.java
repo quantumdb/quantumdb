@@ -20,10 +20,9 @@ class Transformer {
 
 		if (version != null && !version.isEmpty()) {
 			String query = new StringBuilder()
-					.append("SELECT t.table_id, t.table_name ")
-					.append("FROM quantumdb_tables t ")
-					.append("LEFT JOIN quantumdb_table_versions v ON v.table_id = t.table_id ")
-					.append("WHERE v.version_id = ?;")
+					.append("SELECT table_id, table_name ")
+					.append("FROM quantumdb_table_versions ")
+					.append("WHERE version_id = ?;")
 					.toString();
 
 			try (PreparedStatement statement = connection.prepareStatement(query)) {
