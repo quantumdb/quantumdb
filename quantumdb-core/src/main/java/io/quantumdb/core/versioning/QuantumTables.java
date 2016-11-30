@@ -101,7 +101,7 @@ public class QuantumTables {
 			Statement statement = connection.createStatement();
 			statement.executeUpdate("DROP SCHEMA public CASCADE;");
 			statement.executeUpdate("CREATE SCHEMA public;");
-			statement.executeUpdate("ALTER SCHEMA public OWNER TO CURRENT_USER;");
+			statement.executeUpdate("ALTER SCHEMA public OWNER TO " + connection.getMetaData().getUserName() + ";");
 			statement.close();
 			connection.commit();
 		}

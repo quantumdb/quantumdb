@@ -268,11 +268,6 @@ public class RefLogTest {
 		refLog.addTable("transactions", generateHash(), null, Lists.newArrayList());
 	}
 
-	@Test(expected = IllegalArgumentException.class)
-	public void testAddingTableWithNullColumnsThrowsException() {
-		refLog.addTable("transactions", generateHash(), version, null);
-	}
-
 	@Test(expected = IllegalStateException.class)
 	public void testAddingTableWithExistingNameAndVersionCombinationThrowsException() {
 		refLog.addTable("users", generateHash(), version, Lists.newArrayList());

@@ -8,6 +8,7 @@ import static io.quantumdb.core.schema.operations.SchemaOperations.dropColumn;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
 
+import java.util.Map;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableMap;
@@ -60,7 +61,8 @@ public class SyncFunctionTest {
 		refLog.addSync("some-name", "some-function", ImmutableMap.of(usersId, users2Id, usersName, users2Name));
 
 		NullRecords nullRecords = Mockito.mock(NullRecords.class);
-		SyncFunction syncFunction = new SyncFunction(refLog, source, target, catalog, nullRecords);
+		Map<ColumnRef, ColumnRef> columnMapping = refLog.getColumnMapping(source, target);
+		SyncFunction syncFunction = new SyncFunction(refLog, source, target, columnMapping, catalog, nullRecords);
 		syncFunction.setColumnsToMigrate(list("id", "name", "email"));
 
 		assertThat(syncFunction.getInsertExpressions(), is(ImmutableMap.of("\"id\"", "NEW.\"id\"", "\"name\"", "NEW.\"name\"")));
@@ -99,7 +101,8 @@ public class SyncFunctionTest {
 		refLog.addSync("some-name", "some-function", ImmutableMap.of(usersId, users2Id, usersName, users2Name));
 
 		NullRecords nullRecords = Mockito.mock(NullRecords.class);
-		SyncFunction syncFunction = new SyncFunction(refLog, source, target, catalog, nullRecords);
+		Map<ColumnRef, ColumnRef> columnMapping = refLog.getColumnMapping(source, target);
+		SyncFunction syncFunction = new SyncFunction(refLog, source, target, columnMapping, catalog, nullRecords);
 		syncFunction.setColumnsToMigrate(list("id", "full_name"));
 
 		assertThat(syncFunction.getInsertExpressions(), is(ImmutableMap.of("\"id\"", "NEW.\"id\"", "\"full_name\"", "NEW.\"name\"")));
@@ -138,7 +141,8 @@ public class SyncFunctionTest {
 		refLog.addSync("some-name", "some-function", ImmutableMap.of(usersId, users2Id, usersName, users2Name));
 
 		NullRecords nullRecords = Mockito.mock(NullRecords.class);
-		SyncFunction syncFunction = new SyncFunction(refLog, source, target, catalog, nullRecords);
+		Map<ColumnRef, ColumnRef> columnMapping = refLog.getColumnMapping(source, target);
+		SyncFunction syncFunction = new SyncFunction(refLog, source, target, columnMapping, catalog, nullRecords);
 		syncFunction.setColumnsToMigrate(list("user_id", "name"));
 
 		assertThat(syncFunction.getInsertExpressions(), is(ImmutableMap.of("\"user_id\"", "NEW.\"id\"", "\"name\"", "NEW.\"name\"")));
@@ -175,7 +179,8 @@ public class SyncFunctionTest {
 				Lists.newArrayList(users2Id, users2Name));
 
 		NullRecords nullRecords = Mockito.mock(NullRecords.class);
-		SyncFunction syncFunction = new SyncFunction(refLog, source, target, catalog, nullRecords);
+		Map<ColumnRef, ColumnRef> columnMapping = refLog.getColumnMapping(source, target);
+		SyncFunction syncFunction = new SyncFunction(refLog, source, target, columnMapping, catalog, nullRecords);
 		syncFunction.setColumnsToMigrate(list("id", "name"));
 
 		assertThat(syncFunction.getInsertExpressions(), is(ImmutableMap.of("\"id\"", "NEW.\"id\"", "\"name\"", "NEW.\"name\"")));
@@ -227,7 +232,8 @@ public class SyncFunctionTest {
 		NullRecords nullRecords = Mockito.mock(NullRecords.class);
 		Mockito.when(nullRecords.getIdentity(other)).thenReturn(new Identity("id", 0));
 
-		SyncFunction syncFunction = new SyncFunction(refLog, source, target, catalog, nullRecords);
+		Map<ColumnRef, ColumnRef> columnMapping = refLog.getColumnMapping(source, target);
+		SyncFunction syncFunction = new SyncFunction(refLog, source, target, columnMapping, catalog, nullRecords);
 		syncFunction.setColumnsToMigrate(list("id", "full_name"));
 
 		assertThat(syncFunction.getInsertExpressions(), is(ImmutableMap.of("\"id\"", "NEW.\"id\"", "\"other_id\"", "0", "\"full_name\"", "NEW.\"name\"")));

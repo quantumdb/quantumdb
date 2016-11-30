@@ -21,7 +21,7 @@ class quantumdb_postgresql($version = "9.6"){
 		encoding            => 'UTF-8',
 		locale              => 'en_US.UTF-8',
 		manage_package_repo => true,
-		version             => $version,
+		version             => $version
 	}
 	->
 	class { 'postgresql::server':
