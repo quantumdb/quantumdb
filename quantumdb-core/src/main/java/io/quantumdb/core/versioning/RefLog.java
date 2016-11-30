@@ -19,6 +19,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+import io.quantumdb.core.migration.VersionTraverser;
+import io.quantumdb.core.migration.VersionTraverser.Direction;
 import io.quantumdb.core.schema.definitions.Catalog;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -73,6 +75,10 @@ public class RefLog {
 			return ImmutableMap.copyOf(columns);
 		}
 
+		public ColumnRef getColumn(String name) {
+			return columns.get(name);
+		}
+
 		public Set<TableRef> getBasedOn() {
 			return columns.values().stream()
 					.flatMap(column -> column.getBasedOn().stream())
@@ -120,7 +126,15 @@ public class RefLog {
 		}
 
 		public ColumnRef dropColumn(String name) {
-			return columns.remove(name);
+			ColumnRef removed = columns.remove(name);
+			removed.drop();
+			return removed;
+		}
+
+		void drop() {
+			columns.forEach((name, ref) -> ref.drop());
+			inboundSyncs.forEach(syncRef -> syncRef.getSource().outboundSyncs.remove(syncRef));
+			outboundSyncs.forEach(syncRef -> syncRef.getTarget().inboundSyncs.remove(syncRef));
 		}
 
 		public TableRef renameColumn(String oldName, String newName) {
@@ -175,15 +189,19 @@ public class RefLog {
 			this(name, Sets.newHashSet());
 		}
 
+		public ColumnRef(String name, ColumnRef... basedOn) {
+			this(name, Sets.newHashSet(basedOn));
+		}
+
 		public ColumnRef(String name, Collection<ColumnRef> basedOn) {
 			this.name = name;
-			this.basedOn = ImmutableSet.copyOf(basedOn);
+			this.basedOn = Sets.newHashSet(basedOn);
 			this.basisFor = Sets.newHashSet();
 
 			basedOn.forEach(column -> column.basisFor.add(this));
 		}
 
-		private ColumnRef ghost() {
+		public ColumnRef ghost() {
 			return new ColumnRef(name, Sets.newHashSet(this));
 		}
 
@@ -193,6 +211,18 @@ public class RefLog {
 
 		public ImmutableSet<ColumnRef> getBasedOn() {
 			return ImmutableSet.copyOf(basedOn);
+		}
+
+		void drop() {
+			for (ColumnRef from : basedOn) {
+				for (ColumnRef to : basisFor) {
+					to.basedOn.remove(this);
+					to.basedOn.add(from);
+
+					from.basisFor.remove(this);
+					from.basisFor.add(to);
+				}
+			}
 		}
 
 		public boolean equals(Object other) {
@@ -261,6 +291,17 @@ public class RefLog {
 
 			source.outboundSyncs.add(this);
 			target.inboundSyncs.add(this);
+
+			columnMapping.forEach((from, to) -> {
+				from.basisFor.add(to);
+				to.basedOn.add(from);
+			});
+		}
+
+		public Direction getDirection() {
+			Version origin = VersionTraverser.getFirst(source.getVersions());
+			Version destination = VersionTraverser.getFirst(target.getVersions());
+			return VersionTraverser.getDirection(origin, destination);
 		}
 
 		public ImmutableMap<ColumnRef, ColumnRef> getColumnMapping() {
@@ -277,7 +318,7 @@ public class RefLog {
 
 		public void drop() {
 			source.outboundSyncs.remove(this);
-			source.inboundSyncs.remove(this);
+			target.inboundSyncs.remove(this);
 		}
 
 		public boolean equals(Object other) {
@@ -469,6 +510,11 @@ public class RefLog {
 		TableRef tableRef = getTableRef(version, tableName);
 		tableRef.versions.remove(version);
 		tables.remove(version, tableRef);
+
+		if (tableRef.versions.isEmpty()) {
+			tableRef.drop();
+		}
+
 		return tableRef;
 	}
 
@@ -486,12 +532,20 @@ public class RefLog {
 				.collect(Collectors.toList());
 
 		versions.forEach(version -> tables.remove(version, tableRef));
-		tableRef.inboundSyncs.forEach(syncRef -> syncRef.getSource().outboundSyncs.remove(syncRef));
-		tableRef.outboundSyncs.forEach(syncRef -> syncRef.getTarget().inboundSyncs.remove(syncRef));
-		tableRef.getColumns().forEach((k, v) -> {
-			v.getBasisFor().forEach(columnRef -> columnRef.basedOn.remove(v));
-			v.getBasedOn().forEach(columnRef -> columnRef.basisFor.remove(v));
-		});
+		tableRef.drop();
+	}
+
+	/**
+	 * Creates a new TableRef for the specified table ID, name, and columns at the specified version.
+	 *
+	 * @param name The name of the table.
+	 * @param tableId The table ID of the table.
+	 * @param version The version at which this table exists.
+	 * @param columns The columns present in the table.
+	 * @return The constructed TableRef object.
+	 */
+	public TableRef addTable(String name, String tableId, Version version, ColumnRef... columns) {
+		return addTable(name, tableId, version, Lists.newArrayList(columns));
 	}
 
 	/**
@@ -634,13 +688,16 @@ public class RefLog {
 	private boolean isForwards(TableRef from, TableRef to) {
 		boolean forwards = false;
 		if (!from.equals(to)) {
-			List<TableRef> toDo = Lists.newLinkedList(from.getBasisFor());
-			while (!toDo.isEmpty()) {
-				TableRef current = toDo.remove(0);
-				if (current.equals(to)) {
-					forwards = true;
-				}
-			}
+//			List<TableRef> toDo = Lists.newLinkedList(from.getBasisFor());
+//			while (!toDo.isEmpty()) {
+//				TableRef current = toDo.remove(0);
+//				if (current.equals(to)) {
+//					forwards = true;
+//				}
+//			}
+			Version origin = VersionTraverser.getFirst(from.getVersions());
+			Version target = VersionTraverser.getFirst(to.getVersions());
+			forwards = VersionTraverser.getDirection(origin, target) == Direction.FORWARDS;
 		}
 		return forwards;
 	}

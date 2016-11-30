@@ -18,10 +18,10 @@ import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.ForeignKey;
 import io.quantumdb.core.schema.definitions.Identity;
 import io.quantumdb.core.schema.definitions.Table;
+import io.quantumdb.core.utils.QueryBuilder;
 import io.quantumdb.core.versioning.RefLog;
 import io.quantumdb.core.versioning.RefLog.ColumnRef;
 import io.quantumdb.core.versioning.RefLog.TableRef;
-import io.quantumdb.core.utils.QueryBuilder;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Setter;
@@ -36,6 +36,7 @@ public class SyncFunction {
 	private final RefLog refLog;
 	private final Catalog catalog;
 	private final NullRecords nullRecords;
+	private final Map<ColumnRef, ColumnRef> columnMapping;
 
 	@Setter(AccessLevel.NONE)
 	private ImmutableMap<String, String> insertExpressions;
@@ -49,12 +50,14 @@ public class SyncFunction {
 	@Setter(AccessLevel.NONE)
 	private ImmutableMap<String, String> updateIdentitiesForInserts;
 
-	public SyncFunction(RefLog refLog, TableRef source, TableRef target, Catalog catalog, NullRecords nullRecords) {
-		this(refLog, source, target, catalog, nullRecords, "sync_" + generateHash(), "trig_" + generateHash());
+	public SyncFunction(RefLog refLog, TableRef source, TableRef target, Map<ColumnRef, ColumnRef> columnMapping,
+			Catalog catalog, NullRecords nullRecords) {
+
+		this(refLog, source, target, columnMapping, catalog, nullRecords, "sync_" + generateHash(), "trig_" + generateHash());
 	}
 
-	public SyncFunction(RefLog refLog, TableRef source, TableRef target, Catalog catalog, NullRecords nullRecords,
-			String functionName, String triggerName) {
+	public SyncFunction(RefLog refLog, TableRef source, TableRef target, Map<ColumnRef, ColumnRef> columnMapping,
+			Catalog catalog, NullRecords nullRecords, String functionName, String triggerName) {
 
 		this.refLog = refLog;
 		this.nullRecords = nullRecords;
@@ -63,12 +66,12 @@ public class SyncFunction {
 		this.catalog = catalog;
 		this.functionName = functionName;
 		this.triggerName = triggerName;
+		this.columnMapping = columnMapping;
 	}
 
 	public void setColumnsToMigrate(Set<String> columnsToMigrate) {
 		Table sourceTable = catalog.getTable(source.getTableId());
 		Table targetTable = catalog.getTable(target.getTableId());
-		Map<ColumnRef, ColumnRef> columnMapping = refLog.getColumnMapping(source, target);
 
 		Map<String, String> mapping = columnMapping.entrySet().stream()
 				.filter(entry -> {

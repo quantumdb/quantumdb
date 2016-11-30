@@ -5,9 +5,9 @@ import static com.google.common.base.Preconditions.checkState;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
 import io.quantumdb.core.backends.Backend;
 import io.quantumdb.core.backends.DatabaseMigrator;
 import io.quantumdb.core.backends.DatabaseMigrator.MigrationException;
@@ -69,7 +69,14 @@ public class Migrator {
 		Version from = changelog.getVersion(sourceVersionId);
 		Version to = changelog.getVersion(targetVersionId);
 
-		Set<String> origins = Sets.newHashSet(changelog.getRoot().getId());
+		Set<String> origins = state.getRefLog().getVersions().stream()
+				.map(Version::getId)
+				.collect(Collectors.toSet());
+
+		if (origins.isEmpty()) {
+			origins.add(changelog.getRoot().getId());
+		}
+
 		if (!origins.contains(sourceVersionId)) {
 			log.warn("Not forking database, since we're not currently at version: {}", sourceVersionId);
 			return;
@@ -99,6 +106,16 @@ public class Migrator {
 				migrator.applyDataChanges(state, stage);
 			}
 		}
+	}
+
+	public void drop(String versionId) throws MigrationException {
+		DatabaseMigrator migrator = backend.getMigrator();
+
+		State state = loadState();
+		Changelog changelog = state.getChangelog();
+		Version version = changelog.getVersion(versionId);
+
+		migrator.drop(state, version);
 	}
 
 	private State loadState() throws MigrationException {

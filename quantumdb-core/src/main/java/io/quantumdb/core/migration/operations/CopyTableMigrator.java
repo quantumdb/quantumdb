@@ -1,12 +1,16 @@
 package io.quantumdb.core.migration.operations;
 
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
+
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.ForeignKey;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.schema.operations.CopyTable;
-import io.quantumdb.core.versioning.RefLog;
-import io.quantumdb.core.versioning.RefLog.TableRef;
 import io.quantumdb.core.utils.RandomHasher;
+import io.quantumdb.core.versioning.RefLog;
+import io.quantumdb.core.versioning.RefLog.ColumnRef;
+import io.quantumdb.core.versioning.RefLog.TableRef;
 import io.quantumdb.core.versioning.Version;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -22,7 +26,10 @@ class CopyTableMigrator implements SchemaOperationMigrator<CopyTable> {
 
 		refLog.fork(version);
 		TableRef sourceTableRef = refLog.getTableRef(version.getParent(), sourceTableName);
-		refLog.replaceTable(version, sourceTableName, targetTableName, tableId);
+		refLog.addTable(targetTableName, tableId, version, sourceTableRef.getColumns().entrySet().stream()
+				.map(Entry::getValue)
+				.map(ColumnRef::ghost)
+				.collect(Collectors.toList()));
 
 		Table sourceTable = catalog.getTable(sourceTableRef.getTableId());
 		Table targetTable = sourceTable.copy().rename(tableId);
