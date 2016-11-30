@@ -53,6 +53,10 @@ public class Fork extends Command {
 	private Version getOriginVersion(List<String> arguments, State state, Changelog changelog) throws CliException {
 		if (arguments.isEmpty()) {
 			List<Version> versions = Lists.newArrayList(state.getRefLog().getVersions());
+			if (versions.isEmpty()) {
+				versions.add(changelog.getRoot());
+			}
+
 			if (versions.size() == 1) {
 				return versions.get(0);
 			}

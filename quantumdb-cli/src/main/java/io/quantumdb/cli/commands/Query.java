@@ -7,6 +7,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import io.quantumdb.cli.utils.CliWriter;
 import io.quantumdb.cli.utils.CliWriter.Context;
@@ -25,7 +26,8 @@ public class Query extends Command {
 		try {
 			Config config = Config.load();
 			String versionId = arguments.remove(0);
-			String query = arguments.remove(0);
+			String query = arguments.stream()
+					.collect(Collectors.joining(" "));
 
 			Class.forName("io.quantumdb.driver.Driver");
 			String url = createUrl(config.getUrl(), config.getCatalog(), versionId);
