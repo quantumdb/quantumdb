@@ -114,7 +114,7 @@ class CatalogLoader {
 				if (!"yes".equalsIgnoreCase(resultSet.getString("is_nullable"))) {
 					hints.add(Column.Hint.NOT_NULL);
 				}
-				if (primaryKeys.contains(columnName) || (primaryKeys.isEmpty() && columns.isEmpty())) { // TODO: <--- HACK!!
+				if (primaryKeys.contains(columnName) || (primaryKeys.isEmpty() && columns.isEmpty())) {
 					hints.add(Column.Hint.IDENTITY);
 				}
 

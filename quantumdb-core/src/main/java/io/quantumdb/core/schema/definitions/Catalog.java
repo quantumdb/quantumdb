@@ -85,7 +85,10 @@ public class Catalog implements Copyable<Catalog> {
 		sequences.remove(sequence);
 		sequence.setParent(null);
 
-		// TODO: Remove reference from all columns in catalog.
+		tables.stream()
+				.flatMap(table -> table.getColumns().stream())
+				.filter(column -> sequence.equals(column.getSequence()))
+				.forEach(Column::dropDefaultValue);
 
 		return sequence;
 	}

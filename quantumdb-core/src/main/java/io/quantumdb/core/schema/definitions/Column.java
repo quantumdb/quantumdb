@@ -77,6 +77,7 @@ public class Column implements Copyable<Column> {
 
 	public void dropDefaultValue() {
 		this.defaultValue = null;
+		this.sequence = null;
 		this.hints.remove(Hint.AUTO_INCREMENT);
 	}
 

@@ -166,7 +166,7 @@ public class Backend {
 										.filter(mapping -> mapping.getTarget().equals(column))
 										.map(TableColumnMapping::getSource)
 										.map(columnCache::get)
-										.filter(ref -> ref != null) // TODO: Really needed?
+										.filter(ref -> ref != null)
 										.collect(Collectors.toList());
 
 								return new ColumnRef(column.getColumn(), basedOn);
