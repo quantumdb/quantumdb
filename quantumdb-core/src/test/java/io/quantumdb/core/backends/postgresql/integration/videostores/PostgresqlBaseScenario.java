@@ -10,6 +10,7 @@ import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
 
 import java.sql.Date;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -25,10 +26,10 @@ import io.quantumdb.core.migration.Migrator;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Table;
-import io.quantumdb.core.versioning.RefLog;
-import io.quantumdb.core.versioning.RefLog.ColumnRef;
 import io.quantumdb.core.utils.BatchInserter;
 import io.quantumdb.core.versioning.Changelog;
+import io.quantumdb.core.versioning.RefLog;
+import io.quantumdb.core.versioning.RefLog.ColumnRef;
 import io.quantumdb.core.versioning.State;
 import lombok.Getter;
 
@@ -158,10 +159,15 @@ public class PostgresqlBaseScenario extends PostgresqlDatabase {
 		tableIds.put("payments", PAYMENTS_ID);
 		tableIds.put("rentals", RENTALS_ID);
 
-		catalog.getTables().forEach(table -> {
-			refLog.addTable(table.getName(), tableIds.get(table.getName()), changelog.getRoot(), table.getColumns().stream()
+		tableIds.entrySet().forEach(entry -> {
+			String tableName = entry.getKey();
+			String tableId = entry.getValue();
+			Table table = catalog.getTable(tableId);
+			List<ColumnRef> columns = table.getColumns().stream()
 					.map(column -> new ColumnRef(column.getName()))
-					.collect(Collectors.toList()));
+					.collect(Collectors.toList());
+
+			refLog.addTable(tableName, tableId, changelog.getRoot(), columns);
 		});
 
 		backend.persistState(state);

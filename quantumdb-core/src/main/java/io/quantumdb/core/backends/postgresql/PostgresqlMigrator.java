@@ -1,5 +1,7 @@
 package io.quantumdb.core.backends.postgresql;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -24,10 +26,13 @@ import io.quantumdb.core.backends.postgresql.planner.Plan;
 import io.quantumdb.core.backends.postgresql.planner.PlanValidator;
 import io.quantumdb.core.backends.postgresql.planner.Step;
 import io.quantumdb.core.migration.Migrator.Stage;
+import io.quantumdb.core.migration.VersionTraverser.Direction;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
+import io.quantumdb.core.schema.definitions.Sequence;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.schema.operations.DataOperation;
+import io.quantumdb.core.schema.operations.Operation.Type;
 import io.quantumdb.core.utils.QueryBuilder;
 import io.quantumdb.core.versioning.RefLog;
 import io.quantumdb.core.versioning.RefLog.ColumnRef;
@@ -40,6 +45,14 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 class PostgresqlMigrator implements DatabaseMigrator {
+
+	private static void execute(Connection connection, QueryBuilder queryBuilder) throws SQLException {
+		String query = queryBuilder.toString();
+		try (Statement statement = connection.createStatement()) {
+			log.debug("Executing: " + query);
+			statement.execute(query);
+		}
+	}
 
 	private final PostgresqlBackend backend;
 
@@ -107,27 +120,79 @@ class PostgresqlMigrator implements DatabaseMigrator {
 
 	@Override
 	public void drop(State state, Version version) throws MigrationException {
+		checkArgument(version.getOperation().getType() == Type.DDL);
 		RefLog refLog = state.getRefLog();
+		Catalog catalog = state.getCatalog();
+
 		List<TableRef> tablesToDrop = refLog.getTableRefs().stream()
 				.filter(tableRef -> tableRef.getVersions().contains(version))
-				.filter(tableRef -> tableRef.getVersions().size() == 1)
+				.filter(tableRef -> tableRef.getVersions().stream()
+						.filter(otherVersion -> otherVersion.getOperation().getType() == Type.DDL)
+						.count() == 1)
 				.collect(Collectors.toList());
 
+		Map<SyncRef, SyncFunction> newSyncFunctions = Maps.newLinkedHashMap();
+
 		log.info("Determined the following tables will be dropped: {}", tablesToDrop);
+		for (TableRef tableRef : tablesToDrop) {
+			Set<SyncRef> inbounds = tableRef.getInboundSyncs();
+			Set<SyncRef> outbounds = tableRef.getOutboundSyncs();
+
+			for (SyncRef inbound : inbounds) {
+				TableRef source = inbound.getSource();
+				Direction direction = inbound.getDirection();
+
+				Map<ColumnRef, ColumnRef> inboundMapping = inbound.getColumnMapping();
+				for (SyncRef outbound : outbounds) {
+					if (outbound.getDirection() != direction) {
+						continue;
+					}
+
+					TableRef target = outbound.getTarget();
+					Map<ColumnRef, ColumnRef> outboundMapping = outbound.getColumnMapping();
+
+					// TODO: Somehow persist default values ?
+					Map<ColumnRef, ColumnRef> newMapping = inboundMapping.entrySet().stream()
+							.filter(entry -> {
+								ColumnRef intermediate = entry.getValue();
+								return outboundMapping.containsKey(intermediate);
+							})
+							.collect(Collectors.toMap(Entry::getKey, entry -> outboundMapping.get(entry.getValue())));
+
+					Set<String> columnsToMigrate = newMapping.values().stream()
+							.map(ColumnRef::getName)
+							.collect(Collectors.toSet());
+
+					SyncFunction sync = new SyncFunction(refLog, source, target, newMapping, catalog, new NullRecords());
+					sync.setColumnsToMigrate(columnsToMigrate);
+
+					SyncRef syncRef = refLog.addSync(sync.getTriggerName(), sync.getFunctionName(), newMapping);
+					newSyncFunctions.put(syncRef, sync);
+				}
+			}
+		}
+
 		try (Connection connection = backend.connect()) {
+			connection.setAutoCommit(false);
 			dropSynchronizers(connection, state.getRefLog(), tablesToDrop);
-			dropTables(connection, refLog, tablesToDrop);
+			for (SyncFunction syncFunction : newSyncFunctions.values()) {
+				execute(connection, syncFunction.createFunctionStatement());
+				execute(connection, syncFunction.createTriggerStatement());
+			}
+			dropTables(connection, refLog, catalog, tablesToDrop);
 			backend.persistState(state);
+			connection.commit();
 		}
 		catch (SQLException e) {
 			throw new MigrationException(e);
 		}
 	}
 
-	private void dropSynchronizers(Connection connection, RefLog refLog, List<TableRef> tablesToDrop) throws SQLException {
+	private void dropSynchronizers(Connection connection, RefLog refLog, List<TableRef> tablesToDrop)
+			throws SQLException {
+
 		connection.setAutoCommit(false);
 
-		Set<SyncRef> toDrop = Sets.newHashSet();
 		for (TableRef table : tablesToDrop) {
 			String tableId = table.getTableId();
 			TableRef tableRef = refLog.getTableRefById(tableId);
@@ -137,31 +202,70 @@ class PostgresqlMigrator implements DatabaseMigrator {
 
 			for (SyncRef tableSync : tableSyncs) {
 				dropSynchronizer(connection, tableSync);
-				toDrop.add(tableSync);
 			}
 		}
 
 		connection.commit();
-		toDrop.forEach(SyncRef::drop);
 	}
 
 	private void dropSynchronizer(Connection connection, SyncRef sync) throws SQLException {
 		String triggerName = sync.getName();
 		String functionName = sync.getFunctionName();
 		String sourceTableId = sync.getSource().getTableId();
+		String targetTableId = sync.getTarget().getTableId();
 
 		try (Statement statement = connection.createStatement()) {
 			statement.execute("DROP TRIGGER " + triggerName + " ON " + sourceTableId + ";");
 			statement.execute("DROP FUNCTION " + functionName + "();");
 			sync.drop();
+			log.info("Dropped synchronizer: {}/{} for: {} -> {}", triggerName, functionName, sourceTableId, targetTableId);
 		}
 	}
 
-	private void dropTables(Connection connection, RefLog refLog, List<TableRef> tablesToDrop) throws SQLException {
+	private void dropTables(Connection connection, RefLog refLog, Catalog catalog, List<TableRef> tablesToDrop)
+			throws SQLException {
+
 		connection.setAutoCommit(false);
 
-		for (TableRef table : tablesToDrop) {
-			String tableId = table.getTableId();
+		Set<String> tableIdsToDrop = tablesToDrop.stream()
+				.map(TableRef::getTableId)
+				.collect(Collectors.toSet());
+
+		for (TableRef tableRef : tablesToDrop) {
+			String tableId = tableRef.getTableId();
+			Table table = catalog.getTable(tableId);
+
+			Set<Sequence> usedSequences = table.getColumns().stream()
+					.filter(column -> column.getSequence() != null)
+					.map(Column::getSequence)
+					.collect(Collectors.toSet());
+
+			Set<Table> tablesNotToBeDeleted = catalog.getTables().stream()
+					.filter(otherTable -> !tableIdsToDrop.contains(otherTable.getName()))
+					.collect(Collectors.toSet());
+
+			for (Table otherTable : tablesNotToBeDeleted) {
+				boolean reassigned = false;
+				for (Column column : otherTable.getColumns()) {
+					Sequence sequence = column.getSequence();
+					if (sequence != null && usedSequences.contains(sequence)) {
+						try (Statement statement = connection.createStatement()) {
+							String sequenceName = sequence.getName();
+							String target = otherTable.getName() + "." + column.getName();
+							log.info("Reassigning sequence: {} to: {}", sequenceName, target);
+							statement.execute("ALTER SEQUENCE " + sequenceName + " OWNED BY " + target + ";");
+							usedSequences.remove(sequence);
+							reassigned = true;
+							break;
+						}
+					}
+				}
+
+				if (reassigned) {
+					break;
+				}
+			}
+
 			try (Statement statement = connection.createStatement()) {
 				statement.execute("DROP TABLE " + tableId + " CASCADE;");
 			}
@@ -345,15 +449,16 @@ class PostgresqlMigrator implements DatabaseMigrator {
 
 			SyncFunction syncFunction = syncFunctions.get(sourceTableId, targetTableId);
 			if (syncFunction == null) {
-				syncFunction = new SyncFunction(refLog, source, target, catalog, nullRecords);
+				Map<ColumnRef, ColumnRef> mapping = refLog.getColumnMapping(source, target);
+				syncFunction = new SyncFunction(refLog, source, target, mapping, catalog, nullRecords);
 				syncFunction.setColumnsToMigrate(columns);
 				syncFunctions.put(sourceTableId, targetTableId, syncFunction);
 
 				log.info("Creating sync function: {} for table: {}", syncFunction.getFunctionName(), sourceTableId);
-				execute(connection, syncFunction.createFunctionStatement());
+				PostgresqlMigrator.execute(connection, syncFunction.createFunctionStatement());
 
 				log.info("Creating trigger: {} for table: {}", syncFunction.getTriggerName(), sourceTableId);
-				execute(connection, syncFunction.createTriggerStatement());
+				PostgresqlMigrator.execute(connection, syncFunction.createTriggerStatement());
 
 				Map<ColumnRef, ColumnRef> columnMapping = refLog.getColumnMapping(source, target);
 				refLog.addSync(syncFunction.getTriggerName(), syncFunction.getFunctionName(), columnMapping);
@@ -362,7 +467,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 				syncFunction.setColumnsToMigrate(columns);
 
 				log.info("Updating sync function: {} for table: {}", syncFunction.getFunctionName(), sourceTableId);
-				execute(connection, syncFunction.createFunctionStatement());
+				PostgresqlMigrator.execute(connection, syncFunction.createFunctionStatement());
 
 				TableRef sourceTable = refLog.getTableRefById(sourceTableId);
 				sourceTable.getOutboundSyncs().stream()
@@ -385,14 +490,6 @@ class PostgresqlMigrator implements DatabaseMigrator {
 								ref.addColumnMapping(from, to);
 							}
 						}));
-			}
-		}
-
-		private void execute(Connection connection, QueryBuilder queryBuilder) throws SQLException {
-			String query = queryBuilder.toString();
-			try (Statement statement = connection.createStatement()) {
-				log.debug("Executing: " + query);
-				statement.execute(query);
 			}
 		}
 	}

@@ -51,7 +51,7 @@ public class RenameTableMigratorTest {
 				.addColumn(new Column("name", varchar(255), NOT_NULL));
 
 		assertEquals(expectedGhostTable, ghostTable);
-		assertEquals("customers", refLog.getTableRefById(ghostTable.getName()).getName());
+		assertEquals("users", refLog.getTableRef(changelog.getLastAdded(), "customers").getTableId());
 		assertFalse(refLog.getTableRefs(changelog.getLastAdded()).stream()
 				.anyMatch(tableRef -> tableRef.getName().equals("users")));
 	}

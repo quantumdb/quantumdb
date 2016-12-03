@@ -154,7 +154,6 @@ class TableDataMigrator {
 			Object right = limit.get(key);
 
 			if (left == null || right == null) {
-				// TODO: Should account for NULLs in identity columns?
 				throw new IllegalStateException("NULL values in identity columns are currently not supported.");
 			}
 

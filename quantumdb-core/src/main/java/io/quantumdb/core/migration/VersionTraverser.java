@@ -1,5 +1,6 @@
 package io.quantumdb.core.migration;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
 import java.util.LinkedList;
@@ -10,31 +11,61 @@ import java.util.Set;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import io.quantumdb.core.migration.Migrator.Stage;
 import io.quantumdb.core.schema.operations.Operation;
 import io.quantumdb.core.schema.operations.Operation.Type;
 import io.quantumdb.core.versioning.RefLog;
 import io.quantumdb.core.versioning.State;
 import io.quantumdb.core.versioning.Version;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class VersionTraverser {
 
-	public static Set<Version> enumerateChildren(Version version) {
-		List<Version> toVisit = Lists.newArrayList(version);
-		Set<Version> children = Sets.newHashSet();
+	public enum Direction {
+		BACKWARDS, FORWARDS;
+	}
 
-		while (!toVisit.isEmpty()) {
-			Version current = toVisit.remove(0);
+	public static Direction getDirection(Version from, Version to) {
+		checkArgument(from != null, "You must specify a 'from' version!");
+		checkArgument(to != null, "You must specify a 'to' version!");
 
-			Version child = current.getChild();
-			if (child != null) {
-				children.add(child);
-				toVisit.add(child);
+		int fromGeneration = getGeneration(from);
+		int toGeneration = getGeneration(to);
+
+		if (fromGeneration > toGeneration) {
+			return Direction.BACKWARDS;
+		}
+		else if (toGeneration > fromGeneration) {
+			return Direction.FORWARDS;
+		}
+		throw new IllegalArgumentException("These are different versions but in the same generation: " + from + ", " + to);
+	}
+
+	public static Version getFirst(Set<Version> versions) {
+		checkArgument(versions != null, "You must specify a set of 'versions'!");
+
+		Version first = null;
+		int lowestGeneration = Integer.MAX_VALUE;
+		for (Version version : versions) {
+			int generation = getGeneration(version);
+			if (generation < lowestGeneration) {
+				lowestGeneration = generation;
+				first = version;
 			}
 		}
+		return first;
+	}
 
-		return children;
+	private static int getGeneration(Version version) {
+		int generation = 0;
+		Version pointer = version;
+		while (pointer.getParent() != null) {
+			pointer = pointer.getParent();
+			generation++;
+		}
+		return generation;
 	}
 
 	public static Optional<List<Version>> findPath(Version from, Version to) {
@@ -51,6 +82,9 @@ public class VersionTraverser {
 
 	private static Optional<List<Version>> findPath(Version from, Version to,
 			boolean traverseChildren, boolean traverseParent) {
+
+		checkArgument(from != null, "You must specify a 'from'.");
+		checkArgument(to != null, "You must specify a 'to'.");
 
 		if (from.equals(to)) {
 			return Optional.of(Lists.newArrayList(from));

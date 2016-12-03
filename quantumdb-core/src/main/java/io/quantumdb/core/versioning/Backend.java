@@ -3,6 +3,7 @@ package io.quantumdb.core.versioning;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
@@ -14,6 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -24,6 +26,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Table;
+import com.google.common.collect.Table.Cell;
 import com.google.common.primitives.Ints;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -39,19 +42,20 @@ import io.quantumdb.core.versioning.RefLog.ColumnRef;
 import io.quantumdb.core.versioning.RefLog.SyncRef;
 import io.quantumdb.core.versioning.RefLog.TableRef;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class Backend {
 
 	@Data
 	private static class TableId {
 		private final String tableId;
-		private final String tableName;
 	}
 
 	@Data
 	private static class TableColumn {
 		private final long id;
-		private final TableId table;
+		private final TableId tableId;
 		private final String column;
 	}
 
@@ -131,12 +135,12 @@ public class Backend {
 	public State load(Connection connection, Catalog catalog) throws SQLException {
 		Changelog changelog = loadChangelog(connection);
 		Map<String, TableId> tableIds = listTableIds(connection);
-		Multimap<Version, TableId> tableVersions = listTableVersions(connection, tableIds, changelog);
+		Table<TableId, Version, String> tableVersions = listTableVersions(connection, tableIds, changelog);
 		List<TableColumn> tableColumns = listTableColumns(connection, tableIds);
 		List<TableColumnMapping> columnMappings = listTableColumnMappings(connection, tableColumns);
 
 		Multimap<TableId, TableColumn> columnsPerTable = LinkedHashMultimap.create();
-		tableColumns.forEach(column -> columnsPerTable.put(column.getTable(), column));
+		tableColumns.forEach(column -> columnsPerTable.put(column.getTableId(), column));
 
 		Map<TableColumn, ColumnRef> columnCache = Maps.newLinkedHashMap();
 
@@ -146,9 +150,9 @@ public class Backend {
 
 		while (!toDo.isEmpty()) {
 			Version version = toDo.remove(0);
-			for (TableId table : tableVersions.get(version)) {
+			for (Entry<TableId, String> entry : tableVersions.column(version).entrySet()) {
 				TableRef tableRef = refLog.getTableRefs(version).stream()
-						.filter(ref -> ref.getName().equals(table.getTableName()))
+						.filter(ref -> ref.getName().equals(entry.getValue()) && ref.getTableId().equals(entry.getKey().getTableId()))
 						.findFirst()
 						.orElse(null);
 
@@ -156,20 +160,20 @@ public class Backend {
 					tableRef.markAsPresent(version);
 				}
 				else {
-					Map<TableColumn, ColumnRef> columnRefs = columnsPerTable.get(table).stream()
+					Map<TableColumn, ColumnRef> columnRefs = columnsPerTable.get(entry.getKey()).stream()
 							.collect(Collectors.toMap(Function.identity(), column -> {
 								List<ColumnRef> basedOn = columnMappings.stream()
 										.filter(mapping -> mapping.getTarget().equals(column))
 										.map(TableColumnMapping::getSource)
 										.map(columnCache::get)
-										.filter(ref -> ref != null) // TODO: Really needed?
+										.filter(ref -> ref != null)
 										.collect(Collectors.toList());
 
 								return new ColumnRef(column.getColumn(), basedOn);
 							}, (l, r) -> l, LinkedHashMap::new));
 
 					columnCache.putAll(columnRefs);
-					refLog.addTable(table.getTableName(), table.getTableId(), version, columnRefs.values());
+					refLog.addTable(entry.getValue(), entry.getKey().getTableId(), version, columnRefs.values());
 				}
 			}
 
@@ -192,7 +196,7 @@ public class Backend {
 		Collection<RawTableColumn> columns = persistTableColumns(connection, refLog);
 		Map<Long, RawColumnMapping> columnMapping = persistColumnMappings(connection, refLog, columns);
 		Map<Long, SyncRef> syncRefs = persistTableSynchronizers(connection, refLog);
-		persistSynchronizerColumns(connection, refLog, syncRefs, columnMapping);
+		persistSynchronizerColumns(connection, syncRefs, columnMapping);
 	}
 
 	private void persistChangelog(Connection connection, Changelog changelog) throws SQLException {
@@ -247,13 +251,16 @@ public class Backend {
 							update.setString(3, version.getParent().getId());
 						}
 						update.setString(4, versionId);
+
 						update.execute();
+						log.debug("Updated entry for changelog id: {}", versionId);
 					}
 				}
 				else {
 					try (PreparedStatement delete = connection.prepareStatement(deleteQuery)) {
 						delete.setString(1, versionId);
 						delete.execute();
+						log.debug("Deleted entry for changelog id: {}", versionId);
 					}
 				}
 			}
@@ -277,13 +284,14 @@ public class Backend {
 						insert.setString(3, null);
 					}
 
-					if (version.getParent() == null) {
-						insert.setString(4, null);
+					String versionId = null;
+					if (version.getParent() != null) {
+						versionId = version.getParent().getId();
 					}
-					else {
-						insert.setString(4, version.getParent().getId());
-					}
+
+					insert.setString(4, versionId);
 					insert.execute();
+					log.debug("Inserted new entry for changelog id: {}", versionId);
 				}
 			}
 
@@ -321,12 +329,14 @@ public class Backend {
 						update.setTimestamp(3, new Timestamp(changeSet.getCreated().getTime()));
 						update.setString(4, versionId);
 						update.execute();
+						log.debug("Updated entry for changeset id: {}", versionId);
 					}
 				}
 				else {
 					try (PreparedStatement delete = connection.prepareStatement(deleteQuery)) {
 						delete.setString(1, versionId);
 						delete.execute();
+						log.debug("Deleted entry for changeset id: {}", versionId);
 					}
 				}
 			}
@@ -334,7 +344,8 @@ public class Backend {
 			if (!mapping.isEmpty()) {
 				PreparedStatement insert = connection.prepareStatement(insertQuery);
 				for (Entry<String, ChangeSet> entry : mapping.entrySet()) {
-					insert.setString(1, entry.getKey());
+					String versionId = entry.getKey();
+					insert.setString(1, versionId);
 
 					ChangeSet changeSet = entry.getValue();
 					if (changeSet != null) {
@@ -348,6 +359,7 @@ public class Backend {
 						insert.setTimestamp(4, Timestamp.from(Instant.now()));
 					}
 					insert.execute();
+					log.debug("Inserted new entry for changeset id: {}", versionId);
 				}
 			}
 
@@ -356,42 +368,48 @@ public class Backend {
 	}
 
 	private void persistTables(Connection connection, RefLog refLog) throws SQLException {
-		Map<String, String> tableNameMapping = refLog.getTableRefs().stream()
-				.collect(Collectors.toMap(TableRef::getTableId, TableRef::getName));
+		Set<String> tableIds = refLog.getTableRefs().stream()
+				.map(TableRef::getTableId)
+				.collect(Collectors.toSet());
 
 		try (Statement statement = connection.createStatement()) {
-			String query = "SELECT * FROM quantumdb_tables ORDER BY table_name ASC;";
+			String query = "SELECT * FROM quantumdb_tables ORDER BY table_id ASC;";
 			String deleteQuery = "DELETE FROM quantumdb_tables WHERE table_id = ?;";
-			String insertQuery = "INSERT INTO quantumdb_tables (table_id, table_name) VALUES (?, ?);";
-			String updateQuery = "UPDATE quantumdb_tables SET table_name = ? WHERE table_id = ?;";
+			String insertQuery = "INSERT INTO quantumdb_tables (table_id) VALUES (?);";
 
 			ResultSet resultSet = statement.executeQuery(query);
 			while (resultSet.next()) {
 				String tableId = resultSet.getString("table_id");
-				if (tableNameMapping.containsKey(tableId)) {
-					String tableName = tableNameMapping.remove(tableId);
-					if (!resultSet.getString("table_name").equals(tableName)) {
-						try (PreparedStatement update = connection.prepareStatement(updateQuery)) {
-							update.setString(1, tableName);
-							update.setString(2, tableId);
-							update.execute();
-						}
+				if (!tableIds.remove(tableId)) {
+					try (Statement stmt = connection.createStatement()) {
+						ResultSet r = stmt.executeQuery("SELECT * FROM quantumdb_column_mappings");
+						printResults(r);
 					}
-				}
-				else {
+
+					try (Statement stmt = connection.createStatement()) {
+						ResultSet r = stmt.executeQuery("SELECT * FROM quantumdb_table_columns");
+						printResults(r);
+					}
+
+					try (Statement stmt = connection.createStatement()) {
+						ResultSet r = stmt.executeQuery("SELECT * FROM quantumdb_tables");
+						printResults(r);
+					}
+
 					try (PreparedStatement delete = connection.prepareStatement(deleteQuery)) {
 						delete.setString(1, tableId);
 						delete.execute();
+						log.debug("Deleted entry for table id: {}", tableId);
 					}
 				}
 			}
 
-			if (!tableNameMapping.isEmpty()) {
+			if (!tableIds.isEmpty()) {
 				PreparedStatement insert = connection.prepareStatement(insertQuery);
-				for (Entry<String, String> entry : tableNameMapping.entrySet()) {
-					insert.setString(1, entry.getKey());
-					insert.setString(2, entry.getValue());
+				for (String tableId : tableIds) {
+					insert.setString(1, tableId);
 					insert.execute();
+					log.debug("Inserted new entry for table id: {}", tableId);
 				}
 			}
 
@@ -399,34 +417,58 @@ public class Backend {
 		}
 	}
 
+	private void printResults(ResultSet r) throws SQLException {
+		ResultSetMetaData metaData = r.getMetaData();
+		while (r.next()) {
+			StringBuilder builder = new StringBuilder();
+			builder.append("[" + metaData.getTableName(1) + "] ");
+			for (int i = 0; i < metaData.getColumnCount(); i++) {
+				builder.append(metaData.getColumnName(i + 1));
+				builder.append("=");
+				builder.append(r.getObject(i + 1));
+
+				if (i < metaData.getColumnCount() - 1) {
+					builder.append(", ");
+				}
+			}
+			System.out.println(builder.toString());
+		}
+	}
+
 	private void persistTableVersions(Connection connection, RefLog refLog) throws SQLException {
-		Multimap<String, String> versionMapping = HashMultimap.create();
-		refLog.getTableRefs()
-				.forEach(tableRef -> versionMapping.putAll(tableRef.getTableId(), tableRef.getVersions().stream()
-						.map(Version::getId)
-						.collect(Collectors.toSet())));
+		Table<String, String, String> mapping = HashBasedTable.create();
+		refLog.getTableRefs().forEach(tableRef -> {
+			String tableId = tableRef.getTableId();
+			String tableName = tableRef.getName();
+			Set<String> versionIds = tableRef.getVersions().stream()
+					.map(Version::getId)
+					.collect(Collectors.toSet());
+
+			versionIds.forEach(versionId -> mapping.put(tableId, versionId, tableName));
+		});
 
 		try (Statement statement = connection.createStatement()) {
 			String query = "SELECT * FROM quantumdb_table_versions ORDER BY table_id ASC;";
 			String deleteQuery = "DELETE FROM quantumdb_table_versions WHERE table_id = ? AND version_id = ?;";
-			String insertQuery = "INSERT INTO quantumdb_table_versions (table_id, version_id) VALUES (?, ?);";
+			String insertQuery = "INSERT INTO quantumdb_table_versions (table_id, version_id, table_name) VALUES (?, ?, ?);";
 
 			ResultSet resultSet = statement.executeQuery(query);
 			while (resultSet.next()) {
 				String tableId = resultSet.getString("table_id");
 				String versionId = resultSet.getString("version_id");
 
-				if (versionMapping.containsKey(tableId)) {
-					Collection<String> versions = versionMapping.get(tableId);
-					if (!versions.contains(versionId)) {
+				if (mapping.containsRow(tableId)) {
+					Map<String, String> internalMapping = mapping.row(tableId);
+					if (!internalMapping.containsKey(versionId)) {
 						try (PreparedStatement delete = connection.prepareStatement(deleteQuery)) {
 							delete.setString(1, tableId);
 							delete.setString(2, versionId);
 							delete.execute();
+							log.debug("Deleted entry for table_versions id: {} / {}", tableId, versionId);
 						}
 					}
 					else {
-						versionMapping.remove(tableId, versionId);
+						mapping.remove(tableId, versionId);
 					}
 				}
 				else {
@@ -434,16 +476,23 @@ public class Backend {
 						delete.setString(1, tableId);
 						delete.setString(2, versionId);
 						delete.execute();
+						log.debug("Deleted entry for table_versions id: {} / {}", tableId, versionId);
 					}
 				}
 			}
 
-			if (!versionMapping.isEmpty()) {
+			if (!mapping.isEmpty()) {
 				PreparedStatement insert = connection.prepareStatement(insertQuery);
-				for (Entry<String, String> entry : versionMapping.entries()) {
-					insert.setString(1, entry.getKey());
-					insert.setString(2, entry.getValue());
+				for (Cell<String, String, String> entry : mapping.cellSet()) {
+					String tableId = entry.getRowKey();
+					String versionId = entry.getColumnKey();
+
+					insert.setString(1, tableId);
+					insert.setString(2, versionId);
+					insert.setString(3, entry.getValue());
 					insert.execute();
+
+					log.debug("Inserted new entry for table_versions id: {} / {}", tableId, versionId);
 				}
 			}
 
@@ -473,6 +522,7 @@ public class Backend {
 						try (PreparedStatement delete = connection.prepareStatement(deleteQuery)) {
 							delete.setLong(1, id);
 							delete.execute();
+							log.debug("Deleted entry for table_columns id: {} - {} / {}", id, tableId, columnName);
 						}
 					}
 					else {
@@ -484,6 +534,7 @@ public class Backend {
 					try (PreparedStatement delete = connection.prepareStatement(deleteQuery)) {
 						delete.setLong(1, id);
 						delete.execute();
+						log.debug("Deleted entry for table_columns id: {}", id);
 					}
 				}
 			}
@@ -491,13 +542,17 @@ public class Backend {
 			if (!columnMapping.isEmpty()) {
 				try (PreparedStatement insert = connection.prepareStatement(insertQuery)) {
 					for (Entry<String, String> entry : columnMapping.entries()) {
-						insert.setString(1, entry.getKey());
-						insert.setString(2, entry.getValue());
+						String tableId = entry.getKey();
+						String columnName = entry.getValue();
+
+						insert.setString(1, tableId);
+						insert.setString(2, columnName);
 						ResultSet generatedKeys = insert.executeQuery();
 						generatedKeys.next();
 
 						long id = generatedKeys.getLong("id");
-						columns.add(new RawTableColumn(id, entry.getKey(), entry.getValue()));
+						columns.add(new RawTableColumn(id, tableId, columnName));
+						log.debug("Inserted new entry for table_columns id: {} - {} / {}", id, tableId, columnName);
 					}
 				}
 			}
@@ -527,6 +582,7 @@ public class Backend {
 					RawColumn source = new RawColumn(sourceTableId, sourceColumnName);
 
 					columnMapping.put(source, target);
+					columnMapping.put(target, source);
 				}
 			}
 		}
@@ -554,6 +610,7 @@ public class Backend {
 					try (PreparedStatement delete = connection.prepareStatement(deleteQuery)) {
 						delete.setLong(1, id);
 						delete.execute();
+						log.debug("Deleted entry for column_mappings id: {}", id);
 					}
 				}
 			}
@@ -571,6 +628,7 @@ public class Backend {
 
 						long id = generatedKeys.getLong("id");
 						results.put(id, new RawColumnMapping(id, entry.getKey(), entry.getValue()));
+						log.debug("Inserted new entry for column_mappings id: {} - {} / {}", id, sourceId, targetId);
 					}
 				}
 			}
@@ -611,6 +669,7 @@ public class Backend {
 						update.setString(2, syncRef.getFunctionName());
 						update.setLong(3, id);
 						update.execute();
+						log.debug("Updated entry for synchronizers id: {} - {} -> {}", id, sourceTableId, targetTableId);
 					}
 
 					mapping.put(id, syncRef);
@@ -619,6 +678,7 @@ public class Backend {
 					try (PreparedStatement delete = connection.prepareStatement(deleteQuery)) {
 						delete.setLong(1, id);
 						delete.execute();
+						log.debug("Deleted entry for synchronizers id: {}", id);
 					}
 				}
 			}
@@ -626,8 +686,11 @@ public class Backend {
 			if (!syncMapping.isEmpty()) {
 				PreparedStatement insert = connection.prepareStatement(insertQuery);
 				for (SyncRef syncRef : syncMapping.values()) {
-					insert.setString(1, syncRef.getSource().getTableId());
-					insert.setString(2, syncRef.getTarget().getTableId());
+					String sourceTableId = syncRef.getSource().getTableId();
+					String targetTableId = syncRef.getTarget().getTableId();
+
+					insert.setString(1, sourceTableId);
+					insert.setString(2, targetTableId);
 					insert.setString(3, syncRef.getName());
 					insert.setString(4, syncRef.getFunctionName());
 					ResultSet generatedKeys = insert.executeQuery();
@@ -635,6 +698,7 @@ public class Backend {
 					generatedKeys.next();
 					long id = generatedKeys.getLong("id");
 					mapping.put(id, syncRef);
+					log.debug("Inserted new entry for synchronizers id: {} - {} -> {}", id, sourceTableId, targetTableId);
 				}
 			}
 
@@ -643,7 +707,7 @@ public class Backend {
 		return mapping;
 	}
 
-	private void persistSynchronizerColumns(Connection connection, RefLog refLog, Map<Long, SyncRef> syncRefs,
+	private void persistSynchronizerColumns(Connection connection, Map<Long, SyncRef> syncRefs,
 			Map<Long, RawColumnMapping> columnMapping) throws SQLException {
 
 		Table<String, String, Long> syncIndex = HashBasedTable.create();
@@ -653,8 +717,10 @@ public class Backend {
 		columnMapping.forEach((id, mapping) -> {
 			String sourceTableId = mapping.getSource().getTable();
 			String targetTableId = mapping.getTarget().getTable();
-			long syncId = syncIndex.get(sourceTableId, targetTableId);
-			idMapping.put(syncId, mapping.getId());
+			Long syncId = syncIndex.get(sourceTableId, targetTableId);
+			if (syncId != null) {
+				idMapping.put(syncId, mapping.getId());
+			}
 		});
 
 		try (Statement statement = connection.createStatement()) {
@@ -675,6 +741,7 @@ public class Backend {
 						delete.setLong(1, synchronizerId);
 						delete.setLong(2, columnMappingId);
 						delete.execute();
+						log.debug("Deleted entry for synchronizer_columns id: {}, mapping: {}", synchronizerId, columnMappingId);
 					}
 				}
 			}
@@ -682,9 +749,12 @@ public class Backend {
 			if (!idMapping.isEmpty()) {
 				PreparedStatement insert = connection.prepareStatement(insertQuery);
 				for (Entry<Long, Long> idEntry : idMapping.entries()) {
-					insert.setLong(1, idEntry.getKey());
-					insert.setLong(2, idEntry.getValue());
+					Long synchronizerId = idEntry.getKey();
+					Long columnMappingId = idEntry.getValue();
+					insert.setLong(1, synchronizerId);
+					insert.setLong(2, columnMappingId);
 					insert.execute();
+					log.debug("Inserted new entry for synchronizer_columns id: {}, mapping: {}", synchronizerId, columnMappingId);
 				}
 			}
 
@@ -815,28 +885,28 @@ public class Backend {
 	}
 
 	private Map<String, TableId> listTableIds(Connection connection) throws SQLException {
-		Map<String, TableId> mapping = Maps.newLinkedHashMap();
+		Map<String, TableId> tableIds = Maps.newHashMap();
 		try (Statement statement = connection.createStatement()) {
-			ResultSet resultSet = statement.executeQuery("SELECT * FROM quantumdb_tables ORDER BY table_name ASC;");
+			ResultSet resultSet = statement.executeQuery("SELECT * FROM quantumdb_tables ORDER BY table_id ASC;");
 			while (resultSet.next()) {
 				String tableId = resultSet.getString("table_id");
-				String tableName = resultSet.getString("table_name");
-				mapping.put(tableId, new TableId(tableId, tableName));
+				tableIds.put(tableId, new TableId(tableId));
 			}
 		}
-		return mapping;
+		return tableIds;
 	}
 
-	private Multimap<Version, TableId> listTableVersions(Connection connection, Map<String, TableId> tableIds, Changelog changelog) throws SQLException {
-		Multimap<Version, TableId> mapping = LinkedHashMultimap.create();
+	private Table<TableId, Version, String> listTableVersions(Connection connection, Map<String, TableId> tableIds, Changelog changelog) throws SQLException {
+		Table<TableId, Version, String> mapping = HashBasedTable.create();
 		try (Statement statement = connection.createStatement()) {
 			ResultSet resultSet = statement.executeQuery("SELECT * FROM quantumdb_table_versions ORDER BY table_id ASC;");
 			while (resultSet.next()) {
 				String tableId = resultSet.getString("table_id");
+				String tableName = resultSet.getString("table_name");
 				String versionId = resultSet.getString("version_id");
-				TableId table = tableIds.get(tableId);
 				Version version = changelog.getVersion(versionId);
-				mapping.put(version, table);
+				TableId tableIdRef = tableIds.get(tableId);
+				mapping.put(tableIdRef, version, tableName);
 			}
 		}
 		return mapping;
@@ -850,8 +920,8 @@ public class Backend {
 				long id = resultSet.getLong("id");
 				String tableId = resultSet.getString("table_id");
 				String column = resultSet.getString("column_name");
-				TableId table = tableIds.get(tableId);
-				results.add(new TableColumn(id, table, column));
+				TableId tableIdRef = tableIds.get(tableId);
+				results.add(new TableColumn(id, tableIdRef, column));
 			}
 		}
 		return results;
@@ -880,7 +950,7 @@ public class Backend {
 		Map<Long, TableColumnMapping> columnMapping = columnMappings.stream()
 				.collect(Collectors.toMap(TableColumnMapping::getId, Function.identity()));
 
-		Multimap<Long, Long> syncColumMappings = HashMultimap.create();
+		Multimap<Long, Long> syncColumnMappings = HashMultimap.create();
 		try (Statement statement = connection.createStatement()) {
 			String query = "SELECT * FROM quantumdb_synchronizer_columns;";
 
@@ -888,7 +958,7 @@ public class Backend {
 			while (resultSet.next()) {
 				long synchronizerId = resultSet.getLong("synchronizer_id");
 				long columnMappingId = resultSet.getLong("column_mapping_id");
-				syncColumMappings.put(synchronizerId, columnMappingId);
+				syncColumnMappings.put(synchronizerId, columnMappingId);
 			}
 		}
 
@@ -903,25 +973,25 @@ public class Backend {
 				String triggerName = resultSet.getString("trigger_name");
 				String functionName = resultSet.getString("function_name");
 
-				Map<ColumnRef, ColumnRef> mappingsForSynchronizer = syncColumMappings.get(id).stream()
+				Map<ColumnRef, ColumnRef> mappingsForSynchronizer = syncColumnMappings.get(id).stream()
 						.map(columnMapping::get)
 						.collect(Collectors.toMap(entry -> {
 							TableColumn source = entry.getSource();
-							if (!source.getTable().getTableId().equals(sourceTableId)) {
+							if (!source.getTableId().getTableId().equals(sourceTableId)) {
 								throw new IllegalStateException("The column mapping of synchronizer: " + id
-										+ " originates to a table: " + source.getTable().getTableId()
+										+ " originates to a table: " + source.getTableId().getTableId()
 										+ " other than the source table: " + sourceTableId);
 							}
-							TableRef ref = refLog.getTableRefById(source.getTable().getTableId());
+							TableRef ref = refLog.getTableRefById(source.getTableId().getTableId());
 							return ref.getColumns().get(source.getColumn());
 						}, entry -> {
 							TableColumn target = entry.getTarget();
-							if (!target.getTable().getTableId().equals(targetTableId)) {
+							if (!target.getTableId().getTableId().equals(targetTableId)) {
 								throw new IllegalStateException("The column mapping of synchronizer: " + id
-										+ " targets into a table: " + target.getTable().getTableId()
+										+ " targets into a table: " + target.getTableId().getTableId()
 										+ " other than the target table: " + targetTableId);
 							}
-							TableRef ref = refLog.getTableRefById(target.getTable().getTableId());
+							TableRef ref = refLog.getTableRefById(target.getTableId().getTableId());
 							return ref.getColumns().get(target.getColumn());
 						}));
 

@@ -14,6 +14,7 @@ import io.quantumdb.core.schema.operations.Operation;
 import io.quantumdb.core.utils.RandomHasher;
 import lombok.AccessLevel;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -22,6 +23,7 @@ import lombok.Setter;
  * This class allows you to define a series of successive ChangeSets, building up a changelog in the process.
  */
 @Data
+@EqualsAndHashCode(exclude = { "idGenerator" })
 public class Changelog {
 
 	private final Version root;
