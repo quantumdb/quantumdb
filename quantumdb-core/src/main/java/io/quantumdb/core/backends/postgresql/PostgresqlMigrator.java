@@ -3,6 +3,7 @@ package io.quantumdb.core.backends.postgresql;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
@@ -174,9 +175,11 @@ class PostgresqlMigrator implements DatabaseMigrator {
 
 		try (Connection connection = backend.connect()) {
 			connection.setAutoCommit(false);
+
+			boolean useUpsert = useUpsert(connection);
 			dropSynchronizers(connection, state.getRefLog(), tablesToDrop);
 			for (SyncFunction syncFunction : newSyncFunctions.values()) {
-				execute(connection, syncFunction.createFunctionStatement());
+				execute(connection, syncFunction.createFunctionStatement(useUpsert));
 				execute(connection, syncFunction.createTriggerStatement());
 			}
 			dropTables(connection, refLog, catalog, tablesToDrop);
@@ -447,6 +450,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 			String sourceTableId = source.getTableId();
 			String targetTableId = target.getTableId();
 
+			boolean useUpsert = useUpsert(connection);
 			SyncFunction syncFunction = syncFunctions.get(sourceTableId, targetTableId);
 			if (syncFunction == null) {
 				Map<ColumnRef, ColumnRef> mapping = refLog.getColumnMapping(source, target);
@@ -455,7 +459,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 				syncFunctions.put(sourceTableId, targetTableId, syncFunction);
 
 				log.info("Creating sync function: {} for table: {}", syncFunction.getFunctionName(), sourceTableId);
-				PostgresqlMigrator.execute(connection, syncFunction.createFunctionStatement());
+				PostgresqlMigrator.execute(connection, syncFunction.createFunctionStatement(useUpsert));
 
 				log.info("Creating trigger: {} for table: {}", syncFunction.getTriggerName(), sourceTableId);
 				PostgresqlMigrator.execute(connection, syncFunction.createTriggerStatement());
@@ -467,7 +471,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 				syncFunction.setColumnsToMigrate(columns);
 
 				log.info("Updating sync function: {} for table: {}", syncFunction.getFunctionName(), sourceTableId);
-				PostgresqlMigrator.execute(connection, syncFunction.createFunctionStatement());
+				PostgresqlMigrator.execute(connection, syncFunction.createFunctionStatement(useUpsert));
 
 				TableRef sourceTable = refLog.getTableRefById(sourceTableId);
 				sourceTable.getOutboundSyncs().stream()
@@ -492,5 +496,11 @@ class PostgresqlMigrator implements DatabaseMigrator {
 						}));
 			}
 		}
+	}
+
+	private static boolean useUpsert(Connection connection) throws SQLException {
+		DatabaseMetaData metaData = connection.getMetaData();
+		return metaData.getDatabaseMajorVersion() > 9
+				|| metaData.getDatabaseMajorVersion() == 9 && metaData.getDatabaseMinorVersion() >= 5;
 	}
 }
