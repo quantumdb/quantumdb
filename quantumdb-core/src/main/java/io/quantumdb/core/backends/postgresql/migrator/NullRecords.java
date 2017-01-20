@@ -15,7 +15,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import io.quantumdb.core.backends.Backend;
 import io.quantumdb.core.schema.definitions.Column;
-import io.quantumdb.core.schema.definitions.ColumnType;
+import io.quantumdb.core.schema.definitions.DataType;
 import io.quantumdb.core.schema.definitions.ForeignKey;
 import io.quantumdb.core.schema.definitions.Identity;
 import io.quantumdb.core.schema.definitions.Sequence;
@@ -95,7 +95,7 @@ public class NullRecords {
 				i++;
 				Object value = identity.getValue(columnName);
 				Column column = table.getColumn(columnName);
-				ColumnType type = column.getType();
+				DataType type = column.getType();
 				type.getValueSetter().setValue(statement, i, value);
 			}
 			statement.execute();
@@ -135,7 +135,7 @@ public class NullRecords {
 		try (PreparedStatement statement = connection.prepareStatement(builder.toString())) {
 			for (int i = 1; i <= columnsToSet.size(); i++) {
 				Column column = columnsToSet.get(i - 1);
-				ColumnType.ValueSetter valueSetter = column.getType().getValueSetter();
+				DataType.ValueSetter valueSetter = column.getType().getValueSetter();
 				String columnName = column.getName();
 				ForeignKey outgoingForeignKey = column.getOutgoingForeignKey();
 
@@ -152,7 +152,7 @@ public class NullRecords {
 					values.put(column.getName(), value);
 				}
 				else {
-					ColumnType.ValueGenerator valueGenerator = column.getType().getValueGenerator();
+					DataType.ValueGenerator valueGenerator = column.getType().getValueGenerator();
 					Object value = valueGenerator.generateValue();
 					valueSetter.setValue(statement, i, value);
 					values.put(column.getName(), value);
@@ -198,7 +198,7 @@ public class NullRecords {
 				identity.add(identityColumn.getName(), referredIdentity.getValue(mappedColumnName));
 			}
 			else {
-				ColumnType.ValueGenerator valueGenerator = identityColumn.getType().getValueGenerator();
+				DataType.ValueGenerator valueGenerator = identityColumn.getType().getValueGenerator();
 				Object value = valueGenerator.generateValue();
 				identity.add(identityColumn.getName(), value);
 			}

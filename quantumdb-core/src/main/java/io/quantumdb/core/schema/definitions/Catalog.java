@@ -1,9 +1,12 @@
 package io.quantumdb.core.schema.definitions;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.base.Strings.isNullOrEmpty;
 
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -20,6 +23,7 @@ public class Catalog implements Copyable<Catalog> {
 	private final String name;
 	private final Collection<Table> tables;
 	private final Collection<Sequence> sequences;
+	private final Collection<Function> functions;
 
 	public Catalog(String name) {
 		checkArgument(!Strings.isNullOrEmpty(name), "You must specify a 'name'");
@@ -27,6 +31,7 @@ public class Catalog implements Copyable<Catalog> {
 		this.name = name;
 		this.tables = Sets.newTreeSet(Comparator.comparing(Table::getName));
 		this.sequences = Sets.newTreeSet(Comparator.comparing(Sequence::getName));
+		this.functions = Sets.newTreeSet(Comparator.comparing(Function::getName));
 	}
 
 	public Catalog addTable(Table table) {
@@ -101,6 +106,50 @@ public class Catalog implements Copyable<Catalog> {
 				.findFirst()
 				.orElseThrow(() -> new IllegalStateException(
 						"Catalog: " + name + " does not contain a sequence: " + sequenceName));
+	}
+
+	public Catalog addFunction(Function function) {
+		checkArgument(function != null, "You must specify a 'function'.");
+		checkState(!containsFunction(function.getName(), function.getParameterTypes()),
+				"Table already has a function with name: " + function.getName());
+
+		functions.add(function);
+		function.setParent(this);
+		return this;
+	}
+
+	public boolean containsFunction(String functionName, List<DataType> parameterTypes) {
+		checkArgument(!isNullOrEmpty(functionName), "You must specify a 'functionName'.");
+		checkArgument(parameterTypes != null, "You must specify a 'parameterTypes'.");
+
+		return functions.stream()
+				.anyMatch(function -> function.getName().equals(functionName)
+						&& function.getParameterTypes().equals(parameterTypes));
+	}
+
+	public Function removeFunction(String functionName, List<DataType> parameterTypes) {
+		checkArgument(!isNullOrEmpty(functionName), "You must specify a 'functionName'.");
+		checkArgument(parameterTypes != null, "You must specify a 'parameterTypes'.");
+
+		Function function = getFunction(functionName, parameterTypes);
+		function.setParent(null);
+		functions.remove(function);
+		return function;
+	}
+
+	public Function getFunction(String functionName, List<DataType> parameterTypes) {
+		checkArgument(!isNullOrEmpty(functionName), "You must specify a 'functionName'.");
+		checkArgument(parameterTypes != null, "You must specify a 'parameterTypes'.");
+
+		return functions.stream()
+				.filter(function -> function.getName().equals(functionName)
+						&& function.getParameterTypes().equals(parameterTypes))
+				.findFirst()
+				.orElse(null);
+	}
+
+	public ImmutableSet<Function> getFunctions() {
+		return ImmutableSet.copyOf(functions);
 	}
 
 	public ImmutableSet<Table> getTables() {

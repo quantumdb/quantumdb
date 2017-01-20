@@ -20,7 +20,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import io.quantumdb.core.backends.DatabaseMigrator;
 import io.quantumdb.core.backends.postgresql.migrator.NullRecords;
-import io.quantumdb.core.backends.postgresql.migrator.TableCreator;
+import io.quantumdb.core.backends.postgresql.migrator.StatementExecutor;
 import io.quantumdb.core.backends.postgresql.planner.GreedyMigrationPlanner;
 import io.quantumdb.core.backends.postgresql.planner.Operation;
 import io.quantumdb.core.backends.postgresql.planner.Plan;
@@ -324,6 +324,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 				}
 			}
 
+			createFunctions();
 			createIndexes();
 
 			synchronizeBackwards();
@@ -343,7 +344,6 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		}
 
 		private void execute(Operation operation) throws MigrationException, InterruptedException {
-
 			log.info("Executing operation: " + operation);
 			try {
 				Set<Table> tables = operation.getTables();
@@ -373,7 +373,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 
 		private void createGhostTables() throws MigrationException {
 			try (Connection connection = backend.connect()) {
-				TableCreator creator = new TableCreator();
+				StatementExecutor creator = new StatementExecutor();
 				creator.create(connection, plan.getGhostTables());
 			}
 			catch (SQLException e) {
@@ -383,8 +383,28 @@ class PostgresqlMigrator implements DatabaseMigrator {
 
 		private void createIndexes() throws MigrationException {
 			try (Connection connection = backend.connect()) {
-				TableCreator creator = new TableCreator();
+				StatementExecutor creator = new StatementExecutor();
 				creator.createIndexes(connection, plan.getGhostTables());
+			}
+			catch (SQLException e) {
+				throw new MigrationException(e);
+			}
+		}
+
+		private void createFunctions() throws MigrationException {
+			try (Connection connection = backend.connect()) {
+				StatementExecutor creator = new StatementExecutor();
+				creator.createFunctions(connection, plan.getNewFunctions());
+			}
+			catch (SQLException e) {
+				throw new MigrationException(e);
+			}
+		}
+
+		private void dropFunctions() throws MigrationException {
+			try (Connection connection = backend.connect()) {
+				StatementExecutor creator = new StatementExecutor();
+				creator.dropFunctions(connection, plan.getRemovedFunctions());
 			}
 			catch (SQLException e) {
 				throw new MigrationException(e);

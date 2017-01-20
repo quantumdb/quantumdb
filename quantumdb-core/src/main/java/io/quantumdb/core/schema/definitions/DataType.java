@@ -6,9 +6,9 @@ import java.sql.SQLException;
 import lombok.Data;
 
 @Data
-public class ColumnType {
+public class DataType {
 
-	public static enum Type {
+	public enum Type {
 		OID,
 		UUID,
 		CHAR,
@@ -21,7 +21,8 @@ public class ColumnType {
 		FLOAT,
 		BOOLEAN,
 		DATE,
-		TIMESTAMP
+		TIMESTAMP,
+		TRIGGER
 	}
 
 	@FunctionalInterface

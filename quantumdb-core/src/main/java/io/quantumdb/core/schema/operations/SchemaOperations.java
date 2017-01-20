@@ -1,7 +1,7 @@
 package io.quantumdb.core.schema.operations;
 
 import io.quantumdb.core.schema.definitions.Column;
-import io.quantumdb.core.schema.definitions.ColumnType;
+import io.quantumdb.core.schema.definitions.DataType;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -44,11 +44,11 @@ public class SchemaOperations {
 		return new JoinTable(sourceTable, alias, columns);
 	}
 
-	public static AddColumn addColumn(String tableName, String columnName, ColumnType type, Column.Hint... hints) {
+	public static AddColumn addColumn(String tableName, String columnName, DataType type, Column.Hint... hints) {
 		return addColumn(tableName, columnName, type, null, hints);
 	}
 
-	public static AddColumn addColumn(String tableName, String columnName, ColumnType type, String defaultExpression,
+	public static AddColumn addColumn(String tableName, String columnName, DataType type, String defaultExpression,
 			Column.Hint... hints) {
 		return new AddColumn(tableName, columnName, type, defaultExpression, hints);
 	}
@@ -75,6 +75,14 @@ public class SchemaOperations {
 
 	public static DropIndex dropIndex(String tableName, String... columns) {
 		return new DropIndex(tableName, columns);
+	}
+
+	public static CreateFunction createFunction(String functionName) {
+		return new CreateFunction(functionName);
+	}
+
+	public static DropFunction dropFunction(String functionName) {
+		return new DropFunction(functionName);
 	}
 
 	public static DataOperation execute(String query) {

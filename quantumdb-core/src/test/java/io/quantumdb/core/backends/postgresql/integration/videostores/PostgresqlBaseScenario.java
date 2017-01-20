@@ -21,7 +21,7 @@ import io.quantumdb.core.backends.Backend;
 import io.quantumdb.core.backends.Config;
 import io.quantumdb.core.backends.DatabaseMigrator.MigrationException;
 import io.quantumdb.core.backends.postgresql.PostgresqlDatabase;
-import io.quantumdb.core.backends.postgresql.migrator.TableCreator;
+import io.quantumdb.core.backends.postgresql.migrator.StatementExecutor;
 import io.quantumdb.core.migration.Migrator;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
@@ -56,7 +56,7 @@ public class PostgresqlBaseScenario extends PostgresqlDatabase {
 	public void before() throws SQLException, MigrationException, ClassNotFoundException {
 		super.before();
 
-		TableCreator tableCreator = new TableCreator();
+		StatementExecutor statementExecutor = new StatementExecutor();
 
 		Table stores = new Table(STORES_ID)
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
@@ -131,7 +131,7 @@ public class PostgresqlBaseScenario extends PostgresqlDatabase {
 		catalog = new Catalog(getCatalogName());
 		tables.forEach(catalog::addTable);
 
-		tableCreator.create(getConnection(), tables);
+		statementExecutor.create(getConnection(), tables);
 
 		Config config = new Config();
 		config.setUrl(getJdbcUrl());

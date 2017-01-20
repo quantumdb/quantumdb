@@ -6,7 +6,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-import io.quantumdb.core.backends.postgresql.migrator.TableCreator;
+import io.quantumdb.core.backends.postgresql.migrator.StatementExecutor;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.versioning.Backend;
 import io.quantumdb.core.versioning.QuantumTables;
@@ -78,8 +78,8 @@ public class PostgresqlBackend implements io.quantumdb.core.backends.Backend {
 	}
 
 	@Override
-	public TableCreator getTableCreator() {
-		return new TableCreator();
+	public StatementExecutor getTableCreator() {
+		return new StatementExecutor();
 	}
 
 	@Override

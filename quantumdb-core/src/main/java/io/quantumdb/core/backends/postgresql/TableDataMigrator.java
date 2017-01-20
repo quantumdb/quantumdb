@@ -20,7 +20,7 @@ import io.quantumdb.core.backends.Backend;
 import io.quantumdb.core.backends.postgresql.MigratorFunction.Stage;
 import io.quantumdb.core.backends.postgresql.migrator.NullRecords;
 import io.quantumdb.core.schema.definitions.Column;
-import io.quantumdb.core.schema.definitions.ColumnType.Type;
+import io.quantumdb.core.schema.definitions.DataType.Type;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.versioning.RefLog;
 import io.quantumdb.core.utils.QueryBuilder;

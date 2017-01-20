@@ -43,6 +43,8 @@ public class GreedyMigrationPlanner implements MigrationPlanner {
 		log.debug("Creating migration plan for migration from version: {} to: {}", from, to);
 
 		Catalog catalog = state.getCatalog();
+		Set<io.quantumdb.core.schema.definitions.Function> functions = Sets.newHashSet(catalog.getFunctions());
+
 		RefLog refLog = state.getRefLog();
 		SchemaOperationsMigrator migrator = new SchemaOperationsMigrator(catalog, refLog);
 
@@ -76,10 +78,13 @@ public class GreedyMigrationPlanner implements MigrationPlanner {
 
 		Set<String> newTableIds = Sets.difference(postTableIds, preTableIds);
 
+		Set<io.quantumdb.core.schema.definitions.Function> newFunctions = Sets.difference(catalog.getFunctions(), functions);
+		Set<io.quantumdb.core.schema.definitions.Function> removedFunctions = Sets.difference(functions, catalog.getFunctions());
+
 		log.debug("The following ghost tables will be created: " + newTableIds.stream()
 				.collect(Collectors.toMap(Function.identity(), (id) -> refLog.getTableRefById(id).getName())));
 
-		return new Planner(state, from, to, newTableIds, migrator.getRefLog()).createPlan();
+		return new Planner(state, from, to, newTableIds, newFunctions, removedFunctions, migrator.getRefLog()).createPlan();
 	}
 
 	private static class Planner {
@@ -88,6 +93,8 @@ public class GreedyMigrationPlanner implements MigrationPlanner {
 		private final Version from;
 		private final Version to;
 		private final Set<String> newTableIds;
+		private final Set<io.quantumdb.core.schema.definitions.Function> newFunctions;
+		private final Set<io.quantumdb.core.schema.definitions.Function> removedFunctions;
 		private final RefLog refLog;
 
 		private Set<String> tableIdsWithNullRecords;
@@ -95,11 +102,16 @@ public class GreedyMigrationPlanner implements MigrationPlanner {
 		private MigrationState migrationState;
 		private Graph graph;
 
-		public Planner(State state, Version from, Version to, Set<String> newTableIds, RefLog refLog) {
+		public Planner(State state, Version from, Version to, Set<String> newTableIds,
+				Set<io.quantumdb.core.schema.definitions.Function> newFunctions,
+				Set<io.quantumdb.core.schema.definitions.Function> removedFunctions, RefLog refLog) {
+
 			this.catalog = state.getCatalog();
 			this.from = from;
 			this.to = to;
 			this.newTableIds = Sets.newHashSet(newTableIds);
+			this.newFunctions = Sets.newHashSet(newFunctions);
+			this.removedFunctions = Sets.newHashSet(removedFunctions);
 			this.refLog = refLog;
 
 			this.tableIdsWithNullRecords = Sets.newHashSet();
@@ -137,7 +149,7 @@ public class GreedyMigrationPlanner implements MigrationPlanner {
 					.map(catalog::getTable)
 					.collect(Collectors.toSet());
 
-			return plan.build(refLog, ghostTables);
+			return plan.build(refLog, ghostTables, newFunctions, removedFunctions);
 		}
 
 		private Set<String> listToDo() {

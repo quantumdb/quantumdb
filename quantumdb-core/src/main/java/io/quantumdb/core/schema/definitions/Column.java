@@ -26,7 +26,7 @@ public class Column implements Copyable<Column> {
 	private String name;
 	private Table parent;
 
-	private ColumnType type;
+	private DataType type;
 	private String defaultValue;
 	private final Set<Hint> hints;
 
@@ -39,19 +39,19 @@ public class Column implements Copyable<Column> {
 	@Getter(AccessLevel.PROTECTED)
 	private final List<ForeignKey> incomingForeignKeys;
 
-	public Column(String name, ColumnType type, Hint... hints) {
+	public Column(String name, DataType type, Hint... hints) {
 		this(name, type, null, null, hints);
 	}
 
-	public Column(String name, ColumnType type, String defaultValue, Hint... hints) {
+	public Column(String name, DataType type, String defaultValue, Hint... hints) {
 		this(name, type, null, defaultValue, hints);
 	}
 
-	public Column(String name, ColumnType type, Sequence sequence, Hint... hints) {
+	public Column(String name, DataType type, Sequence sequence, Hint... hints) {
 		this(name, type, sequence, null, hints);
 	}
 
-	private Column(String name, ColumnType type, Sequence sequence, String defaultValueExpression, Hint... hints) {
+	private Column(String name, DataType type, Sequence sequence, String defaultValueExpression, Hint... hints) {
 		checkArgument(!Strings.isNullOrEmpty(name), "You must specify a 'name'.");
 		checkArgument(type != null, "You must specify a 'type'.");
 		checkArgument(hints != null, "You may not specify 'hints' as NULL.");
@@ -71,7 +71,7 @@ public class Column implements Copyable<Column> {
 		this.parent = parent;
 	}
 
-	public void modifyType(ColumnType newColumnType) {
+	public void modifyType(DataType newColumnType) {
 		this.type = newColumnType;
 	}
 

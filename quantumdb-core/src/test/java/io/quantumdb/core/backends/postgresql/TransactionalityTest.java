@@ -17,7 +17,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import io.quantumdb.core.backends.postgresql.migrator.TableCreator;
+import io.quantumdb.core.backends.postgresql.migrator.StatementExecutor;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Table;
@@ -63,7 +63,7 @@ public class TransactionalityTest {
 		Connection connection = database.getConnection();
 
 		log.info("Creating source and target table...");
-		new TableCreator().create(connection, catalog.getTables());
+		new StatementExecutor().create(connection, catalog.getTables());
 
 		log.info("Creating functions and triggers...");
 		execute(connection, createSyncFunction(SYNC_FUNCTION, target.getName()));

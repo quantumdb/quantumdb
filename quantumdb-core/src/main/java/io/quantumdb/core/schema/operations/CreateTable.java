@@ -8,7 +8,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.quantumdb.core.schema.definitions.Column.Hint;
-import io.quantumdb.core.schema.definitions.ColumnType;
+import io.quantumdb.core.schema.definitions.DataType;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -29,11 +29,11 @@ public class CreateTable implements SchemaOperation {
 		this.columns = Lists.newArrayList();
 	}
 
-	public CreateTable with(String name, ColumnType type, Hint... hints) {
+	public CreateTable with(String name, DataType type, Hint... hints) {
 		return with(name, type, null, hints);
 	}
 
-	public CreateTable with(String name, ColumnType type, String defaultValueExpression, Hint... hints) {
+	public CreateTable with(String name, DataType type, String defaultValueExpression, Hint... hints) {
 		checkArgument(!Strings.isNullOrEmpty(name), "You must specify a 'name'.");
 		checkArgument(type != null, "You must specify a 'type'.");
 

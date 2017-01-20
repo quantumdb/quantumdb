@@ -14,6 +14,7 @@ import com.google.common.collect.Maps;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.ForeignKey;
 import io.quantumdb.core.schema.definitions.ForeignKey.Action;
+import io.quantumdb.core.schema.definitions.Function;
 import io.quantumdb.core.schema.definitions.Index;
 import io.quantumdb.core.schema.definitions.Sequence;
 import io.quantumdb.core.schema.definitions.Table;
@@ -21,7 +22,7 @@ import io.quantumdb.core.utils.QueryBuilder;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class TableCreator {
+public class StatementExecutor {
 
 	public void create(Connection connection, Collection<Table> tables) throws SQLException {
 		createTables(connection, tables);
@@ -43,6 +44,18 @@ public class TableCreator {
 	public void createIndexes(Connection connection, Collection<Table> tables) throws SQLException {
 		for (Table table : tables) {
 			createIndexes(connection, table);
+		}
+	}
+
+	public void createFunctions(Connection connection, Collection<Function> functions) throws SQLException {
+		for (Function function : functions) {
+			createFunction(connection, function);
+		}
+	}
+
+	public void dropFunctions(Connection connection, Collection<Function> functions) throws SQLException {
+		for (Function function : functions) {
+			dropFunction(connection, function);
 		}
 	}
 
@@ -139,6 +152,36 @@ public class TableCreator {
 			log.info("Creating index key: {}", index.getIndexName());
 			execute(connection, queryBuilder);
 		}
+	}
+
+	private void createFunction(Connection connection, Function function) throws SQLException {
+		String parameters = function.getParameters().entrySet().stream()
+				.map(entry -> entry.getKey() + " " + entry.getValue().getNotation())
+				.collect(Collectors.joining(", "));
+
+		QueryBuilder queryBuilder = new QueryBuilder()
+				.append("CREATE FUNCTION " + function.getName())
+				.append("(" + parameters + ")")
+				.append("RETURNS " + function.getReturnType().getNotation())
+				.append("AS $$")
+				.append(function.getBody())
+				.append("$$ LANGUAGE plpgsql;");
+
+		log.info("Creating function: {}", function.getName());
+		execute(connection, queryBuilder);
+	}
+
+	private void dropFunction(Connection connection, Function function) throws SQLException {
+		String parameters = function.getParameters().entrySet().stream()
+				.map(entry -> entry.getKey() + " " + entry.getValue().getNotation())
+				.collect(Collectors.joining(", "));
+
+		QueryBuilder queryBuilder = new QueryBuilder()
+				.append("DROP FUNCTION " + function.getName())
+				.append("(" + parameters + ");");
+
+		log.info("Dropping function: {}", function.getName());
+		execute(connection, queryBuilder);
 	}
 
 	private String valueOf(Action action) {

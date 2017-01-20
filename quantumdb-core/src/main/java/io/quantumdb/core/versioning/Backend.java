@@ -35,7 +35,7 @@ import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSerializer;
 import io.quantumdb.core.backends.postgresql.PostgresTypes;
 import io.quantumdb.core.schema.definitions.Catalog;
-import io.quantumdb.core.schema.definitions.ColumnType;
+import io.quantumdb.core.schema.definitions.DataType;
 import io.quantumdb.core.schema.operations.Operation;
 import io.quantumdb.core.utils.RandomHasher;
 import io.quantumdb.core.versioning.RefLog.ColumnRef;
@@ -106,7 +106,7 @@ public class Backend {
 
 	public Backend() {
 		this.gson = new GsonBuilder()
-				.registerTypeAdapter(ColumnType.class, (JsonDeserializer<ColumnType>) (element, type, context) -> {
+				.registerTypeAdapter(DataType.class, (JsonDeserializer<DataType>) (element, type, context) -> {
 					String fullType = element.getAsString().toUpperCase();
 
 					String sqlType = fullType;
@@ -127,7 +127,7 @@ public class Backend {
 					}
 					return PostgresTypes.from(sqlType, null);
 				})
-				.registerTypeAdapter(ColumnType.class, (JsonSerializer<ColumnType>)
+				.registerTypeAdapter(DataType.class, (JsonSerializer<DataType>)
 						(element, type, context) -> new JsonPrimitive(element.getNotation()))
 				.create();
 	}

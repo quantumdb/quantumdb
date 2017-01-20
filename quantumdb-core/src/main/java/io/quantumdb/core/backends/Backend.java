@@ -3,7 +3,7 @@ package io.quantumdb.core.backends;
 import java.sql.Connection;
 import java.sql.SQLException;
 
-import io.quantumdb.core.backends.postgresql.migrator.TableCreator;
+import io.quantumdb.core.backends.postgresql.migrator.StatementExecutor;
 import io.quantumdb.core.versioning.State;
 import io.quantumdb.core.versioning.Version;
 
@@ -27,7 +27,7 @@ public interface Backend {
 	 */
 	void persistState(State state) throws SQLException;
 
-	TableCreator getTableCreator();
+	StatementExecutor getTableCreator();
 
 	/**
 	 * Creates a connection to the database.

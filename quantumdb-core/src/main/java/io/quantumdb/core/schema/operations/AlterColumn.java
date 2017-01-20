@@ -9,7 +9,7 @@ import java.util.Set;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import io.quantumdb.core.schema.definitions.Column.Hint;
-import io.quantumdb.core.schema.definitions.ColumnType;
+import io.quantumdb.core.schema.definitions.DataType;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Setter;
@@ -32,7 +32,7 @@ public class AlterColumn implements SchemaOperation {
 	private Optional<String> newColumnName;
 
 	@Setter(AccessLevel.NONE)
-	private Optional<ColumnType> newColumnType;
+	private Optional<DataType> newColumnType;
 
 	@Setter(AccessLevel.NONE)
 	private Optional<String> newDefaultValueExpression;
@@ -58,7 +58,7 @@ public class AlterColumn implements SchemaOperation {
 		return this;
 	}
 
-	public AlterColumn modifyDataType(ColumnType newColumnType) {
+	public AlterColumn modifyDataType(DataType newColumnType) {
 		checkArgument(newColumnType != null, "You must specify a 'newColumnType'.");
 
 		this.newColumnType = Optional.of(newColumnType);

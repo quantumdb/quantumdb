@@ -14,7 +14,7 @@ import org.apache.commons.lang.builder.HashCodeBuilder;
 @Data
 public class Operation {
 
-	public static enum Type {
+	public enum Type {
 		ADD_NULL, DROP_NULL, COPY
 	}
 

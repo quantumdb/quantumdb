@@ -74,6 +74,19 @@ class PrettyPrinter {
 				model.addProperty("columns", Joiner.on(", ").join(src.getColumns()));
 				return model;
 			})
+			.registerTypeAdapter(Function.class, (JsonSerializer<Function>) (src, typeOfSrc, context) -> {
+				JsonObject parameters = new JsonObject();
+				src.getParameters()
+						.forEach((name, type) -> parameters.addProperty(name, type.getNotation()));
+
+				JsonObject model = new JsonObject();
+				model.addProperty("name", src.getName());
+				model.add("parameters", parameters);
+				model.addProperty("returnType", src.getReturnType().getNotation());
+				model.addProperty("name", src.getName());
+				model.addProperty("body", src.getBody());
+				return model;
+			})
 			.registerTypeAdapter(Table.class, (JsonSerializer<Table>) (src, typeOfSrc, context) -> {
 				JsonObject model = new JsonObject();
 				model.addProperty("tableName", src.getName());

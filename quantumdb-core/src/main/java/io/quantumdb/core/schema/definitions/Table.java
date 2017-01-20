@@ -2,6 +2,7 @@ package io.quantumdb.core.schema.definitions;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.base.Strings.isNullOrEmpty;
 
 import java.util.Collection;
 import java.util.LinkedHashSet;
@@ -9,7 +10,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -79,9 +79,10 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 	private final LinkedHashSet<Column> columns = Sets.newLinkedHashSet();
 	private final List<ForeignKey> foreignKeys = Lists.newArrayList();
 	private final List<Index> indexes = Lists.newArrayList();
+	private final Set<Trigger> triggers = Sets.newHashSet();
 
 	public Table(String name) {
-		checkArgument(!Strings.isNullOrEmpty(name), "You must specify a 'name'.");
+		checkArgument(!isNullOrEmpty(name), "You must specify a 'name'.");
 		this.name = name;
 	}
 
@@ -96,6 +97,44 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 		}
 
 		this.parent = parent;
+	}
+
+	public Table addTrigger(Trigger trigger) {
+		checkArgument(trigger != null, "You must specify a 'trigger'.");
+		checkState(!containsTrigger(trigger.getName()), "Table already has a trigger with name: " + trigger.getName());
+
+		triggers.add(trigger);
+		trigger.setParent(this);
+		return this;
+	}
+
+	public boolean containsTrigger(String triggerName) {
+		checkArgument(!isNullOrEmpty(triggerName), "You must specify a 'triggerName'.");
+
+		return triggers.stream()
+				.anyMatch(trigger -> trigger.getName().equals(triggerName));
+	}
+
+	public Trigger removeTrigger(String triggerName) {
+		checkArgument(!isNullOrEmpty(triggerName), "You must specify a 'triggerName'.");
+
+		Trigger trigger = getTrigger(triggerName);
+		trigger.setParent(null);
+		triggers.remove(trigger);
+		return trigger;
+	}
+
+	public Trigger getTrigger(String triggerName) {
+		checkArgument(!isNullOrEmpty(triggerName), "You must specify a 'triggerName'.");
+
+		return triggers.stream()
+				.filter(trigger -> trigger.getName().equals(triggerName))
+				.findFirst()
+				.orElse(null);
+	}
+
+	public ImmutableList<Trigger> getTriggers() {
+		return ImmutableList.copyOf(triggers);
 	}
 
 	public Table addIndex(Index index) {
@@ -166,7 +205,7 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 	}
 
 	public Column getColumn(String columnName) {
-		checkArgument(!Strings.isNullOrEmpty(columnName), "You must specify a 'columnName'.");
+		checkArgument(!isNullOrEmpty(columnName), "You must specify a 'columnName'.");
 
 		return columns.stream()
 				.filter(c -> c.getName().equals(columnName))
@@ -182,7 +221,7 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 	}
 
 	public boolean containsColumn(String columnName) {
-		checkArgument(!Strings.isNullOrEmpty(columnName), "You must specify a 'name'.");
+		checkArgument(!isNullOrEmpty(columnName), "You must specify a 'name'.");
 
 		return columns.stream()
 				.filter(c -> c.getName().equals(columnName))
@@ -191,7 +230,7 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 	}
 
 	public Column removeColumn(String columnName) {
-		checkArgument(!Strings.isNullOrEmpty(columnName), "You must specify a 'name'.");
+		checkArgument(!isNullOrEmpty(columnName), "You must specify a 'name'.");
 		checkState(containsColumn(columnName), "You cannot remove a column which does not exist: " + columnName);
 
 		Column column = getColumn(columnName);
@@ -229,7 +268,7 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 	}
 
 	public Table rename(String newName) {
-		checkArgument(!Strings.isNullOrEmpty(newName), "You must specify a 'name'.");
+		checkArgument(!isNullOrEmpty(newName), "You must specify a 'name'.");
 		if (parent != null) {
 			checkState(!parent.containsTable(newName),
 					"Catalog: " + parent.getName() + " already contains table with name: " + newName);

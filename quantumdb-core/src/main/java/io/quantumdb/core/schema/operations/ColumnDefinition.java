@@ -6,14 +6,14 @@ import java.util.Arrays;
 
 import com.google.common.base.Strings;
 import io.quantumdb.core.schema.definitions.Column;
-import io.quantumdb.core.schema.definitions.ColumnType;
+import io.quantumdb.core.schema.definitions.DataType;
 import lombok.Data;
 
 @Data
 public class ColumnDefinition {
 
 	private final String name;
-	private final ColumnType type;
+	private final DataType type;
 	private final String defaultValueExpression;
 	private final Column.Hint[] hints;
 
@@ -24,11 +24,11 @@ public class ColumnDefinition {
 		this.hints = new Column.Hint[0];
 	}
 
-	ColumnDefinition(String name, ColumnType type, Column.Hint... hints) {
+	ColumnDefinition(String name, DataType type, Column.Hint... hints) {
 		this(name, type, null, hints);
 	}
 
-	ColumnDefinition(String name, ColumnType type, String defaultValueExpression, Column.Hint... hints) {
+	ColumnDefinition(String name, DataType type, String defaultValueExpression, Column.Hint... hints) {
 		checkArgument(!Strings.isNullOrEmpty(name), "You must specify a 'name'.");
 		checkArgument(type != null, "You must specify a 'type'.");
 		checkArgument(hints != null, "You may not specify 'hints' as NULL.");
