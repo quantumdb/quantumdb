@@ -32,12 +32,24 @@
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-source-plugin</artifactId>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>2.4</version>
+				<configuration>
+					<archive>
+						<manifest>
+							<addClasspath>true</addClasspath>
+						</manifest>
+					</archive>
+					<descriptorRefs>
+						<descriptorRef>jar-with-dependencies</descriptorRef>
+					</descriptorRefs>
+				</configuration>
 				<executions>
 					<execution>
-						<id>attach-sources</id>
+						<id>assemble-all</id>
+						<phase>package</phase>
 						<goals>
-							<goal>jar</goal>
+							<goal>single</goal>
 						</goals>
 					</execution>
 				</executions>
