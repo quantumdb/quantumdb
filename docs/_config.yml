@@ -1,0 +1,17 @@
+# Site settings
+title: QuantumDB
+email: info@quantumdb.io
+url: http://quantumdb.io
+description: ""
+
+# Social networks usernames (many more available: google-plus, flickr, dribbble, pinterest, instagram, tumblr, linkedin, etc.)
+social:
+  - title: github
+    url: https://github.com/quantumdb/quantumdb
+
+# Build settings
+markdown: quantumdb
+permalink: pretty
+
+sass:
+    sass_dir: assets/css
