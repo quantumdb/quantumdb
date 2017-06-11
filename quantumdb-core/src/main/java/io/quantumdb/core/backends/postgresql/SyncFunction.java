@@ -140,39 +140,47 @@ public class SyncFunction {
 		QueryBuilder builder = new QueryBuilder()
 				.append("CREATE OR REPLACE FUNCTION " + functionName + "()")
 				.append("RETURNS TRIGGER AS $$")
-				.append("BEGIN")
-				.append("  IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN");
+				.append("BEGIN");
 
 		if (useUpsert) {
-			builder.append("    INSERT INTO " + target.getTableId())
-			       .append("    (" + represent(insertExpressions, Entry::getKey, ", ") + ") VALUES")
-			       .append("    (" + represent(insertExpressions, Entry::getValue, ", ") + ")")
-			       .append("      ON CONFLICT unique_violation DO UPDATE " + target.getTableId())
-			       .append("        SET " + represent(updateIdentitiesForInserts, " = ", ", "))
-			       .append("        WHERE " + represent(updateIdentitiesForInserts, " = ", " AND ") + ";");
+			Map<String, String> upsertExpressions = updateIdentities.entrySet().stream()
+					.collect(Collectors.toMap(entry -> target.getTableId() + "." + entry.getKey(), Entry::getValue));
+
+			builder.append("  IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN")
+					.append("    INSERT INTO " + target.getTableId())
+					.append("    (" + represent(insertExpressions, Entry::getKey, ", ") + ") VALUES")
+					.append("    (" + represent(insertExpressions, Entry::getValue, ", ") + ")")
+					.append("      ON CONFLICT (" + represent(insertExpressions, Entry::getKey, ", ") + ") DO UPDATE")
+					.append("        SET " + represent(updateIdentitiesForInserts, " = ", ", "))
+					.append("        WHERE " + represent(upsertExpressions, " = ", " AND ") + ";");
 		}
 		else {
-			builder.append("    LOOP")
-			       .append("      UPDATE " + target.getTableId())
-			       .append("        SET " + represent(updateIdentitiesForInserts, " = ", ", "))
-			       .append("        WHERE " + represent(updateIdentitiesForInserts, " = ", " AND ") + ";")
-			       .append("      IF found THEN EXIT; END IF;")
-			       .append("      BEGIN")
-			       .append("        INSERT INTO " + target.getTableId())
-			       .append("          (" + represent(insertExpressions, Entry::getKey, ", ") + ") VALUES")
-			       .append("          (" + represent(insertExpressions, Entry::getValue, ", ") + ");")
-			       .append("      EXIT;")
-			       .append("      EXCEPTION WHEN unique_violation THEN END;")
-			       .append("	END LOOP;");
+			builder.append("  IF TG_OP = 'INSERT' THEN")
+					.append("    INSERT INTO " + target.getTableId())
+					.append("      (" + represent(insertExpressions, Entry::getKey, ", ") + ") VALUES")
+					.append("      (" + represent(insertExpressions, Entry::getValue, ", ") + ");")
+					.append("  ELSIF TG_OP = 'UPDATE' THEN")
+					.append("    LOOP")
+					.append("      UPDATE " + target.getTableId())
+					.append("        SET " + represent(updateIdentitiesForInserts, " = ", ", "))
+					.append("        WHERE " + represent(updateIdentities, " = ", " AND ") + ";")
+					.append("      IF found THEN EXIT; END IF;")
+					.append("      BEGIN")
+					.append("        INSERT INTO " + target.getTableId())
+					.append("          (" + represent(insertExpressions, Entry::getKey, ", ") + ") VALUES")
+					.append("          (" + represent(insertExpressions, Entry::getValue, ", ") + ");")
+					.append("      EXIT;")
+					.append("      EXCEPTION WHEN unique_violation THEN END;")
+					.append("	END LOOP;");
 		}
 
 		builder.append("  ELSIF TG_OP = 'DELETE' THEN")
-		       .append("    DELETE FROM " + target.getTableId())
-		       .append("      WHERE " + represent(updateIdentities, " = ", " AND ") + ";")
-		       .append("  END IF;")
-		       .append("  RETURN NEW;")
-		       .append("END;")
-		       .append("$$ LANGUAGE 'plpgsql';");
+				.append("    DELETE FROM " + target.getTableId())
+				.append("      WHERE " + represent(updateIdentities, " = ", " AND ") + ";")
+				.append("  END IF;")
+				.append("  RETURN NEW;")
+				.append("END;")
+				.append("$$ LANGUAGE 'plpgsql';");
 
 		return builder;
 	}
