@@ -4,13 +4,17 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.List;
 import java.util.Properties;
 
-import io.quantumdb.core.backends.postgresql.PostgresqlBackend;
+import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class Config {
+
+	private static final List<String> SUPPORTED_BACKENDS = Lists.newArrayList(
+			"io.quantumdb.core.planner.PostgresqlBackend");
 
 	private static final String URL = "url";
 	private static final String USER = "user";
@@ -91,13 +95,22 @@ public class Config {
 	}
 
 	public Backend getBackend() {
-		String driver = getDriver();
-		switch (driver) {
-			case "org.postgresql.Driver":
-				return new PostgresqlBackend(getUrl(), getUser(), getPassword(), getCatalog(), driver);
-			default:
-				throw new IllegalArgumentException("No backend support for driver: " + driver);
+		String jdbcUrl = getUrl();
+
+		for (String backendName : SUPPORTED_BACKENDS) {
+			try {
+				Class<?> type = Class.forName(backendName);
+				Backend backend = (Backend) type.getDeclaredConstructor(Config.class).newInstance(this);
+				if (backend.isJdbcUrlSupported(jdbcUrl)) {
+					return backend;
+				}
+			}
+			catch (ReflectiveOperationException e) {
+				// Skip this one.
+			}
 		}
+
+		throw new IllegalArgumentException("No backend support for JDBC URL: " + jdbcUrl);
 	}
 
 }
