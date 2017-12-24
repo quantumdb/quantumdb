@@ -5,8 +5,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.Sets;
-import io.quantumdb.core.backends.postgresql.PostgresTypes;
 import io.quantumdb.core.schema.definitions.Column;
+import io.quantumdb.core.schema.definitions.TestTypes;
 import org.junit.Test;
 
 public class AlterColumnTest {
@@ -36,9 +36,9 @@ public class AlterColumnTest {
 	@Test
 	public void testModifyingDataType() {
 		AlterColumn operation = SchemaOperations.alterColumn("users", "name")
-				.modifyDataType(PostgresTypes.varchar(255));
+				.modifyDataType(TestTypes.varchar(255));
 
-		assertEquals(PostgresTypes.varchar(255), operation.getNewColumnType().get());
+		assertEquals(TestTypes.varchar(255), operation.getNewColumnType().get());
 	}
 
 	@Test(expected = IllegalArgumentException.class)

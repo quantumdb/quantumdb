@@ -3,7 +3,6 @@ package io.quantumdb.core.backends;
 import java.sql.Connection;
 import java.sql.SQLException;
 
-import io.quantumdb.core.backends.postgresql.migrator.TableCreator;
 import io.quantumdb.core.versioning.State;
 import io.quantumdb.core.versioning.Version;
 
@@ -27,8 +26,6 @@ public interface Backend {
 	 */
 	void persistState(State state) throws SQLException;
 
-	TableCreator getTableCreator();
-
 	/**
 	 * Creates a connection to the database.
 	 *
@@ -43,6 +40,16 @@ public interface Backend {
 	 */
 	DatabaseMigrator getMigrator();
 
+	/**
+	 * Determines if this particular backend support the specified JDBC URL.
+	 *
+	 * @param jdbcUrl The JDBC URL to verify
+	 *
+	 * @return True if this backend supports the URL, or false otherwise.
+	 */
+	boolean isJdbcUrlSupported(String jdbcUrl);
+
+	// TODO Move to the migrator.
 	int countClientsConnectedToVersion(Version version) throws SQLException;
 
 }

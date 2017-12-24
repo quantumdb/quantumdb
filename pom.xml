@@ -12,6 +12,7 @@
 
 	<modules>
 		<module>quantumdb-core</module>
+		<module>quantumdb-postgresql</module>
 		<module>quantumdb-driver</module>
 		<module>quantumdb-cli</module>
 		<module>quantumdb-query-rewriter</module>

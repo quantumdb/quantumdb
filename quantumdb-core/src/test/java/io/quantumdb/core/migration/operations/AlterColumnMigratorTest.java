@@ -1,22 +1,22 @@
 package io.quantumdb.core.migration.operations;
 
-import static io.quantumdb.core.backends.postgresql.PostgresTypes.integer;
-import static io.quantumdb.core.backends.postgresql.PostgresTypes.text;
-import static io.quantumdb.core.backends.postgresql.PostgresTypes.varchar;
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
 import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
+import static io.quantumdb.core.schema.definitions.TestTypes.integer;
+import static io.quantumdb.core.schema.definitions.TestTypes.text;
+import static io.quantumdb.core.schema.definitions.TestTypes.varchar;
 import static org.junit.Assert.assertEquals;
 
-import io.quantumdb.core.backends.postgresql.PostgresTypes;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.Table;
+import io.quantumdb.core.schema.definitions.TestTypes;
 import io.quantumdb.core.schema.operations.AlterColumn;
 import io.quantumdb.core.schema.operations.SchemaOperations;
+import io.quantumdb.core.versioning.Changelog;
 import io.quantumdb.core.versioning.RefLog;
 import io.quantumdb.core.versioning.RefLog.TableRef;
-import io.quantumdb.core.versioning.Changelog;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -61,7 +61,7 @@ public class AlterColumnMigratorTest {
 
 	@Test
 	public void testExpandForChangingTypeOfColumn() {
-		AlterColumn operation = SchemaOperations.alterColumn("users", "name").modifyDataType(PostgresTypes.text());
+		AlterColumn operation = SchemaOperations.alterColumn("users", "name").modifyDataType(TestTypes.text());
 		changelog.addChangeSet("Michael de Jong", "Set type of 'name' column to 'text'.", operation);
 		migrator.migrate(catalog, refLog, changelog.getLastAdded(), operation);
 

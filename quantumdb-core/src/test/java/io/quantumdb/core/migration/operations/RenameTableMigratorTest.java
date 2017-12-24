@@ -1,10 +1,10 @@
 package io.quantumdb.core.migration.operations;
 
-import static io.quantumdb.core.backends.postgresql.PostgresTypes.integer;
-import static io.quantumdb.core.backends.postgresql.PostgresTypes.varchar;
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
 import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
+import static io.quantumdb.core.schema.definitions.TestTypes.integer;
+import static io.quantumdb.core.schema.definitions.TestTypes.varchar;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 

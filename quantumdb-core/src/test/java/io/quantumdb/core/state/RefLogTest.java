@@ -1,8 +1,8 @@
 package io.quantumdb.core.state;
 
-import static io.quantumdb.core.backends.postgresql.PostgresTypes.bigint;
-import static io.quantumdb.core.backends.postgresql.PostgresTypes.varchar;
 import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
+import static io.quantumdb.core.schema.definitions.TestTypes.bigint;
+import static io.quantumdb.core.schema.definitions.TestTypes.varchar;
 import static io.quantumdb.core.utils.RandomHasher.generateHash;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
