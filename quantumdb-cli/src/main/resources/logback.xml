@@ -2,15 +2,12 @@
 <configuration scan="true" scanPeriod="30 seconds">
 
 	<appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-		<file>logs/server.log</file>
+		<file>logs/cli.log</file>
 		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-			<!-- daily rollover -->
-			<fileNamePattern>logs/server.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-			<!-- keep 30 days' worth of history -->
+			<fileNamePattern>logs/cli.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
 			<maxHistory>15</maxHistory>
 			<timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
-				<!-- or whenever the file size reaches 100MB -->
-				<maxFileSize>100MB</maxFileSize>
+				<maxFileSize>10MB</maxFileSize>
 			</timeBasedFileNamingAndTriggeringPolicy>
 		</rollingPolicy>
 
@@ -19,19 +16,10 @@
 		</encoder>
 	</appender>
 
-	<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-
-		<!-- encoders are assigned by default the type ch.qos.logback.classic.encoder.PatternLayoutEncoder -->
-		<encoder>
-			<pattern>%d{dd MMM HH:mm:ss.SSS} [%thread] %-5level %logger{36} \(%L\) - %msg%n</pattern>
-		</encoder>
-	</appender>
-
 	<logger name="io.quantumdb" level="DEBUG"/>
 
 	<root level="WARN">
 		<appender-ref ref="FILE" />
-		<appender-ref ref="STDOUT" />
 	</root>
 
 </configuration>

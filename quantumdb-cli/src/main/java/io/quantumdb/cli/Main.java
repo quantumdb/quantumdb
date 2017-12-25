@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
@@ -20,10 +21,14 @@ import io.quantumdb.cli.commands.Nuke;
 import io.quantumdb.cli.commands.Query;
 import io.quantumdb.cli.commands.Status;
 import io.quantumdb.cli.utils.CliWriter;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class Main {
 
 	public static void main(String[] args) throws IOException, SQLException {
+		log.info("Parsing command: {}", Stream.of(args).collect(Collectors.joining(" ")));
+
 		CliWriter writer = new CliWriter();
 		List<String> arguments = normalize(args);
 
