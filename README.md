@@ -14,13 +14,10 @@ For more information, please checkout these links:
 ## Setup dev-environment
 
 For most development work on QuantumDB you'll want to have a database server running to test and run against. For this
-purpose this repository contains all you need to setup a VM which will run a recent version of PostgreSQL. Here's how
-to get started:
+purpose, we'd recommend to use docker to run an instance of PostgreSQL. Here's how to get started:
 
 ```
-gem install librarian-puppet
-librarian-puppet install
-vagrant up --provision
+docker run --name postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres
 ```
 
 You should now be able to access PostgreSQL on port 5432 on localhost. Also note that puppet-librarian managed modules
