@@ -151,10 +151,13 @@ public class Backend {
 		while (!toDo.isEmpty()) {
 			Version version = toDo.remove(0);
 			for (Entry<TableId, String> entry : tableVersions.column(version).entrySet()) {
-				TableRef tableRef = refLog.getTableRefs(version).stream()
-						.filter(ref -> ref.getName().equals(entry.getValue()) && ref.getTableId().equals(entry.getKey().getTableId()))
-						.findFirst()
-						.orElse(null);
+				TableRef tableRef = null;
+				if (version.getParent() != null) {
+					tableRef = refLog.getTableRefs(version.getParent()).stream()
+							.filter(ref -> ref.getName().equals(entry.getValue()) && ref.getTableId().equals(entry.getKey().getTableId()))
+							.findFirst()
+							.orElse(null);
+				}
 
 				if (tableRef != null) {
 					tableRef.markAsPresent(version);
@@ -392,21 +395,6 @@ public class Backend {
 			while (resultSet.next()) {
 				String tableId = resultSet.getString("table_id");
 				if (!tableIds.remove(tableId)) {
-					try (Statement stmt = connection.createStatement()) {
-						ResultSet r = stmt.executeQuery("SELECT * FROM quantumdb_column_mappings");
-						printResults(r);
-					}
-
-					try (Statement stmt = connection.createStatement()) {
-						ResultSet r = stmt.executeQuery("SELECT * FROM quantumdb_table_columns");
-						printResults(r);
-					}
-
-					try (Statement stmt = connection.createStatement()) {
-						ResultSet r = stmt.executeQuery("SELECT * FROM quantumdb_tables");
-						printResults(r);
-					}
-
 					try (PreparedStatement delete = connection.prepareStatement(deleteQuery)) {
 						delete.setString(1, tableId);
 						delete.execute();
@@ -829,8 +817,8 @@ public class Backend {
 			}
 
 			if (finalizeChangeSet) {
-				RawChangelogEntry first = changeSetContents.get(0);
-				RawChangeSet rawChangeSet = changeSets.get(first.getVersionId());
+				RawChangelogEntry lastEntry = changeSetContents.get(changeSetContents.size() - 1);
+				RawChangeSet rawChangeSet = changeSets.get(lastEntry.getVersionId());
 				ChangeSet changeSet = new ChangeSet(rawChangeSet.getAuthor(), rawChangeSet.getCreated(), rawChangeSet.getDescription());
 
 				for (RawChangelogEntry entryInSet : changeSetContents) {
@@ -853,9 +841,6 @@ public class Backend {
 					}
 				}
 				changeSetContents.clear();
-			}
-			else {
-				changeSetContents.add(entry);
 			}
 		}
 
