@@ -98,7 +98,13 @@ a {
 }
 
 pre.code {
-  @extend .terminal;
+  border-radius: 8px;
+  background-color: #2b2b2b;
+  color: #f8f8f8;
+
+  .green {
+    color: #00B400;
+  }
 }
 
 .content {
@@ -159,12 +165,16 @@ pre {
   margin-bottom: 24px;
 
   &.terminal {
-    background-color: #2b2b2b;
-    color: #f8f8f8;
+    background-color: #000000;
+    background-image: url("/assets/images/terminal.png");
+    background-repeat: no-repeat;
+    background-position: 0px 0px;
+    background-size: 900px;
+    border-radius: 6px;
+    padding-top: 32px;
+    padding-bottom: 32px;
 
-    .green {
-      color: #00B400;
-    }
+    @extend .code;
   }
 }
 
