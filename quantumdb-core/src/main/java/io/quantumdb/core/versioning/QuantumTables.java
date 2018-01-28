@@ -62,8 +62,12 @@ public class QuantumTables {
 			"CREATE SEQUENCE quantumdb_synchronizer_columns_id;",
 			"CREATE TABLE quantumdb_synchronizer_columns (synchronizer_id BIGINT NOT NULL DEFAULT NEXTVAL('quantumdb_synchronizer_columns_id'), column_mapping_id BIGINT NOT NULL, PRIMARY KEY(synchronizer_id, column_mapping_id));",
 			"ALTER TABLE quantumdb_synchronizer_columns ADD CONSTRAINT quantumdb_synchronizer_columns_synchronizer_id FOREIGN KEY (synchronizer_id) REFERENCES quantumdb_synchronizers (id) ON DELETE CASCADE;",
-			"ALTER TABLE quantumdb_synchronizer_columns ADD CONSTRAINT quantumdb_synchronizer_columns_column_mapping_id FOREIGN KEY (column_mapping_id) REFERENCES quantumdb_column_mappings (id) ON DELETE CASCADE;"
-	);
+			"ALTER TABLE quantumdb_synchronizer_columns ADD CONSTRAINT quantumdb_synchronizer_columns_column_mapping_id FOREIGN KEY (column_mapping_id) REFERENCES quantumdb_column_mappings (id) ON DELETE CASCADE;",
+
+			// Creates the "quantumdb_active_versions" table which describes which versions are active at this time.
+			"CREATE TABLE quantumdb_active_versions (version_id VARCHAR(10), PRIMARY KEY (version_id));",
+			"ALTER TABLE quantumdb_active_versions ADD CONSTRAINT quantumdb_active_versions_version_id FOREIGN KEY (version_id) REFERENCES quantumdb_changelog (version_id) ON DELETE CASCADE;"
+		);
 
 	public static int prepare(Connection connection) throws SQLException {
 		connection.setAutoCommit(false);
