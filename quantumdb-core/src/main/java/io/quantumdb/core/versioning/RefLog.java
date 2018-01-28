@@ -369,12 +369,14 @@ public class RefLog {
 	}
 
 	private final Multimap<Version, TableRef> tables;
+	private final Set<Version> activeVersions;
 
 	/**
 	 * Creates a new RefLog object.
 	 */
 	public RefLog() {
 		this.tables = LinkedHashMultimap.create();
+		this.activeVersions = Sets.newHashSet();
 	}
 
 	/**
@@ -396,6 +398,10 @@ public class RefLog {
 			log.debug("Added TableRef: {} (id: {}) for version: {} with columns: {}", table.getName(),
 					table.getName(), version, tableRef.getColumns().keySet());
 		});
+
+		// Register version as active.
+		setVersionState(version, true);
+
 		return this;
 	}
 
@@ -702,11 +708,20 @@ public class RefLog {
 		return forwards;
 	}
 
+	public void setVersionState(Version version, boolean active) {
+		if (active) {
+			activeVersions.add(version);
+		}
+		else {
+			activeVersions.remove(version);
+		}
+	}
+
 	/**
 	 * @return An ImmutableSet of Versions covered by this RefLog.
 	 */
 	public ImmutableSet<Version> getVersions() {
-		return ImmutableSet.copyOf(tables.keySet());
+		return ImmutableSet.copyOf(activeVersions);
 	}
 
 }

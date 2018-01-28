@@ -33,9 +33,9 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSerializer;
-import io.quantumdb.core.schema.definitions.PostgresTypes;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.ColumnType;
+import io.quantumdb.core.schema.definitions.PostgresTypes;
 import io.quantumdb.core.schema.operations.Operation;
 import io.quantumdb.core.utils.RandomHasher;
 import io.quantumdb.core.versioning.RefLog.ColumnRef;
@@ -183,6 +183,7 @@ public class Backend {
 		}
 
 		addSynchronizers(connection, refLog, columnMappings);
+		setActiveVersions(connection, changelog, refLog);
 
 		return new State(catalog, refLog, changelog);
 	}
@@ -197,6 +198,7 @@ public class Backend {
 		Map<Long, RawColumnMapping> columnMapping = persistColumnMappings(connection, refLog, columns);
 		Map<Long, SyncRef> syncRefs = persistTableSynchronizers(connection, refLog);
 		persistSynchronizerColumns(connection, syncRefs, columnMapping);
+		persistActiveVersions(connection, refLog);
 	}
 
 	private void persistChangelog(Connection connection, Changelog changelog) throws SQLException {
@@ -306,7 +308,16 @@ public class Backend {
 
 		while (!versions.isEmpty()) {
 			Version version = versions.remove(0);
-			mapping.put(version.getId(), version.getChangeSet());
+			ChangeSet changeSet = version.getChangeSet();
+			if (mapping.containsValue(changeSet)) {
+				List<String> versionIdsToDrop = mapping.entrySet().stream()
+						.filter(entry -> entry.getValue().equals(changeSet))
+						.map(Entry::getKey)
+						.collect(Collectors.toList());
+
+				versionIdsToDrop.forEach(mapping::remove);
+			}
+			mapping.put(version.getId(), changeSet);
 			if (version.getChild() != null) {
 				versions.add(version.getChild());
 			}
@@ -762,6 +773,44 @@ public class Backend {
 		}
 	}
 
+	private void persistActiveVersions(Connection connection, RefLog refLog) throws SQLException {
+		try (Statement statement = connection.createStatement()) {
+			String query = "SELECT * FROM quantumdb_active_versions;";
+			String deleteQuery = "DELETE FROM quantumdb_active_versions WHERE version_id = ?;";
+			String insertQuery = "INSERT INTO quantumdb_active_versions (version_id) VALUES (?);";
+
+			ResultSet resultSet = statement.executeQuery(query);
+			Set<String> versions = refLog.getVersions().stream()
+					.map(Version::getId)
+					.collect(Collectors.toSet());
+
+			while (resultSet.next()) {
+				String versionId = resultSet.getString("version_id");
+				if (versions.contains(versionId)) {
+					versions.remove(versionId);
+				}
+				else {
+					try (PreparedStatement delete = connection.prepareStatement(deleteQuery)) {
+						delete.setString(1, versionId);
+						delete.execute();
+						log.debug("Deleted entry for active_versions id: {}", versionId);
+					}
+				}
+			}
+
+			if (!versions.isEmpty()) {
+				PreparedStatement insert = connection.prepareStatement(insertQuery);
+				for (String versionId : versions) {
+					insert.setString(1, versionId);
+					insert.execute();
+					log.debug("Inserted new entry for active_versions id: {}", versionId);
+				}
+			}
+
+			resultSet.close();
+		}
+	}
+
 	private Changelog loadChangelog(Connection connection) throws SQLException {
 		List<RawChangelogEntry> entries = loadChangelogEntries(connection);
 		Map<String, RawChangeSet> changeSets = loadChangesets(connection, entries);
@@ -1000,6 +1049,20 @@ public class Backend {
 				}
 			}
 		}
+	}
+
+	private void setActiveVersions(Connection connection, Changelog changelog, RefLog refLog) throws SQLException {
+		try (Statement statement = connection.createStatement()) {
+			String query = "SELECT * FROM quantumdb_active_versions;";
+
+			ResultSet resultSet = statement.executeQuery(query);
+			while (resultSet.next()) {
+				String versionId = resultSet.getString("version_id");
+				Version version = changelog.getVersion(versionId);
+				refLog.setVersionState(version, true);
+			}
+		}
+
 	}
 
 }

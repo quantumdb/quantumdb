@@ -3,7 +3,6 @@ package io.quantumdb.core.planner;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import java.sql.Connection;
-import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
@@ -118,7 +117,9 @@ class PostgresqlMigrator implements DatabaseMigrator {
 
 	@Override
 	public void drop(State state, Version version) throws MigrationException {
-		checkArgument(version.getOperation().getType() == Type.DDL);
+		// Check that the version's operation is of type DDL, or has no operation (root version).
+		checkArgument(version.getOperation() == null || version.getOperation().getType() == Type.DDL);
+
 		RefLog refLog = state.getRefLog();
 		Catalog catalog = state.getCatalog();
 
@@ -179,6 +180,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 				execute(connection, syncFunction.createTriggerStatement());
 			}
 			dropTables(connection, refLog, catalog, tablesToDrop);
+			refLog.setVersionState(version, false);
 			backend.persistState(state);
 			connection.commit();
 		}
@@ -324,7 +326,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 
 			synchronizeBackwards();
 
-//			intermediateVersions.forEach(state.getTableMapping()::remove);
+			refLog.setVersionState(to, true);
 
 			persistState();
 		}
