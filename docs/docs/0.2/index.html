@@ -50,7 +50,7 @@ layout: default
 
             <h3>Command-line interface</h3>
             <p>The command-line interface can be installed by taking the JAR file, and calling it via the command-line
-                like so: <pre class="terminal">java -jar quantumdb-0.2.1.jar &lt;command&gt; [&lt;parameters...&gt;]</pre></p>
+                like so: <pre class="terminal">$ java -jar quantumdb-0.2.1.jar &lt;command&gt; [&lt;parameters...&gt;]</pre></p>
 
             <p>Alternatively on Linux and OSX based systems, you can also specify an alias by creating the file
                 <code>/usr/local/bin/quantumdb</code> with the following contents:
@@ -274,10 +274,10 @@ changelog.addChangeSet("Michael de Jong",
         <section id="cli">
             <h2>Command-line interface</h2>
             <p>The command-line interface can perform various tasks and migrations for you. These can be performed by
-                executing commands in the following manner: <pre class="terminal">quantumdb &lt;command&gt; [&lt;parameters...&gt;]</pre></p>
+                executing commands in the following manner: <pre class="terminal">$ quantumdb &lt;command&gt; [&lt;parameters...&gt;]</pre></p>
 
             <p>The command-line interface can also list all supported commands by executing the help command:
-            <pre class="terminal">quantumdb help
+            <pre class="terminal">$ quantumdb help
 
 <strong>==> Available commands:</strong>
     > init: Initializes and prepares the database for use with QuantumDB.
@@ -291,7 +291,7 @@ changelog.addChangeSet("Michael de Jong",
             <h3>init</h3>
             <p>When you start using QuantumDB for the first time in a new PostgreSQL database you'll need to
                 initialize QuantumDB first. This is done with the <code>init</code> command. After executing this command:
-            <pre class="terminal">quantumdb init &lt;url&gt; &lt;catalog&gt; &lt;user&gt; [&lt;password&gt;]</pre>
+            <pre class="terminal">$ quantumdb init &lt;url&gt; &lt;catalog&gt; &lt;user&gt; [&lt;password&gt;]</pre>
             QuantumDB will scan the database and create tables used to track changes, and store the changelog in
             the database.</p>
 
