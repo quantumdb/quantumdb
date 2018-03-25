@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -370,6 +371,7 @@ public class RefLog {
 
 	private final Multimap<Version, TableRef> tables;
 	private final Set<Version> activeVersions;
+	private Version masterVersion;
 
 	/**
 	 * Creates a new RefLog object.
@@ -715,6 +717,15 @@ public class RefLog {
 		else {
 			activeVersions.remove(version);
 		}
+	}
+
+	public Optional<Version> setMasterVersion(Version version) {
+		checkArgument(version == null || activeVersions.contains(version),
+				"The new master version must be an active version!");
+
+		Version previousMasterVersion = masterVersion;
+		masterVersion = version;
+		return Optional.ofNullable(previousMasterVersion);
 	}
 
 	/**

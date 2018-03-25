@@ -18,8 +18,10 @@ import io.quantumdb.cli.commands.Drop;
 import io.quantumdb.cli.commands.Fork;
 import io.quantumdb.cli.commands.Init;
 import io.quantumdb.cli.commands.Nuke;
+import io.quantumdb.cli.commands.PrepareExample;
 import io.quantumdb.cli.commands.Query;
 import io.quantumdb.cli.commands.Status;
+import io.quantumdb.cli.commands.Switch;
 import io.quantumdb.cli.utils.CliWriter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -68,7 +70,9 @@ public class Main {
 				new Fork(),
 				new Nuke(),
 				new Drop(),
-				new Query()
+				new Query(),
+				new Switch(),
+				new PrepareExample()
 		);
 
 		LinkedHashMap<String, Command> result = Maps.newLinkedHashMap();
