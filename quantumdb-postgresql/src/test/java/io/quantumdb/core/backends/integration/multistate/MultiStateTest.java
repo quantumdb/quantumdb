@@ -49,19 +49,19 @@ public class MultiStateTest extends PostgresqlDatabase {
 
 		step0 = changelog.getRoot();
 
-		step1 = changelog.addChangeSet("Michael de Jong", "Create test table.",
+		step1 = changelog.addChangeSet("step1", "Michael de Jong", "Create test table.",
 				createTable("test").with("id", bigint(), IDENTITY, AUTO_INCREMENT))
 				.getLastAdded();
 
-		changelog.addChangeSet("Michael de Jong", "Add name column to test table.",
+		changelog.addChangeSet("step2", "Michael de Jong", "Add name column to test table.",
 				addColumn("test", "name", varchar(255), "''", NOT_NULL))
 				.getLastAdded();
 
-		changelog.addChangeSet("Michael de Jong", "Insert default user account into test table.",
+		changelog.addChangeSet("step3", "Michael de Jong", "Insert default user account into test table.",
 				execute("INSERT INTO test (name) VALUES ('Hello');"))
 				.getLastAdded();
 
-		step4 = changelog.addChangeSet("Michael de Jong", "Created admin flag for test table.",
+		step4 = changelog.addChangeSet("step4", "Michael de Jong", "Created admin flag for test table.",
 				addColumn("test", "admin", bool(), "'false'", NOT_NULL))
 				.getLastAdded();
 

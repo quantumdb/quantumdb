@@ -25,7 +25,8 @@ public class QuantumTables {
 			"ALTER TABLE quantumdb_changelog ADD CONSTRAINT quantumdb_changelog_no_self_reference CHECK (version_id != parent_version_id);",
 
 			// Creates the "quantumdb_changesets" table which describes all changesets - named lists of (schema) operations.
-			"CREATE TABLE quantumdb_changesets (version_id VARCHAR(10), author VARCHAR(255), created TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), description TEXT, alias VARCHAR(255), PRIMARY KEY (version_id));",
+			"CREATE TABLE quantumdb_changesets (id VARCHAR(255), version_id VARCHAR(10), author VARCHAR(255), created TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), description TEXT, alias VARCHAR(255), PRIMARY KEY (id));",
+			"ALTER TABLE quantumdb_changesets ADD CONSTRAINT quantumdb_changesets_version_id_unique UNIQUE (version_id);",
 			"ALTER TABLE quantumdb_changesets ADD CONSTRAINT quantumdb_changesets_version_id FOREIGN KEY (version_id) REFERENCES quantumdb_changelog (version_id) ON DELETE CASCADE;",
 
 			// Creates the "quantumdb_tableids" table which describes table ids exist.

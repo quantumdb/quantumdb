@@ -1345,7 +1345,7 @@ public class GreedyMigrationPlannerTest {
 		this.refLog = RefLog.init(catalog, changelog.getRoot());
 		State state = new State(catalog, refLog, changelog);
 
-		changelog.addChangeSet("Michael de Jong", operation);
+		changelog.addChangeSet("test", "Michael de Jong", operation);
 
 		PostgresqlMigrationPlanner planner = new PostgresqlMigrationPlanner();
 		this.plan = planner.createPlan(state, changelog.getRoot(), changelog.getLastAdded());

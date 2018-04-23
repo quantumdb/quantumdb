@@ -19,6 +19,8 @@ import lombok.Setter;
 @Data
 public class ChangeSet implements Comparable<ChangeSet> {
 
+	private final String id;
+
 	private final String author;
 
 	private final Date created;
@@ -33,8 +35,8 @@ public class ChangeSet implements Comparable<ChangeSet> {
 	 *
 	 * @param author The author of the ChangeSet.
 	 */
-	public ChangeSet(String author) {
-		this (author, null);
+	public ChangeSet(String id, String author) {
+		this (id, author, null);
 	}
 
 	/**
@@ -43,8 +45,8 @@ public class ChangeSet implements Comparable<ChangeSet> {
 	 * @param author The author of the ChangeSet.
 	 * @param description The description of the ChangeSet (may be NULL).
 	 */
-	public ChangeSet(String author, String description) {
-		this (author, new Date(), description);
+	public ChangeSet(String id, String author, String description) {
+		this (id, author, new Date(), description);
 	}
 
 	/**
@@ -54,10 +56,11 @@ public class ChangeSet implements Comparable<ChangeSet> {
 	 * @param created The time of creation of this ChangeSet.
 	 * @param description The description of the ChangeSet (may be NULL).
 	 */
-	ChangeSet(String author, Date created, String description) {
+	ChangeSet(String id, String author, Date created, String description) {
 		checkArgument(!isNullOrEmpty(author), "You must specify an 'author'.");
 		checkArgument(created != null, "You must specify a 'created' Date.");
 
+		this.id = id;
 		this.author = author;
 		this.created = created;
 		this.description = emptyToNull(description);

@@ -43,7 +43,7 @@ public class ChangelogTest {
 	public void testAddingChangeSet() {
 		Changelog changelog = new Changelog();
 		RenameTable renameTable = SchemaOperations.renameTable("users", "customers");
-		changelog.addChangeSet("Michael de Jong", renameTable);
+		changelog.addChangeSet("test", "Michael de Jong", renameTable);
 
 		Version version = changelog.getLastAdded();
 		Version lookup = changelog.getVersion(version.getId());

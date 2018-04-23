@@ -49,7 +49,7 @@ public class AddColumnToCustomersTable {
 
 		origin = setup.getChangelog().getLastAdded();
 
-		setup.getChangelog().addChangeSet("Michael de Jong",
+		setup.getChangelog().addChangeSet("test", "Michael de Jong",
 				SchemaOperations.addColumn("customers", "date_of_birth", date()));
 
 		target = setup.getChangelog().getLastAdded();

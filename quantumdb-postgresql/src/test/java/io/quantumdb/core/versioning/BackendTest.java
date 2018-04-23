@@ -1,11 +1,11 @@
 package io.quantumdb.core.versioning;
 
-import static io.quantumdb.core.schema.definitions.PostgresTypes.bigint;
-import static io.quantumdb.core.schema.definitions.PostgresTypes.bool;
-import static io.quantumdb.core.schema.definitions.PostgresTypes.text;
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
 import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
+import static io.quantumdb.core.schema.definitions.PostgresTypes.bigint;
+import static io.quantumdb.core.schema.definitions.PostgresTypes.bool;
+import static io.quantumdb.core.schema.definitions.PostgresTypes.text;
 import static io.quantumdb.core.schema.operations.SchemaOperations.addColumn;
 import static org.junit.Assert.assertEquals;
 
@@ -53,8 +53,8 @@ public class BackendTest {
 						.addColumn(new Column("name", text(), NOT_NULL))
 						.addColumn(new Column("admin", bool(), "false", NOT_NULL)));
 
-		Changelog changelog = new Changelog(RandomHasher.generateHash(), new ChangeSet("System", "Initial import"))
-				.addChangeSet("Michael de Jong", addColumn("table", "admin", bool(), "false", NOT_NULL));
+		Changelog changelog = new Changelog(RandomHasher.generateHash(), new ChangeSet("init", "QuantumDB", "Initial import"))
+				.addChangeSet("add_table", "Michael de Jong", addColumn("table", "admin", bool(), "false", NOT_NULL));
 
 		RefLog refLog = new RefLog();
 		TableRef table1 = refLog.addTable("table", "table_1", changelog.getRoot(),

@@ -46,7 +46,7 @@ public class DropPaymentsTable {
 	public static void performEvolution() throws SQLException, MigrationException {
 		origin = setup.getChangelog().getLastAdded();
 
-		setup.getChangelog().addChangeSet("Michael de Jong",
+		setup.getChangelog().addChangeSet("test", "Michael de Jong",
 				SchemaOperations.dropTable("payments"));
 
 		target = setup.getChangelog().getLastAdded();

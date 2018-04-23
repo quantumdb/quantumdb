@@ -96,6 +96,7 @@ public class Backend {
 
 	@Data
 	private static class RawChangeSet {
+		private final String id;
 		private final String versionId;
 		private final String description;
 		private final String author;
@@ -329,7 +330,7 @@ public class Backend {
 		try (Statement statement = connection.createStatement()) {
 			String query = "SELECT * FROM quantumdb_changesets;";
 			String deleteQuery = "DELETE FROM quantumdb_changesets WHERE version_id = ?;";
-			String insertQuery = "INSERT INTO quantumdb_changesets (version_id, author, description, created) VALUES (?, ?, ?, ?);";
+			String insertQuery = "INSERT INTO quantumdb_changesets (id, version_id, author, description, created) VALUES (?, ?, ?, ?, ?);";
 			String updateQuery = "UPDATE quantumdb_changesets SET author = ?, description = ?, created = ? WHERE version_id = ?;";
 
 			ResultSet resultSet = statement.executeQuery(query);
@@ -359,18 +360,21 @@ public class Backend {
 				PreparedStatement insert = connection.prepareStatement(insertQuery);
 				for (Entry<String, ChangeSet> entry : mapping.entrySet()) {
 					String versionId = entry.getKey();
-					insert.setString(1, versionId);
-
 					ChangeSet changeSet = entry.getValue();
+
 					if (changeSet != null) {
-						insert.setString(2, changeSet.getAuthor());
-						insert.setString(3, changeSet.getDescription());
-						insert.setTimestamp(4, new Timestamp(changeSet.getCreated().getTime()));
+						insert.setString(1, changeSet.getId());
+						insert.setString(2, versionId);
+						insert.setString(3, changeSet.getAuthor());
+						insert.setString(4, changeSet.getDescription());
+						insert.setTimestamp(5, new Timestamp(changeSet.getCreated().getTime()));
 					}
 					else {
+						insert.setString(1, versionId);
 						insert.setString(2, "");
 						insert.setString(3, "");
 						insert.setTimestamp(4, Timestamp.from(Instant.now()));
+						throw new IllegalArgumentException("This would be weird!");
 					}
 					insert.execute();
 					log.debug("Inserted new entry for changeset id: {}", versionId);
@@ -819,7 +823,7 @@ public class Backend {
 			if (finalizeChangeSet) {
 				RawChangelogEntry lastEntry = changeSetContents.get(changeSetContents.size() - 1);
 				RawChangeSet rawChangeSet = changeSets.get(lastEntry.getVersionId());
-				ChangeSet changeSet = new ChangeSet(rawChangeSet.getAuthor(), rawChangeSet.getCreated(), rawChangeSet.getDescription());
+				ChangeSet changeSet = new ChangeSet(rawChangeSet.getId(), rawChangeSet.getAuthor(), rawChangeSet.getCreated(), rawChangeSet.getDescription());
 
 				for (RawChangelogEntry entryInSet : changeSetContents) {
 					String operationType = entryInSet.getOperationType();
@@ -896,12 +900,13 @@ public class Backend {
 			String query = "SELECT * FROM quantumdb_changesets;";
 			ResultSet resultSet = statement.executeQuery(query);
 			while (resultSet.next()) {
+				String id = resultSet.getString("id");
 				String versionId = resultSet.getString("version_id");
 				String description = resultSet.getString("description");
 				String author = resultSet.getString("author");
 				Date created = resultSet.getTimestamp("created");
 
-				RawChangeSet changeSet = new RawChangeSet(versionId, description, author, created);
+				RawChangeSet changeSet = new RawChangeSet(id, versionId, description, author, created);
 				changeSets.put(versionId, changeSet);
 
 			}
@@ -911,7 +916,7 @@ public class Backend {
 		if (changeSets.isEmpty()) {
 			RawChangelogEntry rootEntry = entries.get(0);
 			String versionId = rootEntry.getVersionId();
-			RawChangeSet changeSet = new RawChangeSet(versionId, "Initial state of the database.", "QuantumDB", new Date());
+			RawChangeSet changeSet = new RawChangeSet("initial", versionId, "Initial state of the database.", "QuantumDB", new Date());
 			changeSets.put(versionId, changeSet);
 		}
 

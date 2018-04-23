@@ -10,7 +10,7 @@ public class ChangeSetTest {
 
 	@Test
 	public void testSingleArgumentConstructor() {
-		ChangeSet changeSet = new ChangeSet("Michael de Jong");
+		ChangeSet changeSet = new ChangeSet("test", "Michael de Jong");
 
 		assertEquals("Michael de Jong", changeSet.getAuthor());
 		assertNull(changeSet.getDescription());
@@ -19,17 +19,17 @@ public class ChangeSetTest {
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testThatSingleArgumentConstructorWithNullArgumentThrowsException() {
-		new ChangeSet(null);
+		new ChangeSet("test", null);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testThatSingleArgumentConstructorWithEmptyStringArgumentThrowsException() {
-		new ChangeSet("");
+		new ChangeSet("test", "");
 	}
 
 	@Test
 	public void testThatDoubleArgumentConstructorWithNullArgumentIsAllowed() {
-		ChangeSet changeSet = new ChangeSet("Michael de Jong", null);
+		ChangeSet changeSet = new ChangeSet("test", "Michael de Jong", null);
 
 		assertEquals("Michael de Jong", changeSet.getAuthor());
 		assertNull(changeSet.getDescription());
@@ -38,7 +38,7 @@ public class ChangeSetTest {
 
 	@Test
 	public void testThatDoubleArgumentConstructorWithEmptyStringArgumentIsAllowed() {
-		ChangeSet changeSet = new ChangeSet("Michael de Jong", "");
+		ChangeSet changeSet = new ChangeSet("test", "Michael de Jong", "");
 
 		assertEquals("Michael de Jong", changeSet.getAuthor());
 		assertNull(changeSet.getDescription());
@@ -47,15 +47,15 @@ public class ChangeSetTest {
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testThatTripleArgumentConstructorWithNullArgumentThrowsException() {
-		new ChangeSet("Michael de Jong", null, null);
+		new ChangeSet("test", "Michael de Jong", null, null);
 	}
 
 	@Test
 	public void testComparison() throws InterruptedException {
-		ChangeSet oldest = new ChangeSet("Michael de Jong");
+		ChangeSet oldest = new ChangeSet("test", "Michael de Jong");
 
 		Thread.sleep(100);
-		ChangeSet newest = new ChangeSet("Michael de Jong");
+		ChangeSet newest = new ChangeSet("test", "Michael de Jong");
 
 		assertEquals(-1, oldest.compareTo(newest));
 	}

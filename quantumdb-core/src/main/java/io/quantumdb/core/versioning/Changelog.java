@@ -61,20 +61,20 @@ public class Changelog {
 		}
 	}
 
-	public Changelog addChangeSet(String author, Collection<Operation> operations) {
-		return addChangeSet(lastAdded, new ChangeSet(author, new Date(), null), operations);
+	public Changelog addChangeSet(String id, String author, Collection<Operation> operations) {
+		return addChangeSet(lastAdded, new ChangeSet(id, author, new Date(), null), operations);
 	}
 
-	public Changelog addChangeSet(String author, Operation... operations) {
-		return addChangeSet(lastAdded, new ChangeSet(author, new Date(), null), operations);
+	public Changelog addChangeSet(String id, String author, Operation... operations) {
+		return addChangeSet(lastAdded, new ChangeSet(id, author, new Date(), null), operations);
 	}
 
-	public Changelog addChangeSet(String author, String description, Collection<Operation> operations) {
-		return addChangeSet(lastAdded, new ChangeSet(author, new Date(), description), operations);
+	public Changelog addChangeSet(String id, String author, String description, Collection<Operation> operations) {
+		return addChangeSet(lastAdded, new ChangeSet(id, author, new Date(), description), operations);
 	}
 
-	public Changelog addChangeSet(String author, String description, Operation... operations) {
-		return addChangeSet(lastAdded, new ChangeSet(author, new Date(), description), operations);
+	public Changelog addChangeSet(String id, String author, String description, Operation... operations) {
+		return addChangeSet(lastAdded, new ChangeSet(id, author, new Date(), description), operations);
 	}
 
 	public Changelog addChangeSet(ChangeSet changeSet, Collection<Operation> operations) {
