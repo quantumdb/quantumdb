@@ -34,7 +34,7 @@ public class SchemaOperationMigratorTest {
 
 	@Test
 	public void testAddingNewTable() {
-		changelog.addChangeSet("Michael de Jong",
+		changelog.addChangeSet("test", "Michael de Jong",
 				createTable("users")
 						.with("id", bigint(), NOT_NULL, AUTO_INCREMENT, IDENTITY));
 

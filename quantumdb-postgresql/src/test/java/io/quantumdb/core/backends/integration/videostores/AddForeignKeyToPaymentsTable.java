@@ -49,7 +49,7 @@ public class AddForeignKeyToPaymentsTable {
 
 		origin = setup.getChangelog().getLastAdded();
 
-		setup.getChangelog().addChangeSet("Michael de Jong",
+		setup.getChangelog().addChangeSet("test", "Michael de Jong",
 				SchemaOperations.addColumn("payments", "store_id", integer(), "'1'", NOT_NULL),
 				SchemaOperations.addForeignKey("payments", "store_id").referencing("stores", "id"));
 

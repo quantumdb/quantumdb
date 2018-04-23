@@ -48,7 +48,7 @@ public class ModifyTypeInPaymentsTable {
 	public static void performEvolution() throws SQLException, MigrationException {
 		origin = setup.getChangelog().getLastAdded();
 
-		setup.getChangelog().addChangeSet("Michael de Jong",
+		setup.getChangelog().addChangeSet("test", "Michael de Jong",
 				SchemaOperations.alterColumn("payments", "amount")
 						.modifyDataType(doubles()));
 

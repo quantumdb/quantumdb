@@ -49,7 +49,7 @@ public class CopyCustomersTable {
 
 		origin = setup.getChangelog().getLastAdded();
 
-		setup.getChangelog().addChangeSet("Michael de Jong",
+		setup.getChangelog().addChangeSet("test", "Michael de Jong",
 				SchemaOperations.copyTable("customers", "customers_backup"));
 
 		target = setup.getChangelog().getLastAdded();

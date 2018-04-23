@@ -49,7 +49,7 @@ public class CreateCreditCardsTable {
 
 		origin = setup.getChangelog().getLastAdded();
 
-		setup.getChangelog().addChangeSet("Michael de Jong",
+		setup.getChangelog().addChangeSet("test", "Michael de Jong",
 				SchemaOperations.createTable("credit_cards")
 						.with("credit_card_number", varchar(255), IDENTITY, NOT_NULL)
 						.with("card_holder_name", varchar(255), NOT_NULL)

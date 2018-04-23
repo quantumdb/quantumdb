@@ -293,6 +293,9 @@ class CatalogLoader {
 
 				parser.expect("ON");
 				String indexTableName = parser.consume();
+				if (indexTableName.startsWith("public.")) {
+					indexTableName = indexTableName.substring("public.".length());
+				}
 
 				if (parser.present("USING")) {
 					parser.consume();

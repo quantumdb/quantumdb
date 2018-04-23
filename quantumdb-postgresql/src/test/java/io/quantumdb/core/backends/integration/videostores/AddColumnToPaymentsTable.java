@@ -48,7 +48,7 @@ public class AddColumnToPaymentsTable {
 	public static void performEvolution() throws SQLException, MigrationException {
 		origin = setup.getChangelog().getLastAdded();
 
-		setup.getChangelog().addChangeSet("Michael de Jong",
+		setup.getChangelog().addChangeSet("test", "Michael de Jong",
 				SchemaOperations.addColumn("payments", "verified", bool(), "'false'", NOT_NULL));
 
 		target = setup.getChangelog().getLastAdded();

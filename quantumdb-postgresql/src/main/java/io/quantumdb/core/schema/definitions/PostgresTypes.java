@@ -3,12 +3,27 @@ package io.quantumdb.core.schema.definitions;
 import java.sql.Timestamp;
 import java.util.Date;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class PostgresTypes {
+
+	public static ColumnType from(String input) {
+		Pattern pattern = Pattern.compile("^(.+)\\(([0-9]+)\\)$");
+		Matcher match = pattern.matcher(input);
+		if (match.find()) {
+			String type = match.group(1);
+			int length = Integer.parseInt(match.group(2));
+			return from(type, length);
+		}
+		else {
+			return from(input, null);
+		}
+	}
 
 	public static ColumnType from(String type, Integer length) {
 		switch (type.toLowerCase()) {

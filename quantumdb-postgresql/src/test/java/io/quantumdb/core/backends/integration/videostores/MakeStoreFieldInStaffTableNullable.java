@@ -43,7 +43,7 @@ public class MakeStoreFieldInStaffTableNullable {
 
 		origin = setup.getChangelog().getLastAdded();
 
-		setup.getChangelog().addChangeSet("Michael de Jong",
+		setup.getChangelog().addChangeSet("test", "Michael de Jong",
 				SchemaOperations.alterColumn("staff", "store_id")
 						.modifyDefaultExpression("NULL")
 						.dropHint(NOT_NULL));

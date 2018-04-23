@@ -48,7 +48,7 @@ public class SyncFunctionTest {
 		catalog.addTable(ghost);
 
 		Changelog changelog = new Changelog();
-		changelog.addChangeSet("Michael de Jong", SchemaOperations.addColumn("users", "email", varchar(255)));
+		changelog.addChangeSet("test", "Michael de Jong", SchemaOperations.addColumn("users", "email", varchar(255)));
 		RefLog refLog = new RefLog();
 
 		ColumnRef usersId = new ColumnRef("id");
@@ -88,7 +88,7 @@ public class SyncFunctionTest {
 		catalog.addTable(ghost);
 
 		Changelog changelog = new Changelog();
-		changelog.addChangeSet("Michael de Jong", alterColumn("users", "name").rename("full_name"));
+		changelog.addChangeSet("test", "Michael de Jong", alterColumn("users", "name").rename("full_name"));
 		RefLog refLog = new RefLog();
 
 		ColumnRef usersId = new ColumnRef("id");
@@ -128,7 +128,7 @@ public class SyncFunctionTest {
 		catalog.addTable(ghost);
 
 		Changelog changelog = new Changelog();
-		changelog.addChangeSet("Michael de Jong", alterColumn("users", "id").rename("user_id"));
+		changelog.addChangeSet("test", "Michael de Jong", alterColumn("users", "id").rename("user_id"));
 		RefLog refLog = new RefLog();
 
 		ColumnRef usersId = new ColumnRef("id");
@@ -168,7 +168,7 @@ public class SyncFunctionTest {
 		catalog.addTable(ghost);
 
 		Changelog changelog = new Changelog();
-		changelog.addChangeSet("Michael de Jong", alterColumn("users", "name").addHint(NOT_NULL));
+		changelog.addChangeSet("test", "Michael de Jong", alterColumn("users", "name").addHint(NOT_NULL));
 		RefLog refLog = new RefLog();
 
 		ColumnRef usersId = new ColumnRef("id");
@@ -216,8 +216,8 @@ public class SyncFunctionTest {
 		catalog.addTable(ghost);
 
 		Changelog changelog = new Changelog();
-		changelog.addChangeSet("Michael de Jong", dropColumn("users", "other_id"));
-		changelog.addChangeSet("Michael de Jong", alterColumn("users", "name").rename("full_name").addHint(NOT_NULL));
+		changelog.addChangeSet("test1", "Michael de Jong", dropColumn("users", "other_id"));
+		changelog.addChangeSet("test2", "Michael de Jong", alterColumn("users", "name").rename("full_name").addHint(NOT_NULL));
 		RefLog refLog = new RefLog();
 
 		ColumnRef usersId = new ColumnRef("id");
