@@ -1,15 +1,19 @@
 package io.quantumdb.cli.commands;
 
+import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 
+import com.google.common.collect.Maps;
 import io.quantumdb.cli.utils.CliException;
 import io.quantumdb.cli.utils.CliWriter;
 import io.quantumdb.cli.utils.CliWriter.Context;
+import io.quantumdb.cli.xml.ChangelogLoader;
 import io.quantumdb.core.backends.Backend;
-import io.quantumdb.core.versioning.RefLog;
 import io.quantumdb.core.versioning.ChangeSet;
+import io.quantumdb.core.versioning.RefLog;
 import io.quantumdb.core.versioning.State;
 import io.quantumdb.core.versioning.Version;
 import lombok.Data;
@@ -31,6 +35,10 @@ public abstract class Command {
 
 	public abstract Identifier getIdentifier();
 
+	public Map<String, String> listArgumentDescriptions() {
+		return Maps.newLinkedHashMap();
+	}
+
 	public abstract void perform(CliWriter writer, List<String> arguments) throws IOException;
 
 	void persistChanges(Backend backend, State state) throws CliException {
@@ -45,11 +53,23 @@ public abstract class Command {
 
 	State loadState(Backend backend) throws CliException {
 		try {
-			return backend.loadState();
+			State state = backend.loadState();
+			if (new File("changelog.xml").exists()) {
+				new ChangelogLoader().load(state.getChangelog(), "changelog.xml");
+			}
+			return state;
 		}
 		catch (SQLException e) {
 			log.error(e.getMessage(), e);
 			throw new CliException("Could not connect to the database.", e);
+		}
+		catch (IOException e) {
+			log.error(e.getMessage(), e);
+			throw new CliException("Could not read from changelog.xml file.", e);
+		}
+		catch (Throwable e) {
+			log.error(e.getMessage(), e);
+			throw new CliException(e.getMessage());
 		}
 	}
 
@@ -69,6 +89,42 @@ public abstract class Command {
 		}
 
 		writer.indent(-1);
+	}
+
+	<T> T getArgument(List<String> arguments, String key, Class<T> type, T defaultValue) {
+		String prefix = "--" + key + "=";
+		String boolKey = "--" + key;
+
+		for (String argument : arguments) {
+			if (argument.startsWith(prefix)) {
+				String value = argument.substring(prefix.length());
+
+				if (type.equals(int.class) || Integer.class.isAssignableFrom(type)) {
+					return (T) (Integer) Integer.parseInt(value);
+				}
+				else if (type.equals(long.class) || Long.class.isAssignableFrom(type)) {
+					return (T) (Long) Long.parseLong(value);
+				}
+				else if (type.equals(double.class) || Double.class.isAssignableFrom(type)) {
+					return (T) (Double) Double.parseDouble(value);
+				}
+				else if (type.equals(float.class) || Float.class.isAssignableFrom(type)) {
+					return (T) (Float) Float.parseFloat(value);
+				}
+				else if (type.equals(boolean.class) || Boolean.class.isAssignableFrom(type)) {
+					return (T) (Boolean) Boolean.parseBoolean(value);
+				}
+				else {
+					return (T) value;
+				}
+			}
+			else if (argument.equals(boolKey)) {
+				if (type.equals(boolean.class) || Boolean.class.isAssignableFrom(type)) {
+					return (T) (Boolean) true;
+				}
+			}
+		}
+		return defaultValue;
 	}
 
 }

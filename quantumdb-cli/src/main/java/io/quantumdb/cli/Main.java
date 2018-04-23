@@ -60,7 +60,7 @@ public class Main {
 		writer.indent(-1);
 	}
 
-	private static LinkedHashMap<String, Command> listCommands() {
+	public static LinkedHashMap<String, Command> listCommands() {
 		List<Command> commands = Lists.newArrayList(
 				new Init(),
 				new Changelog(),
