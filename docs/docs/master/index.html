@@ -25,11 +25,11 @@ layout: default
                 <a href="https://github.com/quantumdb/quantumdb">here</a>.</p>
 
             <div class="btn-block">
-                <a href="https://github.com/quantumdb/quantumdb/releases/download/quantumdb-0.2.1/quantumdb-cli-0.2.1.jar" class="btn btn-success">
-                    <i class="glyphicon glyphicon-compressed"></i> quantumdb-cli-0.2.1.jar
+                <a href="https://github.com/quantumdb/quantumdb/releases/download/quantumdb-0.3.0/quantumdb-cli-0.3.0.jar" class="btn btn-success">
+                    <i class="glyphicon glyphicon-compressed"></i> quantumdb-cli-0.3.0.jar
                 </a>
-                <a href="https://github.com/quantumdb/quantumdb/releases/download/quantumdb-0.2.1/quantumdb-driver-0.2.1.jar" class="btn btn-success">
-                    <i class="glyphicon glyphicon-compressed"></i> quantumdb-driver-0.2.1.jar
+                <a href="https://github.com/quantumdb/quantumdb/releases/download/quantumdb-0.3.0/quantumdb-driver-0.3.0.jar" class="btn btn-success">
+                    <i class="glyphicon glyphicon-compressed"></i> quantumdb-driver-0.3.0.jar
                 </a>
             </div>
         </section>
@@ -50,12 +50,12 @@ layout: default
 
             <h3>Command-line interface</h3>
             <p>The command-line interface can be installed by taking the JAR file, and calling it via the command-line
-                like so: <pre class="terminal">$ java -jar quantumdb-0.2.1.jar &lt;command&gt; [&lt;parameters...&gt;]</pre></p>
+                like so: <pre class="terminal">$ java -jar quantumdb-0.3.0.jar &lt;command&gt; [&lt;parameters...&gt;]</pre></p>
 
             <p>Alternatively on Linux and OSX based systems, you can also specify an alias by creating the file
                 <code>/usr/local/bin/quantumdb</code> with the following contents:
                 <pre>#!/bin/sh
-java -jar quantumdb-0.2.1.jar "$@"</pre></p>
+java -jar quantumdb-0.3.0.jar "$@"</pre></p>
 
             <p>This way the JAR becomes easily accessible from any location on the system. It allows the user to
                 execute migrations and other operations via the command-line with statements such as:
@@ -160,17 +160,48 @@ java -jar quantumdb-0.2.1.jar "$@"</pre></p>
             <p>In addition we also allow the user to specify an author, and a description for each change set for
                 auditing and debugging purposes.</p>
 
-            <p>Using the following code we can define these changelog entries.</p>
+            <p>Using the following code we can define these changelog entries in Java.</p>
 
-            <pre class="code"><code class="java">changelog.addChangeSet("Michael de Jong",
+            <pre class="code"><code class="java">changelog.addChangeSet("add_last_seen_column", "Michael de Jong",
         "Track the time the user was last seen.",
         addColumn("users", "last_seen", timestamp(true)),
         createIndex("users", false, "last_seen"));
 
-changelog.addChangeSet("Michael de Jong",
+changelog.addChangeSet("track_users", "Michael de Jong",
         "Track when users are created and updated.",
         addColumn("users", "created_at", timestamp(true), "NOW()", Hint.NOT_NULL),
         addColumn("users", "updated_at", timestamp(true)));</code></pre>
+
+            <p>Or alternatively, in a XML file to be used together with the CLI tool.</p>
+
+            <pre class="code"><code class="xml">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+
+&lt;changelog xmlns="http://www.quantumdb.io/xml/ns/quantumdb-changelog"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:schemaLocation=""&gt;
+
+  &lt;changeset id="add_last_seen_column" author="Michael de Jong"&gt;
+    &lt;description&gt;Track the time the user was last seen.&lt;/description&gt;
+    &lt;operations&gt;
+      &lt;addColumn tableName="users"&gt;
+        &lt;column name="last_seen" type="timestamp with time zone" /&gt;
+      &lt;/addColumn&gt;
+      &lt;createIndex tableName="users" columnNames="last_seen" /&gt;
+    &lt;/operations&gt;
+  &lt;/changeset&gt;
+
+  &lt;changeset id="track_users" author="Michael de Jong"&gt;
+    &lt;description&gt;Track when users are created and updated.&lt;/description&gt;
+    &lt;operations&gt;
+      &lt;addColumn tableName="users"&gt;
+        &lt;column name="created_at" type="timestamp with time zone" defaultExpression="NOW()" nullable="false" /&gt;
+      &lt;/addColumn&gt;
+      &lt;addColumn tableName="users"&gt;
+        &lt;column name="updated_at" type="timestamp with time zone" /&gt;
+      &lt;/addColumn&gt;
+    &lt;/operations&gt;
+  &lt;/changeset&gt;
+&lt;/changelog&gt;</code></pre>
 
         </section>
 
@@ -179,17 +210,29 @@ changelog.addChangeSet("Michael de Jong",
             <p>QuantumDB currently supports the following schema operations:</p>
 
             <h3>ADD COLUMN</h3>
+
             <pre class="code"><code class="java">SchemaOperations.addColumn("users", "admin", PostgresTypes.bool(), "false", Hint.NOT_NULL);</code></pre>
+
+            <pre class="code"><code class="xml">&lt;addColumn tableName="users"&gt;
+  &lt;column name="admin" type="boolean" defaultExpression="false" nullable="false" /&gt;
+&lt;/addColumn&gt;</code></pre>
+
             <p>This code will create a new <code>admin</code> column in the <code>users</code> table, of type
                 <code>boolean</code>, which defaults to the <code>false</code> value, and cannot hold <code>NULL</code>
                 values. It's not required to set a default value. You can specify zero, one, or multiple hints of the
                 following types <code>AUTO_INCREMENT</code>, <code>NOT_NULL</code>, <code>IDENTITY</code>.</p>
 
             <h3>ADD FOREIGN KEY</h3>
+
             <pre class="code"><code class="java">SchemaOperations.addForeignKey("messages", "sender_id")
         .named("message_sender_id_fk")
         .onDelete(Action.CASCADE)
         .referencing("users", "id");</code></pre>
+
+            <pre class="code"><code class="xml">&lt;addForeignKey tableName="messages" columnNames="sender_id"
+               referencesTableName="users" referencesColumnNames="id"
+               name="message_sender_id_fk" onDelete="CASCADE" /&gt;</code></pre>
+
             <p>This code will create a new foreign key called <code>message_sender_id_fk</code> on the
                 <code>messages</code> table, which references the <code>id</code> column of the <code>users</code> table
                 and which will cascade deletes to the <code>messages</code> table when an entry in the
@@ -198,21 +241,34 @@ changelog.addChangeSet("Michael de Jong",
                 by stating multiple column names.</p>
 
             <h3>ALTER COLUMN</h3>
+
             <pre class="code"><code class="java">SchemaOperations.alterColumn("users", "admin")
         .rename("superuser")
         .addHint(Hint.NOT_NULL)
         .modifyDefaultExpression("false");</code></pre>
+
+            <pre class="code"><code class="xml">&lt;alterColumn tableName="users" columnName="admin" newColumnName="superuser" nullable="false" /&gt;
+&lt;alterDefaultExpression tableName="users" columnName="admin" defaultExpression="false" /&gt;</code></pre>
+
             <p>Using the <code>ALTER COLUMN</code> operation you can alter the name, data type, default
                 value/expression, and add and remove hints, all in one go.</p>
 
             <h3>COPY TABLE</h3>
+
             <pre class="code"><code class="java">SchemaOperations.copyTable("users", "customers");</code></pre>
+
+            <pre class="code"><code class="xml">&lt;copyTable sourceTableName="users" targetTableName="customers" /&gt;</code></pre>
+
             <p>This will create a structural copy of the <code>users</code> table, and name it <code>customers</code>.
                 Please note that this operation does not copy the contents of the original table to the new table.
                 For that you'll have to use a <a href="#dataoperations">DataOperation</a>.</p>
 
             <h3>CREATE INDEX</h3>
+
             <pre class="code"><code class="java">SchemaOperations.createIndex("users", true, "email");</code></pre>
+
+            <pre class="code"><code class="xml">&lt;createIndex tableName="users" columnNames="email" unique="true" /&gt;</code></pre>
+
             <p>This example will create a new index on the <code>email</code> column of the <code>users</code> table.
                 In this particular case an index which enforces that every value in the <code>email</code> column must
                 be unique. If you wish to allow duplicate entries, you'll need to pass <code>false</code> instead of
@@ -220,37 +276,65 @@ changelog.addChangeSet("Michael de Jong",
                 column names.</p>
 
             <h3>CREATE TABLE</h3>
+
             <pre class="code"><code class="java">SchemaOperations.createTable("users")
         .with("id", PostgresTypes.bigint(), Hint.IDENTITY, Hint.AUTO_INCREMENT)
         .with("first_name", PostgresTypes.text(), Hint.NOT_NULL)
         .with("last_name", PostgresTypes.text(), Hint.NOT_NULL));</code></pre>
+
+            <pre class="code"><code class="xml">&lt;createTable tableName="users"&gt;
+  &lt;column name="id" type="bigint" primaryKey="true" autoIncrement="true" /&gt;
+  &lt;column name="first_name" type="text" nullable="false" /&gt;
+  &lt;column name="last_name" type="text" nullable="false" /&gt;
+&lt;/createTable&gt;</code></pre>
+
             <p>This example will create a new <code>users</code> table with three columns <code>id</code>,
                 <code>first_name</code>, and <code>last_name</code>.</p>
 
             <h3>DROP COLUMN</h3>
+
             <pre class="code"><code class="java">SchemaOperations.dropColumn("users", "last_name");</code></pre>
+
+            <pre class="code"><code class="xml">&lt;dropColumn tableName="users" columnName="last_name" /&gt;</code></pre>
+
             <p>This example code drops an existing column from a table. In this particular case it will drop the
                 <code>last_name</code> column from the <code>users</code> table.</p>
 
             <h3>DROP FOREIGN KEY</h3>
+
             <pre class="code"><code class="java">SchemaOperations.dropForeignKey("users", "user_referral_fk");</code></pre>
+
+            <pre class="code"><code class="xml">&lt;dropForeignKey tableName="users" foreignKeyName="user_referral_fk" /&gt;</code></pre>
+
             <p>This example code drops an existing foreign key constraint, named <code>user_referral_fk</code> from
                 the <code>users</code> table.</p>
 
             <h3>DROP INDEX</h3>
+
             <pre class="code"><code class="java">SchemaOperations.dropIndex("users", "email");</code></pre>
+
+            <pre class="code"><code class="xml">&lt;dropIndex tableName="users" columnNames="email" /&gt;</code></pre>
+
             <p>This example code drops an existing index, based on the <code>email</code> column from
                 the <code>users</code> table.</p>
 
             <h3>DROP TABLE</h3>
+
             <pre class="code"><code class="java">SchemaOperations.dropTable("users");</code></pre>
+
+            <pre class="code"><code class="xml">&lt;dropTable tableName="users" /&gt;</code></pre>
+
             <p>This example code drops the existing <code>users</code> table from the database.</p>
             <p>Note that this operation is essentially &quot;free&quot; provided that the table is still in use by an
                 older version of the database schema. When the last database schema still using this table is dropped,
                 this table will be actually dropped from the database.</p>
 
             <h3>RENAME TABLE</h3>
+
             <pre class="code"><code class="java">SchemaOperations.renameTable("users", "customers");</code></pre>
+
+            <pre class="code"><code class="xml">&lt;renameTable oldTableName="users" newTableName="customers" /&gt;</code></pre>
+
             <p>This operation renames an existing <code>users</code> table to <code>customers</code>.</p>
             <p>It's worth noting that this operation is essentially &quot;free&quot;, as the current version of
                 QuantumDB doesn't actually change the database structure at all. The rename is handled by adding an
@@ -269,6 +353,8 @@ changelog.addChangeSet("Michael de Jong",
 
             <pre class="code"><code class="java">SchemaOperations.execute("INSERT INTO users" +
         "(first_name, last_name) VALUES ('Michael', 'de Jong');");</code></pre>
+
+            <pre class="code"><code class="xml">&lt;sql&gt;INSERT INTO users (first_name, last_name) VALUES ('Michael', 'de Jong');&lt;/sql&gt;</code></pre>
         </section>
 
         <section id="cli">
@@ -297,7 +383,7 @@ changelog.addChangeSet("Michael de Jong",
 
             <pre class="terminal">$ quantumdb init jdbc:postgresql://localhost:5432 quantumdb quantumdb quantumdb
 <strong>==> Scanning database...</strong>
-    > Vendor: PostgreSQL 9.6.1
+    > Vendor: PostgreSQL 9.6.5
     > Found: 0 tables
     > Found: 0 foreign keys
     > Found: 0 sequences
@@ -307,19 +393,44 @@ changelog.addChangeSet("Michael de Jong",
 
             <h3>changelog</h3>
             <p>When calling the <code>changelog</code> command, QuantumDB will retrieve the currently known changelog
-                from the database and display it.</p>
+                from the database and display it. If a `changelog.xml` file is present in the working directory, it
+                will be taken into account as well.</p>
 
             <pre class="terminal">$ quantumdb changelog
-<span class="green"><strong>==> Initial state of the database. - QuantumDB</strong></span>
-    > 8fb3b4e71a (active)
+<span class="green"><strong>==> 8fb3b4e71a (active) - initial</strong></span>
+    > Date: 2018-04-24 21:05:57.074
+    > Author: QuantumDB
+    > Description: Initial state of the database.
 
-<span class="green"><strong>==> Track the time the user was last seen. - Michael de Jong</strong></span>
-    > cf3323a79b - AddColumn
-    > ed9eb9be2e - CreateIndex
+<span class="green"><strong>==> ed9eb9be2e - add_last_seen_column</strong></span>
+    > Date: Tue Apr 24 21:13:29 CEST 2018
+    > Author: Michael de Jong
+    > Operations: 1
+    > Description: Track the time the user was last seen.
 
-<span class="green"><strong>==> Track when users are created and updated. - Michael de Jong</strong></span>
-    > 72ae28b49a - AddColumn
-    > cc92b7b121 - AddColumn</pre>
+<span class="green"><strong>==> cc92b7b121 - track_users</strong></span>
+    > Date: Tue Apr 24 21:13:29 CEST 2018
+    > Author: Michael de Jong
+    > Operations: 1
+    > Description: Track when users are created and updated.</pre>
+
+            <p>If this output is too verbose you can use the <code>--short</code> argument to produce a collapsed list
+                of changesets.</p>
+
+            <pre class="terminal">$ quantumdb changelog --short
+<span class="green"><strong>==> 8fb3b4e71a (active) - initial</strong></span>
+<span class="green"><strong>==> ed9eb9be2e - add_last_seen_column</strong></span>
+<span class="green"><strong>==> cc92b7b121 - track_users</strong></span></pre>
+
+            <p>In addition to <code>--short</code> you can also limit which changesets should be returned by using one
+                of, or a combination of the following arguments: <code>--from=&lt;version&gt;</code>,
+                <code>--until=&lt;version&gt;</code>, <code>--limit=&lt;number&gt;</code></p>
+
+            <pre class="terminal">$ quantumdb changelog --from=8fb3b4e71a --until=ed9eb9be2e --limit=1
+<span class="green"><strong>==> 8fb3b4e71a (active) - initial</strong></span>
+    > Date: 2018-04-24 21:05:57.074
+    > Author: QuantumDB
+    > Description: Initial state of the database.</pre>
 
             <h3>status</h3>
             <p>When calling the <code>status</code> command, QuantumDB will display the currently active versions of
@@ -362,7 +473,7 @@ changelog.addChangeSet("Michael de Jong",
             <p><code>query</code> is another debugging command that can be used. The <code>query</code> will execute
                 a specified query based on a specified version of the database schema.</p>
 
-            <pre class="terminal">$ quantumdb query 8fb3b4e71a "SELECT * FROM users;"</pre>
+            <pre class="terminal">$ quantumdb query 8fb3b4e71a SELECT * FROM users;</pre>
         </section>
 
     </div>

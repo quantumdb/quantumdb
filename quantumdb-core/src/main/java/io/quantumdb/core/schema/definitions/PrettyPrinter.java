@@ -34,7 +34,7 @@ class PrettyPrinter {
 				JsonObject model = new JsonObject();
 				model.addProperty("columnName", src.getName());
 				model.addProperty("type", src.getType().getNotation());
-				model.addProperty("defaultValue", src.getDefaultValue());
+				model.addProperty("defaultExpression", src.getDefaultValue());
 
 				if (!src.getHints().isEmpty()) {
 					JsonArray elements = new JsonArray();
