@@ -178,7 +178,7 @@ changelog.addChangeSet("track_users", "Michael de Jong",
 
 &lt;changelog xmlns="http://www.quantumdb.io/xml/ns/quantumdb-changelog"
            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-           xsi:schemaLocation=""&gt;
+           xsi:schemaLocation="http://www.quantumdb.io/xml/ns/quantumdb-changelog-0.3.xsd"&gt;
 
   &lt;changeset id="add_last_seen_column" author="Michael de Jong"&gt;
     &lt;description&gt;Track the time the user was last seen.&lt;/description&gt;
@@ -393,7 +393,7 @@ changelog.addChangeSet("track_users", "Michael de Jong",
 
             <h3>changelog</h3>
             <p>When calling the <code>changelog</code> command, QuantumDB will retrieve the currently known changelog
-                from the database and display it. If a `changelog.xml` file is present in the working directory, it
+                from the database and display it. If a <code>changelog.xml</code> file is present in the working directory, it
                 will be taken into account as well.</p>
 
             <pre class="terminal">$ quantumdb changelog
