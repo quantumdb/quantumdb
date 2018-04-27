@@ -1,0 +1,158 @@
+---
+layout: default
+---
+
+
+<div class="content row">
+    <div class="col-md-3">
+        <nav class="docs-sidebar hidden-print hidden-sm hidden-xs">
+            <ul class="nav">
+                <li><a href="#installation">1. Installation</a></li>
+                <li><a href="#initialization">2. Initializing the database</a></li>
+                <li><a href="#defining-schema-changes">3. Defining a schema change</a></li>
+                <li><a href="#performing-schema-changes">4. Performing a schema change</a></li>
+                <li><a href="#integration">5. Integration with application</a></li>
+            </ul>
+        </nav>
+    </div>
+    <div class="col-md-9">
+        <section id="installation">
+            <h2>1. Installing the command-line interface</h2>
+            <p>You can install the command-line tool by executing the following commands (on OS X and Linux):</p>
+
+            <pre class="terminal">$ curl http://quantumdb.io/getting-started/install.sh | bash</pre>
+
+            <p>Note that we <strong>require a Java 8 JRE or JDK</strong> to be installed on your system.</p>
+        </section>
+
+        <section id="initialization">
+            <h2>2. Initializing the database</h2>
+            <p>Next we'll need to let QuantumDB inspect the current database, to see which tables, and relations are
+                currently present. It doesn't if this database is empty, or if is has pre-existing tables and data
+                stored in it already. It will store this information in meta tables dedicated for use by QuantumDB.
+                We can do this with the command-line tool by executing the following command:</p>
+
+            <pre class="terminal">$ quantumdb init jdbc:postgresql://localhost:5432 &lt;database&gt; &lt;username&gt; &lt;password&gt;
+<strong>==> Scanning database...</strong>
+    > Vendor: PostgreSQL 9.6.5
+    > Found: 0 tables
+    > Found: 0 foreign keys
+    > Found: 0 sequences
+<strong>==> Persisting current state to database...</strong>
+<span class="green"><strong>==> Database is operating at version(s):</strong>
+    > 4c00c31ff0: Initial state of the database.</span></pre>
+
+            <p>Once you've executed this operation, you'll be able to define and execute schema migrations.</p>
+        </section>
+
+        <section id="defining-schema-changes">
+            <h2>3. Defining a schema change</h2>
+            <p>QuantumDB stores all database schema migrations into a changelog. This changelog contains a sequence of
+                changesets which are groupings of schema operations which should be executed together. We can define
+                such schema operations in an XML file like this:</p>
+
+            <pre class="code"><code class="xml">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+
+&lt;changelog xmlns="http://www.quantumdb.io/xml/ns/quantumdb-changelog"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:schemaLocation="http://www.quantumdb.io/xml/ns/quantumdb-changelog-0.3.xsd"&gt;
+
+  &lt;changeset id="create_users_table" author="Michael de Jong"&gt;
+    &lt;description&gt;Creates a table to store users in.&lt;/description&gt;
+    &lt;operations&gt;
+      &lt;createTable tableName="users"&gt;
+        &lt;columns&gt;
+          &lt;column name="id" type="bigint" primaryKey="true" autoIncrement="true" /&gt;
+          &lt;column name="email" type="text" nullable="false"/&gt;
+          &lt;column name="first_name" type="text" nullable="false" /&gt;
+          &lt;column name="last_name" type="text" nullable="false" /&gt;
+          &lt;column name="registered_at" type="timestamp" nullable="false" defaultExpression="NOW()" /&gt;
+        &lt;columns&gt;
+      &lt;/createTable&gt;
+      &lt;createIndex tableName="users" columnNames="email" unique="true" /&gt;
+    &lt;/operations&gt;
+  &lt;/changeset&gt;
+
+  &lt;changeset id="create_messages_table" author="Michael de Jong"&gt;
+    &lt;description&gt;Creates a table where we can store all messages between users.&lt;/description&gt;
+    &lt;operations&gt;
+      &lt;createTable tableName="messages"&gt;
+        &lt;columns&gt;
+          &lt;column name="id" type="bigint" primaryKey="true" autoIncrement="true" /&gt;
+          &lt;column name="sender_id" type="bigint" nullable="false" /&gt;
+          &lt;column name="receiver_id" type="bigint" nullable="false" /&gt;
+          &lt;column name="body" type="text" nullable="false" /&gt;
+          &lt;column name="created_at" type="timestamp" nullable="false" defaultExpression="NOW()" /&gt;
+        &lt;/columns&gt;
+      &lt;/createTable&gt;
+      &lt;addColumn tableName="users"&gt;
+        &lt;column name="email_on_new_message" type="boolean" nullable="false" defaultExpression="true" /&gt;
+      &lt;/addColumn&gt;
+    &lt;/operations&gt;
+  &lt;/changeset&gt;
+&lt;/changelog&gt;</code></pre>
+
+            <p>Then by executing the following command in the same folder as the XML file, we can store these change in
+                the database, and prepare to perform a schema migration.</p>
+
+            <pre class="terminal">$ quantumdb changelog
+<strong><span class="green">==> 4c00c31ff0 (active) - initial</span></strong>
+    > Date: 2018-04-24 21:05:57.074
+    > Author: QuantumDB
+    > Description: Initial state of the database.
+
+<strong><span class="green">==> fa149e6194 - create_users_table</span></strong>
+    > Date: 2018-04-26 20:46:00.366
+    > Author: Michael de Jong
+    > Operations: 2
+    > Description: Creates a table to store users in.
+
+<strong><span class="green">==> 1463e4d8ca - create_messages_table</span></strong>
+    > Date: 2018-04-26 20:46:00.367
+    > Author: Michael de Jong
+    > Operations: 2
+    > Description: Creates a table where we can store all messages between users.</pre>
+        </section>
+
+        <section id="performing-schema-changes">
+            <h2>4. Performing a schema change</h2>
+            <p>Now that we've prepared two changesets, we can perform these schema changes by executing the following
+                command:</p>
+
+            <pre class="terminal">$ quantumdb fork fa149e6194
+<strong>==> Scanning database...</strong>
+<strong>==> Forking database from: 4c00c31ff0 to: fa149e6194...</strong>
+<span class="green"><strong>==> Database is operating at version(s):</strong>
+    > fa149e6194: Creates a table to store users in.
+    > 4c00c31ff0: Initial state of the database.</span></pre></p>
+
+            <p>Once this process has completed, QuantumDB has successfully transitioned the database into a Mixed-State
+                where both the old and the new schema exist in the database. Depending on your method of deployment you
+                can now either choose to run these two versions side by side for a while, or drop one of the versions.
+                For instance if the migration process failed you can drop the newer version and try again later, or if
+                all went well, you can drop the old schema version. You can drop a schema version by executing the
+                following command:</p>
+
+            <pre class="terminal">$ quantumdb drop 4c00c31ff0
+<strong>==> Scanning database...</strong>
+<strong>==> Checking how many clients are still connected to: 4c00c31ff0</strong>
+    > 0 clients are using this version of the database schema.
+<strong>==> Dropping database schema version: 4c00c31ff0...</strong>
+<span class="green"><strong>==> Database is operating at version(s):</strong>
+    > fa149e6194: Creates a table to store users in.</span></pre>
+
+            <p>You have now successfully performed your first zero-downtime migration with QuantumDB!</p>
+        </section>
+
+        <section id="integration">
+            <h2>5. Integrating QuantumDB with your application</h2>
+            <p>QuantumDB shifts your database into and out of Mixed-State while performing database schema migrations.
+                To abstract all this complexity away from your application, you'll need to put the
+                <code>quantumdb-driver</code> on your application's classpath, and alter the connection string you
+                use to connect to your PostgreSQL database so it will use the QuantumDB database driver first, and
+                connect to a specific version of your database schema:</p>
+
+            <pre class="code"><code>jdbc:quantumdb:postgresql://localhost:5432/&lt;database&gt;?version=&lt;schemaVersion&gt;</code></pre>
+        </section>
+    </div>
+</div>
