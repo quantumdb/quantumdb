@@ -13,10 +13,11 @@ $colors: ( $red, $orange, $yellow, $green, $turquoise );
 html, body {
   margin: 0;
   font-family: Roboto;
+  background-color: #fcfcfc;
 }
 
 body {
-  padding: 85px 0 0 0;
+  padding: 78px 0 120px 0;
 }
 
 a {
@@ -29,15 +30,14 @@ a {
 }
 
 .navbar {
-  padding: 14px;
+  padding: 14px 10px;
   border-bottom: 1px solid #eee;
   border-radius: 0;
   background-color: #fff;
 
   .logo {
     display: inline-block;
-    margin: 11px 0px;
-    width: 215px;
+    margin: 11px 11px 0 0;
     font-size: 19px;
     color: #133046;
 
@@ -53,6 +53,12 @@ a {
       position: relative;
       left: -4px;
       top: -16px;
+    }
+
+    @media (max-width: 600px) {
+      span {
+        display: none;
+      }
     }
   }
 
@@ -107,40 +113,23 @@ pre.code {
   }
 }
 
+.alert {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+
+  .glyphicon {
+    float: left;
+    display: flex;
+    align-self: flex-start;
+    margin: 2px 12px 0 0;
+    font-size: 36px;
+    font-weight: 100;
+  }
+}
+
 .content {
   margin-top: 34px;
-}
-
-.full-width {
-  position: absolute;
-  width: 100%;
-  left: 0;
-}
-
-.hero {
-  @extend .full-width;
-  min-height: 330px;
-  padding-top: 48px;
-  color: #ffffff;
-
-  background-color: $green;
-  background: url("/assets/images/logo.png") 70% 100px, -moz-linear-gradient(-45deg, $green 0%, $blue 100%);
-  background: url("/assets/images/logo.png") 70% 100px, -webkit-linear-gradient(-45deg, $green 0%,$blue 100%);
-  background: url("/assets/images/logo.png") 70% 100px, linear-gradient(135deg, $green 0%,$blue 100%);
-  filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='{$green}', endColorstr='{$blue}',GradientType=1 );
-  background-repeat: no-repeat;
-
-  h1, h3 {
-    margin: 0px;
-    padding: 0px;
-    font-weight: 100;
-    text-shadow: 2px 2px 3px rgba(0, 0, 0, 0.33);
-  }
-
-  h1 {
-    font-size: 60px;
-    font-weight: 500;
-  }
 }
 
 img.changelog-image {
@@ -159,12 +148,17 @@ section {
   h3, h4, h5, h6 {
     margin-top: 32px;
   }
+
+  ul li {
+    margin: 12px 0;
+  }
 }
 
 pre {
   margin-bottom: 24px;
 
   &.terminal {
+    text-align: left;
     background-color: #000000;
     background-image: url("/assets/images/terminal.png");
     background-repeat: no-repeat;
@@ -175,6 +169,38 @@ pre {
     padding-bottom: 32px;
 
     @extend .code;
+  }
+}
+
+.home-buttons {
+  text-align: center;
+  margin: 36px 0 18px 0;
+
+  a {
+    display: inline-flex;
+    justify-content: center;
+    flex-direction: column;
+
+    width: 280px;
+    height: 200px;
+    padding-top: 33px;
+    margin: 0 6px;
+
+    pre.terminal {
+      align-self: center;
+      width: 170px;
+      min-height: 100px;
+      display: block;
+      margin: 0 0 20px 0;
+    }
+
+    img {
+      align-self: center;
+      width: 170px;
+      height: 100px;
+      display: block;
+      margin: 0 0 20px 0;
+    }
   }
 }
 

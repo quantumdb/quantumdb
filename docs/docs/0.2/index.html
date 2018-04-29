@@ -7,8 +7,6 @@ layout: default
     <div class="col-md-3">
         <nav class="docs-sidebar hidden-print hidden-sm hidden-xs">
             <ul class="nav">
-                <li><a href="#download">Download</a></li>
-                <li><a href="#installation">Installation</a></li>
                 <li><a href="#versioning">Versioning</a></li>
                 <li><a href="#changesets">Changesets</a></li>
                 <li><a href="#schemaoperations">Schema operations</a></li>
@@ -18,57 +16,6 @@ layout: default
         </nav>
     </div>
     <div class="col-md-9">
-        <section id="download">
-            <h2>Download</h2>
-            <p>You can download the latest version as well as older versions of QuantumDB from the GitHub repository
-                <a href="https://github.com/quantumdb/quantumdb/releases">here</a>. The source code can be found
-                <a href="https://github.com/quantumdb/quantumdb">here</a>.</p>
-
-            <div class="btn-block">
-                <a href="https://github.com/quantumdb/quantumdb/releases/download/quantumdb-0.2.1/quantumdb-cli-0.2.1.jar" class="btn btn-success">
-                    <i class="glyphicon glyphicon-compressed"></i> quantumdb-cli-0.2.1.jar
-                </a>
-                <a href="https://github.com/quantumdb/quantumdb/releases/download/quantumdb-0.2.1/quantumdb-driver-0.2.1.jar" class="btn btn-success">
-                    <i class="glyphicon glyphicon-compressed"></i> quantumdb-driver-0.2.1.jar
-                </a>
-            </div>
-        </section>
-
-        <section id="installation">
-            <h2>Installation</h2>
-            <p>QuantumDB currently consists of two main components:
-                <ul>
-                    <li><strong>A command-line interface</strong> which allows you to perform migrations and other
-                        administrative operations on a PostgreSQL server.</li>
-                    <li><strong>A client-side Java library</strong> which abstracts the migration state of the database
-                        away from the database client by intercepting calls to the actual PostgreSQL database driver,
-                        and rewriting queries to target the correct tables.</li>
-                </ul>
-            </p>
-
-            <p>For both components we currently require a Java 8 JRE or JDK to be installed.</p>
-
-            <h3>Command-line interface</h3>
-            <p>The command-line interface can be installed by taking the JAR file, and calling it via the command-line
-                like so: <pre class="terminal">$ java -jar quantumdb-0.2.1.jar &lt;command&gt; [&lt;parameters...&gt;]</pre></p>
-
-            <p>Alternatively on Linux and OSX based systems, you can also specify an alias by creating the file
-                <code>/usr/local/bin/quantumdb</code> with the following contents:
-                <pre>#!/bin/sh
-java -jar quantumdb-0.2.1.jar "$@"</pre></p>
-
-            <p>This way the JAR becomes easily accessible from any location on the system. It allows the user to
-                execute migrations and other operations via the command-line with statements such as:
-                <pre class="terminal">$ quantumdb &lt;command&gt; [&lt;parameters...&gt;]</pre></p>
-
-            <h3>Java client library</h3>
-            <p>The client library can be included by telling your build system that the quantumdb-driver JAR needs to
-                be put on the classpath. <strong>QuantumDB will not be published on Maven Central until we're confident
-                enough for a public beta. So until then, please manually download the JAR are include it on your
-                classpath. Just be mindful that by doing that you're using code which is not yet ready for production.
-                </strong></p>
-        </section>
-
         <section id="versioning">
             <h2>Versioning</h2>
             <p>QuantumDB currently tracks the database schema in a linear manner historically. Each version has at
@@ -342,9 +289,10 @@ changelog.addChangeSet("Michael de Jong",
     > ed9eb9be2e: Create a users table.</span></pre>
 
             <h3>nuke</h3>
-            <p>Executing the <code>nuke</code> command will drop everything inside the database. This command has been
-                specifically added for testing purposes. <strong>It's not recommended to use this command in
-                    production!</strong></p>
+            <p>Executing the <code>nuke</code> command will drop <strong>everything</strong> inside the database. This
+                not only includes the QuantumDB meta-info tables, but also your own tables. Note that this command does
+                not return any confirmation text. This command has been specifically added for testing purposes.
+                <strong>It's not recommended to use this command in production!</strong></p>
 
             <pre class="terminal">$ quantumdb nuke</pre>
 
