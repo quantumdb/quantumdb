@@ -9,16 +9,28 @@ layout: default
             <ul class="nav">
                 <li><a href="#installation">1. Installation</a></li>
                 <li><a href="#initialization">2. Initializing the database</a></li>
-                <li><a href="#defining-schema-changes">3. Defining a schema change</a></li>
-                <li><a href="#performing-schema-changes">4. Performing a schema change</a></li>
-                <li><a href="#integration">5. Integration with application</a></li>
+                <li><a href="#integration">3. Accessing the database</a></li>
+                <li><a href="#defining-schema-changes">4. Defining a schema change</a></li>
+                <li><a href="#performing-schema-changes">5. Performing a schema change</a></li>
             </ul>
         </nav>
     </div>
     <div class="col-md-9">
+		<div class="alert alert-danger"><i class="glyphicon glyphicon-exclamation-sign"></i>
+			<p>
+				<strong>QuantumDB is not ready for production! No guarantees are made for migration paths between
+					0.x.x versions.</strong>
+			</p>
+		</div>
+
         <section id="installation">
             <h2>1. Installing the command-line interface</h2>
-            <p>You can install the command-line tool by executing the following commands (on OS X and Linux):</p>
+            <p>
+				The easiest method at the moment to manage your PostgreSQL database with QuantumDB is to use the
+				QuantumDB CLI tool. With this tool you'll be able to perform a couple of actions to support your
+				database schema migrations workflow. You can install the command-line tool by executing the following
+				commands (on OS X and Linux):
+			</p>
 
             <pre class="terminal">$ curl http://quantumdb.io/getting-started/install.sh | bash</pre>
 
@@ -27,12 +39,14 @@ layout: default
 
         <section id="initialization">
             <h2>2. Initializing the database</h2>
-            <p>Next we'll need to let QuantumDB inspect the current database, to see which tables, and relations are
+            <p>
+				Next we'll need to let QuantumDB inspect the current database, to see which tables, and relations are
                 currently present. It doesn't if this database is empty, or if is has pre-existing tables and data
                 stored in it already. It will store this information in meta tables dedicated for use by QuantumDB.
-                We can do this with the command-line tool by executing the following command:</p>
+                We can do this with the command-line tool by executing the following command:
+			</p>
 
-            <pre class="terminal">$ quantumdb init jdbc:postgresql://localhost:5432 &lt;database&gt; &lt;username&gt; &lt;password&gt;
+            <pre class="terminal">$ quantumdb init --host=localhost:5432 --database=&lt;database&gt; --username=&lt;username&gt; --password=&lt;password&gt;
 <strong>==> Scanning database...</strong>
     > Vendor: PostgreSQL 9.6.5
     > Found: 0 tables
@@ -43,13 +57,75 @@ layout: default
     > 4c00c31ff0: Initial state of the database.</span></pre>
 
             <p>Once you've executed this operation, you'll be able to define and execute schema migrations.</p>
+
+			<div class="alert alert-danger"><i class="glyphicon glyphicon-exclamation-sign"></i>
+				<p>
+					This command will create a file called <code>.quantumdb</code> in the current directory.
+					<strong>
+						Please note that this file contains the database login credentials you specified in plain-text.
+						Do not commit this file to any version control system!
+					</strong>
+				</p>
+			</div>
         </section>
 
+		<section id="integration">
+			<h2>3. Accessing the database from your application</h2>
+			<p>
+				QuantumDB shifts your database into and out of <i>Mixed-State</i> while performing database schema
+				migrations. To abstract all this complexity away from your application, you'll need to put the
+				<code>quantumdb-driver</code> on your application's classpath. Unfortunately we have yet to publish
+				it on Maven Central, so you'll have to download it manually, and add it as a dependency to your
+				Java project yourself. You can download it here:
+			</p>
+
+			<p>
+				<a href="https://github.com/quantumdb/quantumdb/releases/download/quantumdb-0.3.0/quantumdb-driver-0.3.0.jar" class="btn btn-success">
+					<i class="glyphicon glyphicon-compressed"></i> quantumdb-driver-0.3.0.jar
+				</a>
+			</p>
+
+			<div class="alert alert-info">
+				<i class="glyphicon glyphicon-info-sign"></i>
+				<p>
+					Note that you still need the PostgreSQL JDBC driver to be on the classpath of your project.
+					QuantumDB's driver acts as an interceptor. It receives queries to be executed from your application,
+					alters them so they work in the <i>Mixed-State</i>, and delegates the transformed query to the real
+					PostgreSQL JDBC driver.
+				</p>
+			</div>
+
+			<h3>Specify which schema your application should use</h3>
+			<p>
+				Next you'll need to alter the connection string you use to connect to your PostgreSQL database so it
+				will use the QuantumDB database driver, and connect to a specific version of your database schema:
+			</p>
+
+			<pre class="code"><code>jdbc:quantumdb:postgresql://localhost:5432/&lt;database&gt;?version=&lt;schemaVersion&gt;</code></pre>
+
+			<p>
+				If you're using a master/slave setup for your PostgreSQL database, you can alter the connection string
+				to something like this:
+			</p>
+
+			<pre class="code"><code>jdbc:quantumdb:postgresql://db1:5432,db2:5432/&lt;database&gt;?version=&lt;schemaVersion&gt;&targetServerType=...</code></pre>
+
+			<div class="alert alert-danger">
+				<i class="glyphicon glyphicon-exclamation-sign"></i>
+				<p>
+					<strong>QuantumDB has not yet been tested in any master/slave setup</strong>.
+				</p>
+			</div>
+
+		</section>
+
         <section id="defining-schema-changes">
-            <h2>3. Defining a schema change</h2>
-            <p>QuantumDB stores all database schema migrations into a changelog. This changelog contains a sequence of
+            <h2>4. Defining a schema change</h2>
+            <p>
+				QuantumDB stores all database schema migrations into a changelog. This changelog contains a sequence of
                 changesets which are groupings of schema operations which should be executed together. We can define
-                such schema operations in an XML file like this:</p>
+                such schema operations in an XML file like this:
+			</p>
 
             <pre class="code"><code class="xml">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
 
@@ -92,8 +168,18 @@ layout: default
   &lt;/changeset&gt;
 &lt;/changelog&gt;</code></pre>
 
-            <p>Then by executing the following command in the same folder as the XML file, we can store these change in
-                the database, and prepare to perform a schema migration.</p>
+			<div class="alert alert-info">
+				<i class="glyphicon glyphicon-info-sign"></i>
+				<p>
+					For a comprehensive list of schema operations that are currently supported by QuantumDB, and how to
+					define and use them, please visit <a href="/docs/master/#schemaoperations">the documentation</a>.
+				</p>
+			</div>
+
+            <p>
+				Then by executing the following command in the same folder as the XML file, we can store these change in
+                the database, and prepare to perform a schema migration.
+			</p>
 
             <pre class="terminal">$ quantumdb changelog
 <strong><span class="green">==> 4c00c31ff0 (active) - initial</span></strong>
@@ -115,23 +201,54 @@ layout: default
         </section>
 
         <section id="performing-schema-changes">
-            <h2>4. Performing a schema change</h2>
-            <p>Now that we've prepared two changesets, we can perform these schema changes by executing the following
-                command:</p>
+            <h2>5. Performing a schema change</h2>
+			<p>
+				Schema migrations in QuantumDB always follow the <i>expand/contract approach</i>. Meaning you will first
+				instruct QuantumDB to expand your database with whatever the new schema needs (tables, etc). Then
+				once the deployment of your application / service is a success, you'll instruct QuantumDB to contract
+				your database, which drops everything your old schema was using and your new schema is not using.
+			</p>
+
+			<h3>Expanding the database</h3>
+
+            <p>
+				Now that we've prepared two changesets, we can perform these schema changes in one go, by executing a
+				<code>fork</code> command. This process will create new tables where needed, copy over data, and
+				install database triggers to keep data in sync. You can execute such a command like this:
+			</p>
 
             <pre class="terminal">$ quantumdb fork fa149e6194
 <strong>==> Scanning database...</strong>
 <strong>==> Forking database from: 4c00c31ff0 to: fa149e6194...</strong>
 <span class="green"><strong>==> Database is operating at version(s):</strong>
-    > fa149e6194: Creates a table to store users in.
-    > 4c00c31ff0: Initial state of the database.</span></pre></p>
+    > 4c00c31ff0: Initial state of the database.
+    > fa149e6194: Creates a table to store users in.</span></pre></p>
 
-            <p>Once this process has completed, QuantumDB has successfully transitioned the database into a Mixed-State
-                where both the old and the new schema exist in the database. Depending on your method of deployment you
-                can now either choose to run these two versions side by side for a while, or drop one of the versions.
-                For instance if the migration process failed you can drop the newer version and try again later, or if
-                all went well, you can drop the old schema version. You can drop a schema version by executing the
-                following command:</p>
+            <p>
+				Once this process has completed, QuantumDB has successfully transitioned the database into a
+				<i>Mixed-State</i> where both the old and the new schema exist in the database.
+			</p>
+
+			<div class="alert alert-danger">
+				<i class="glyphicon glyphicon-exclamation-sign"></i>
+				<p>
+					Please note that, although it is technically speaking possible to have more than 2 database
+					schemas operating side by side in the same database through the forking process,
+					<strong>
+						this mode is not actively tested, and will be a lot more demanding on your server's hardware.
+					</strong>
+				</p>
+			</div>
+
+			<h3>Contracting the database</h3>
+
+			<p>
+				Depending on your method of deployment and its result, you  can now either choose to run these two
+				versions side by side for a while, or contract the database by dropping one of these versions. For
+				instance if the migration process failed you can drop the newer version and try again later, or if
+                everything went well, and you'd like to commit to the new database schema version, you can drop the
+				old schema version. You can drop a schema version by executing the following command:
+			</p>
 
             <pre class="terminal">$ quantumdb drop 4c00c31ff0
 <strong>==> Scanning database...</strong>
@@ -142,17 +259,15 @@ layout: default
     > fa149e6194: Creates a table to store users in.</span></pre>
 
             <p>You have now successfully performed your first zero-downtime migration with QuantumDB!</p>
-        </section>
 
-        <section id="integration">
-            <h2>5. Integrating QuantumDB with your application</h2>
-            <p>QuantumDB shifts your database into and out of Mixed-State while performing database schema migrations.
-                To abstract all this complexity away from your application, you'll need to put the
-                <code>quantumdb-driver</code> on your application's classpath, and alter the connection string you
-                use to connect to your PostgreSQL database so it will use the QuantumDB database driver first, and
-                connect to a specific version of your database schema:</p>
-
-            <pre class="code"><code>jdbc:quantumdb:postgresql://localhost:5432/&lt;database&gt;?version=&lt;schemaVersion&gt;</code></pre>
+			<div class="alert alert-info">
+				<i class="glyphicon glyphicon-info-sign"></i>
+				<p>
+					Please note that before dropping a database schema, QuantumDB will first ensure no client is still
+					using it. If there is a client that is still using the specified database schema version through
+					the QuantumDB driver, it will not perform the operation.
+				</p>
+			</div>
         </section>
     </div>
 </div>

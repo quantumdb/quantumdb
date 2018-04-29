@@ -2,10 +2,55 @@
 layout: default
 ---
 
+<div class="content row">
+    <section class="col-md-10 col-md-offset-1">
+        <h1>What is QuantumDB?</h1>
+        <p>
+            Performing schema migrations in SQL databases in any production environments is full of risks. Altering
+            a table that's subject to any read or write operations can severely impact the performance of your
+            application. As we know from previous research, (certain) <i>Data Definition Language</i> operations
+            (red. schema operations) require specific locks on the table they're affecting. These locks in turn prevent
+            your application from accessing these tables, which can make your application unresponsive for the duration
+            of the schema operation. QuantumDB is here to address this problem:
+        </p>
 
-<div class="hero">
-    <div class="container">
-        <h1>Zero-downtime</h1>
-        <h3>database schema migrations</h3>
-    </div>
+        <p>QuantumDB is a tool designed execute database schema migrations on SQL databases with zero-downtime.</p>
+        <ul>
+            <li>
+                Like many other schema migration tools, QuantumDB treats the structure of existing tables and
+                constraints as immutable. It simply creates new (ghost) tables whenever they're needed, copies data
+                between tables and keeps the data in sync. This way costly table locks are avoided during the migration
+                process.
+            </li>
+            <li>
+                QuantumDB employs a two step migration. This allows the developers and system administrators to decide
+                when to switch between database schemas, when (if need be) to roll back to the old database schema,
+                or when to commit to the new database schema.
+            </li>
+            <li>
+                Since QuantumDB exposes all active database schemas concurrently through the database, using
+                QuantumDB's JDBC driver, your application can elect on which version of the database schema it would
+                like to operate. This ensures you can run old and new versions of your application side-by-side on the
+                same database even when they require different database schemas to operate on.
+            </li>
+            <li>
+                And lastly, QuantumDB is the only database schema migration tool which fully embraces and supports
+                foreign key constraints. Where other tools temporarily disable these constraints during migrations,
+                or simply refuse to work, QuantumDB will plan and execute its migration accordingly, making sure
+                they're never violated, or disabled.
+            </li>
+        </ul>
+
+        <div class="home-buttons">
+            <a class="btn btn-lg btn-default" href="/getting-started">
+                <pre class="terminal" style="height: 100px;">$ quantumdb ...</pre>
+                <p>Get started with QuantumDB</p>
+            </a>
+
+            <a class="btn btn-lg btn-default" href="/docs/master">
+                <img src="/assets/images/changelog.png" />
+                <p>See the documentation</p>
+            </a>
+        </div>
+    </section>
 </div>
