@@ -25,6 +25,7 @@ import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 import com.google.common.collect.Table.Cell;
 import com.google.common.primitives.Ints;
@@ -226,10 +227,10 @@ public class Backend {
 		Operations operations = new Operations();
 
 		try (Statement statement = connection.createStatement()) {
-			String query = "SELECT * FROM quantumdb_changelog;";
-			String deleteQuery = "DELETE FROM quantumdb_changelog WHERE version_id = ?;";
-			String insertQuery = "INSERT INTO quantumdb_changelog (version_id, operation_type, operation, parent_version_id) VALUES (?, ?, ?, ?);";
-			String updateQuery = "UPDATE quantumdb_changelog SET operation_type = ?, operation = ?, parent_version_id = ? WHERE version_id = ?;";
+			String query = "SELECT * FROM quantumdb.changelog;";
+			String deleteQuery = "DELETE FROM quantumdb.changelog WHERE version_id = ?;";
+			String insertQuery = "INSERT INTO quantumdb.changelog (version_id, operation_type, operation, parent_version_id) VALUES (?, ?, ?, ?);";
+			String updateQuery = "UPDATE quantumdb.changelog SET operation_type = ?, operation = ?, parent_version_id = ? WHERE version_id = ?;";
 
 			ResultSet resultSet = statement.executeQuery(query);
 			while (resultSet.next()) {
@@ -328,10 +329,10 @@ public class Backend {
 		}
 
 		try (Statement statement = connection.createStatement()) {
-			String query = "SELECT * FROM quantumdb_changesets;";
-			String deleteQuery = "DELETE FROM quantumdb_changesets WHERE version_id = ?;";
-			String insertQuery = "INSERT INTO quantumdb_changesets (id, version_id, author, description, created) VALUES (?, ?, ?, ?, ?);";
-			String updateQuery = "UPDATE quantumdb_changesets SET author = ?, description = ?, created = ? WHERE version_id = ?;";
+			String query = "SELECT * FROM quantumdb.changesets;";
+			String deleteQuery = "DELETE FROM quantumdb.changesets WHERE version_id = ?;";
+			String insertQuery = "INSERT INTO quantumdb.changesets (id, version_id, author, description, created) VALUES (?, ?, ?, ?, ?);";
+			String updateQuery = "UPDATE quantumdb.changesets SET author = ?, description = ?, created = ? WHERE version_id = ?;";
 
 			ResultSet resultSet = statement.executeQuery(query);
 			while (resultSet.next()) {
@@ -391,9 +392,9 @@ public class Backend {
 				.collect(Collectors.toSet());
 
 		try (Statement statement = connection.createStatement()) {
-			String query = "SELECT * FROM quantumdb_tables ORDER BY table_id ASC;";
-			String deleteQuery = "DELETE FROM quantumdb_tables WHERE table_id = ?;";
-			String insertQuery = "INSERT INTO quantumdb_tables (table_id) VALUES (?);";
+			String query = "SELECT * FROM quantumdb.tables ORDER BY table_id ASC;";
+			String deleteQuery = "DELETE FROM quantumdb.tables WHERE table_id = ?;";
+			String insertQuery = "INSERT INTO quantumdb.tables (table_id) VALUES (?);";
 
 			ResultSet resultSet = statement.executeQuery(query);
 			while (resultSet.next()) {
@@ -451,9 +452,9 @@ public class Backend {
 		});
 
 		try (Statement statement = connection.createStatement()) {
-			String query = "SELECT * FROM quantumdb_table_versions ORDER BY table_id ASC;";
-			String deleteQuery = "DELETE FROM quantumdb_table_versions WHERE table_id = ? AND version_id = ?;";
-			String insertQuery = "INSERT INTO quantumdb_table_versions (table_id, version_id, table_name) VALUES (?, ?, ?);";
+			String query = "SELECT * FROM quantumdb.table_versions ORDER BY table_id ASC;";
+			String deleteQuery = "DELETE FROM quantumdb.table_versions WHERE table_id = ? AND version_id = ?;";
+			String insertQuery = "INSERT INTO quantumdb.table_versions (table_id, version_id, table_name) VALUES (?, ?, ?);";
 
 			ResultSet resultSet = statement.executeQuery(query);
 			while (resultSet.next()) {
@@ -510,9 +511,9 @@ public class Backend {
 
 		List<RawTableColumn> columns = Lists.newArrayList();
 		try (Statement statement = connection.createStatement()) {
-			String query = "SELECT * FROM quantumdb_table_columns ORDER BY id ASC;";
-			String deleteQuery = "DELETE FROM quantumdb_table_columns WHERE id = ?;";
-			String insertQuery = "INSERT INTO quantumdb_table_columns (table_id, column_name) VALUES (?, ?) RETURNING id;";
+			String query = "SELECT * FROM quantumdb.table_columns ORDER BY id ASC;";
+			String deleteQuery = "DELETE FROM quantumdb.table_columns WHERE id = ?;";
+			String insertQuery = "INSERT INTO quantumdb.table_columns (table_id, column_name) VALUES (?, ?) RETURNING id;";
 
 			ResultSet resultSet = statement.executeQuery(query);
 			while (resultSet.next()) {
@@ -592,9 +593,9 @@ public class Backend {
 
 		Map<Long, RawColumnMapping> results = Maps.newHashMap();
 		try (Statement statement = connection.createStatement()) {
-			String query = "SELECT * FROM quantumdb_column_mappings;";
-			String deleteQuery = "DELETE FROM quantumdb_column_mappings WHERE id = ?;";
-			String insertQuery = "INSERT INTO quantumdb_column_mappings (source_column_id, target_column_id) VALUES (?, ?) RETURNING id;";
+			String query = "SELECT * FROM quantumdb.column_mappings;";
+			String deleteQuery = "DELETE FROM quantumdb.column_mappings WHERE id = ?;";
+			String insertQuery = "INSERT INTO quantumdb.column_mappings (source_column_id, target_column_id) VALUES (?, ?) RETURNING id;";
 
 			ResultSet resultSet = statement.executeQuery(query);
 			while (resultSet.next()) {
@@ -653,10 +654,10 @@ public class Backend {
 
 		Map<Long, SyncRef> mapping = Maps.newHashMap();
 		try (Statement statement = connection.createStatement()) {
-			String query = "SELECT * FROM quantumdb_synchronizers;";
-			String deleteQuery = "DELETE FROM quantumdb_synchronizers WHERE id = ?;";
-			String insertQuery = "INSERT INTO quantumdb_synchronizers (source_table_id, target_table_id, trigger_name, function_name) VALUES (?, ?, ?, ?) RETURNING id;";
-			String updateQuery = "UPDATE quantumdb_synchronizers SET trigger_name = ?, function_name = ? WHERE id = ?;";
+			String query = "SELECT * FROM quantumdb.synchronizers;";
+			String deleteQuery = "DELETE FROM quantumdb.synchronizers WHERE id = ?;";
+			String insertQuery = "INSERT INTO quantumdb.synchronizers (source_table_id, target_table_id, trigger_name, function_name) VALUES (?, ?, ?, ?) RETURNING id;";
+			String updateQuery = "UPDATE quantumdb.synchronizers SET trigger_name = ?, function_name = ? WHERE id = ?;";
 
 			ResultSet resultSet = statement.executeQuery(query);
 			while (resultSet.next()) {
@@ -727,9 +728,9 @@ public class Backend {
 		});
 
 		try (Statement statement = connection.createStatement()) {
-			String query = "SELECT * FROM quantumdb_synchronizer_columns;";
-			String deleteQuery = "DELETE FROM quantumdb_synchronizer_columns WHERE synchronizer_id = ? AND column_mapping = ?;";
-			String insertQuery = "INSERT INTO quantumdb_synchronizer_columns (synchronizer_id, column_mapping_id) VALUES (?, ?);";
+			String query = "SELECT * FROM quantumdb.synchronizer_columns;";
+			String deleteQuery = "DELETE FROM quantumdb.synchronizer_columns WHERE synchronizer_id = ? AND column_mapping = ?;";
+			String insertQuery = "INSERT INTO quantumdb.synchronizer_columns (synchronizer_id, column_mapping_id) VALUES (?, ?);";
 
 			ResultSet resultSet = statement.executeQuery(query);
 			while (resultSet.next()) {
@@ -767,9 +768,9 @@ public class Backend {
 
 	private void persistActiveVersions(Connection connection, RefLog refLog) throws SQLException {
 		try (Statement statement = connection.createStatement()) {
-			String query = "SELECT * FROM quantumdb_active_versions;";
-			String deleteQuery = "DELETE FROM quantumdb_active_versions WHERE version_id = ?;";
-			String insertQuery = "INSERT INTO quantumdb_active_versions (version_id) VALUES (?);";
+			String query = "SELECT * FROM quantumdb.active_versions;";
+			String deleteQuery = "DELETE FROM quantumdb.active_versions WHERE version_id = ?;";
+			String insertQuery = "INSERT INTO quantumdb.active_versions (version_id) VALUES (?);";
 
 			ResultSet resultSet = statement.executeQuery(query);
 			Set<String> versions = refLog.getVersions().stream()
@@ -855,7 +856,7 @@ public class Backend {
 		RawChangelogEntry root = null;
 		Multimap<String, RawChangelogEntry> entries = HashMultimap.create();
 		try (Statement statement = connection.createStatement()) {
-			String query = "SELECT * FROM quantumdb_changelog;";
+			String query = "SELECT * FROM quantumdb.changelog;";
 			ResultSet resultSet = statement.executeQuery(query);
 			while (resultSet.next()) {
 				String versionId = resultSet.getString("version_id");
@@ -897,7 +898,7 @@ public class Backend {
 
 		Map<String, RawChangeSet> changeSets = Maps.newHashMap();
 		try (Statement statement = connection.createStatement()) {
-			String query = "SELECT * FROM quantumdb_changesets;";
+			String query = "SELECT * FROM quantumdb.changesets;";
 			ResultSet resultSet = statement.executeQuery(query);
 			while (resultSet.next()) {
 				String id = resultSet.getString("id");
@@ -926,7 +927,7 @@ public class Backend {
 	private Map<String, TableId> listTableIds(Connection connection) throws SQLException {
 		Map<String, TableId> tableIds = Maps.newHashMap();
 		try (Statement statement = connection.createStatement()) {
-			ResultSet resultSet = statement.executeQuery("SELECT * FROM quantumdb_tables ORDER BY table_id ASC;");
+			ResultSet resultSet = statement.executeQuery("SELECT * FROM quantumdb.tables ORDER BY table_id ASC;");
 			while (resultSet.next()) {
 				String tableId = resultSet.getString("table_id");
 				tableIds.put(tableId, new TableId(tableId));
@@ -938,7 +939,7 @@ public class Backend {
 	private Table<TableId, Version, String> listTableVersions(Connection connection, Map<String, TableId> tableIds, Changelog changelog) throws SQLException {
 		Table<TableId, Version, String> mapping = HashBasedTable.create();
 		try (Statement statement = connection.createStatement()) {
-			ResultSet resultSet = statement.executeQuery("SELECT * FROM quantumdb_table_versions ORDER BY table_id ASC;");
+			ResultSet resultSet = statement.executeQuery("SELECT * FROM quantumdb.table_versions ORDER BY table_id ASC;");
 			while (resultSet.next()) {
 				String tableId = resultSet.getString("table_id");
 				String tableName = resultSet.getString("table_name");
@@ -954,7 +955,7 @@ public class Backend {
 	private List<TableColumn> listTableColumns(Connection connection, Map<String, TableId> tableIds) throws SQLException {
 		List<TableColumn> results = Lists.newArrayList();
 		try (Statement statement = connection.createStatement()) {
-			ResultSet resultSet = statement.executeQuery("SELECT * FROM quantumdb_table_columns ORDER BY id ASC;");
+			ResultSet resultSet = statement.executeQuery("SELECT * FROM quantumdb.table_columns ORDER BY id ASC;");
 			while (resultSet.next()) {
 				long id = resultSet.getLong("id");
 				String tableId = resultSet.getString("table_id");
@@ -972,7 +973,7 @@ public class Backend {
 
 		List<TableColumnMapping> results = Lists.newArrayList();
 		try (Statement statement = connection.createStatement()) {
-			ResultSet resultSet = statement.executeQuery("SELECT * FROM quantumdb_column_mappings;");
+			ResultSet resultSet = statement.executeQuery("SELECT * FROM quantumdb.column_mappings;");
 			while (resultSet.next()) {
 				long id = resultSet.getLong("id");
 				long sourceColumnId = resultSet.getLong("source_column_id");
@@ -991,7 +992,7 @@ public class Backend {
 
 		Multimap<Long, Long> syncColumnMappings = HashMultimap.create();
 		try (Statement statement = connection.createStatement()) {
-			String query = "SELECT * FROM quantumdb_synchronizer_columns;";
+			String query = "SELECT * FROM quantumdb.synchronizer_columns;";
 
 			ResultSet resultSet = statement.executeQuery(query);
 			while (resultSet.next()) {
@@ -1002,7 +1003,7 @@ public class Backend {
 		}
 
 		try (Statement statement = connection.createStatement()) {
-			String query = "SELECT * FROM quantumdb_synchronizers;";
+			String query = "SELECT * FROM quantumdb.synchronizers;";
 
 			ResultSet resultSet = statement.executeQuery(query);
 			while (resultSet.next()) {
@@ -1043,13 +1044,29 @@ public class Backend {
 
 	private void setActiveVersions(Connection connection, Changelog changelog, RefLog refLog) throws SQLException {
 		try (Statement statement = connection.createStatement()) {
-			String query = "SELECT * FROM quantumdb_active_versions;";
+			String query = "SELECT * FROM quantumdb.active_versions;";
 
+			Set<String> activeVersions = Sets.newHashSet();
 			ResultSet resultSet = statement.executeQuery(query);
 			while (resultSet.next()) {
 				String versionId = resultSet.getString("version_id");
-				Version version = changelog.getVersion(versionId);
-				refLog.setVersionState(version, true);
+				activeVersions.add(versionId);
+			}
+
+			Version pointer = changelog.getRoot();
+			while (pointer != null) {
+				String versionId = pointer.getId();
+				if (activeVersions.contains(versionId)) {
+					activeVersions.remove(versionId);
+					Version version = changelog.getVersion(versionId);
+					refLog.setVersionState(version, true);
+				}
+				pointer = pointer.getChild();
+			}
+
+			if (!activeVersions.isEmpty()) {
+				throw new IllegalStateException("There's are active versions defined which are not present or " +
+						"reachable in the changelog: " + activeVersions.stream().collect(Collectors.joining(",")));
 			}
 		}
 

@@ -57,10 +57,6 @@ class CatalogLoader {
 			ResultSet resultSet = statement.executeQuery();
 			while (resultSet.next()) {
 				String tableName = resultSet.getString("table_name");
-				if (tableName.startsWith("quantumdb_")) {
-					// Skip quantumdb related tables, since these are versioned internally...
-					continue;
-				}
 				tableNames.add(tableName);
 			}
 		}

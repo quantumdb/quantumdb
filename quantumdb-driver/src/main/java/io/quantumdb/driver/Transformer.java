@@ -21,7 +21,7 @@ class Transformer {
 		if (version != null && !version.isEmpty()) {
 			String query = new StringBuilder()
 					.append("SELECT table_id, table_name ")
-					.append("FROM quantumdb_table_versions ")
+					.append("FROM quantumdb.table_versions ")
 					.append("WHERE version_id = ?;")
 					.toString();
 
