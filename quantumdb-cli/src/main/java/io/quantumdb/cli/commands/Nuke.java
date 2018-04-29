@@ -24,10 +24,12 @@ public class Nuke extends Command {
 		Config config = Config.load();
 
 		Backend backend = config.getBackend();
+
 		try {
 			try (Connection connection = backend.connect()) {
-				QuantumTables.dropEverything(connection);
+				QuantumTables.dropEverything(connection, "public");
 			}
+			writer.write("Successfully dropped everything!", Context.SUCCESS);
 		}
 		catch (SQLException e) {
 			writer.write(e.getMessage(), Context.FAILURE);

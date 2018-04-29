@@ -5,6 +5,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 import io.quantumdb.core.backends.Config;
 import io.quantumdb.core.schema.definitions.Catalog;
@@ -86,7 +87,11 @@ public class PostgresqlBackend implements io.quantumdb.core.backends.Backend {
 	@SneakyThrows(ClassNotFoundException.class)
 	public Connection connect() throws SQLException {
 		Class.forName(driver);
-		return DriverManager.getConnection(jdbcUrl + "/" + jdbcCatalog, jdbcUser, jdbcPass);
+		Connection connection = DriverManager.getConnection(jdbcUrl + "/" + jdbcCatalog, jdbcUser, jdbcPass);
+		try (Statement statement = connection.createStatement()) {
+			statement.execute("SET SCHEMA 'public';");
+		}
+		return connection;
 	}
 
 }
