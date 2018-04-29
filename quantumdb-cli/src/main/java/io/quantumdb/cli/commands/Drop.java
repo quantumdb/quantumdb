@@ -32,7 +32,8 @@ public class Drop extends Command {
 			State state = loadState(backend);
 			Changelog changelog = state.getChangelog();
 
-			Version version = changelog.getVersion(arguments.remove(0));
+			String versionId = arguments.remove(0);
+			Version version = changelog.getVersion(versionId);
 
 			writer.write("Checking how many clients are still connected to: " + version.getId());
 			int count = backend.countClientsConnectedToVersion(version);

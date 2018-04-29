@@ -49,6 +49,7 @@ public class PostgresTypes {
 				return PostgresTypes.text();
 			case "timestamp with time zone":
 				return PostgresTypes.timestamp(true);
+			case "timestamp":
 			case "timestamp without time zone":
 				return PostgresTypes.timestamp(false);
 			case "date":

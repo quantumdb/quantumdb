@@ -26,18 +26,14 @@ public class Init extends Command {
 
 	public void perform(CliWriter writer, List<String> arguments) {
 		try {
-			Config config;
-			if (arguments.isEmpty()) {
-				config = Config.load();
-			}
-			else {
-				String url = arguments.isEmpty() ? "" : arguments.remove(0);
-				String catalogName = arguments.isEmpty() ? "" : arguments.remove(0);
-				String user = arguments.isEmpty() ? "" : arguments.remove(0);
-				String pass = arguments.isEmpty() ? "" : arguments.remove(0);
+			Config config = Config.load();
+			if (!arguments.isEmpty()) {
+				String hosts = getArgument(arguments, "host", String.class, () -> "localhost:5432");
+				String catalogName = getArgument(arguments, "database", String.class);
+				String user = getArgument(arguments, "username", String.class);
+				String pass = getArgument(arguments, "password", String.class, null);
 
-				config = new Config();
-				config.setUrl(url);
+				config.setUrl("jdbc:postgresql://" + hosts + "/" + catalogName + "?targetServerType=master\"");
 				config.setCatalog(catalogName);
 				config.setUser(user);
 				config.setPassword(pass);
@@ -75,7 +71,7 @@ public class Init extends Command {
 		}
 	}
 
-	private String getDatabaseVendor(Backend backend) throws CliException {
+	private String getDatabaseVendor(Backend backend) {
 		try (Connection connection = backend.connect()) {
 			DatabaseMetaData metaData = connection.getMetaData();
 			return metaData.getDatabaseProductName() + " " + metaData.getDatabaseProductVersion();

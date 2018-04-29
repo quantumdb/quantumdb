@@ -33,8 +33,8 @@ public class Fork extends Command {
 			State state = loadState(backend);
 			Changelog changelog = state.getChangelog();
 
-			Version to = changelog.getVersion(arguments.remove(0));
 			Version from = getOriginVersion(arguments, state, changelog);
+			Version to = changelog.getVersion(arguments.remove(0));
 
 			writer.write("Forking database from: " + from.getId() + " to: " + to.getId() + "...");
 
@@ -50,19 +50,20 @@ public class Fork extends Command {
 		}
 	}
 
-	private Version getOriginVersion(List<String> arguments, State state, Changelog changelog) throws CliException {
-		if (arguments.isEmpty()) {
+	private Version getOriginVersion(List<String> arguments, State state, Changelog changelog) {
+		String versionId = getArgument(arguments, "from", String.class, () -> {
 			List<Version> versions = Lists.newArrayList(state.getRefLog().getVersions());
 			if (versions.isEmpty()) {
 				versions.add(changelog.getRoot());
 			}
 
 			if (versions.size() == 1) {
-				return versions.get(0);
+				return versions.get(0).getId();
 			}
 			throw new CliException("You must specify a version to fork from!");
-		}
-		return changelog.getVersion(arguments.remove(0));
+		});
+
+		return changelog.getVersion(versionId);
 	}
 
 }
