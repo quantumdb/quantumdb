@@ -376,7 +376,7 @@ public class RefLog {
 	 */
 	public RefLog() {
 		this.tables = LinkedHashMultimap.create();
-		this.activeVersions = Sets.newHashSet();
+		this.activeVersions = Sets.newLinkedHashSet();
 	}
 
 	/**

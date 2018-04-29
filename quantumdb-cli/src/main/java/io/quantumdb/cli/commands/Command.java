@@ -4,9 +4,8 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.Map;
+import java.util.function.Supplier;
 
-import com.google.common.collect.Maps;
 import io.quantumdb.cli.utils.CliException;
 import io.quantumdb.cli.utils.CliWriter;
 import io.quantumdb.cli.utils.CliWriter.Context;
@@ -35,13 +34,9 @@ public abstract class Command {
 
 	public abstract Identifier getIdentifier();
 
-	public Map<String, String> listArgumentDescriptions() {
-		return Maps.newLinkedHashMap();
-	}
-
 	public abstract void perform(CliWriter writer, List<String> arguments) throws IOException;
 
-	void persistChanges(Backend backend, State state) throws CliException {
+	void persistChanges(Backend backend, State state) {
 		try {
 			backend.persistState(state);
 		}
@@ -51,7 +46,7 @@ public abstract class Command {
 		}
 	}
 
-	State loadState(Backend backend) throws CliException {
+	State loadState(Backend backend) {
 		try {
 			State state = backend.loadState();
 			if (new File("changelog.xml").exists()) {
@@ -89,14 +84,23 @@ public abstract class Command {
 		}
 
 		writer.indent(-1);
+		writer.newLine();
 	}
 
-	<T> T getArgument(List<String> arguments, String key, Class<T> type, T defaultValue) {
+	<T> T getArgument(List<String> arguments, String key, Class<T> type) {
+		return getArgument(arguments, key, type, () -> {
+			throw new IllegalArgumentException("You must specify a value for \"" + key + "\"");
+		});
+	}
+
+	<T> T getArgument(List<String> arguments, String key, Class<T> type, Supplier<T> defaultValue) {
 		String prefix = "--" + key + "=";
 		String boolKey = "--" + key;
 
-		for (String argument : arguments) {
+		for (int i = 0; i < arguments.size(); i++) {
+			String argument = arguments.get(i);
 			if (argument.startsWith(prefix)) {
+				arguments.remove(i);
 				String value = argument.substring(prefix.length());
 
 				if (type.equals(int.class) || Integer.class.isAssignableFrom(type)) {
@@ -119,12 +123,18 @@ public abstract class Command {
 				}
 			}
 			else if (argument.equals(boolKey)) {
+				arguments.remove(i);
 				if (type.equals(boolean.class) || Boolean.class.isAssignableFrom(type)) {
 					return (T) (Boolean) true;
 				}
 			}
 		}
-		return defaultValue;
+
+		if (defaultValue == null) {
+			return null;
+		}
+
+		return defaultValue.get();
 	}
 
 }

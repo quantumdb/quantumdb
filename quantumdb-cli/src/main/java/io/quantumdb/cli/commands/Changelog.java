@@ -29,8 +29,8 @@ public class Changelog extends Command {
 		try {
 			String from = getArgument(arguments, "from", String.class, null);
 			String until = getArgument(arguments, "until", String.class, null);
-			Integer limit = getArgument(arguments, "limit", Integer.class, Integer.MAX_VALUE);
-			boolean printShort = getArgument(arguments, "short", Boolean.class, false);
+			Integer limit = getArgument(arguments, "limit", Integer.class, () -> Integer.MAX_VALUE);
+			boolean printShort = getArgument(arguments, "short", Boolean.class, () -> false);
 
 			Config config = Config.load();
 			Backend backend = config.getBackend();
@@ -65,6 +65,8 @@ public class Changelog extends Command {
 					versions.add(version.getChild());
 				}
 			}
+
+			persistChanges(backend, state);
 		}
 		catch (IOException | CliException e) {
 			writer.write(e.getMessage(), Context.FAILURE);
@@ -72,18 +74,16 @@ public class Changelog extends Command {
 	}
 
 	private void print(CliWriter writer, ChangeSet changeSet, Set<Version> activeVersions, boolean printShort) {
-		boolean active = false;
-		Version lastVersion = null;
-		int operations = 0;
-
 		Version pointer = changeSet.getVersion();
+		Version lastVersion = pointer;
+		boolean active = activeVersions.contains(pointer);
+
+		int operations = 0;
 		while (pointer != null && changeSet.equals(pointer.getChangeSet())) {
 			if (pointer.getOperation() != null) {
 				operations++;
 			}
-			active = activeVersions.contains(pointer);
-			lastVersion = pointer;
-			pointer = pointer.getChild();
+			pointer = pointer.getParent();
 		}
 
 		String id = lastVersion.getId();
@@ -91,10 +91,6 @@ public class Changelog extends Command {
 			id += " (active)";
 		}
 		id += " - " + changeSet.getId();
-
-		if (!printShort) {
-			writer.newLine();
-		}
 
 		writer.setIndent(0);
 		writer.write(id, Context.SUCCESS);
@@ -114,6 +110,8 @@ public class Changelog extends Command {
 			if (!Strings.isNullOrEmpty(changeSet.getDescription())) {
 				writer.write("Description: " + changeSet.getDescription(), Context.INFO);
 			}
+
+			writer.newLine();
 		}
 	}
 

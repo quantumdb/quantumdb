@@ -18,6 +18,8 @@ public class CliWriter {
 
 	private final Terminal terminal;
 	private final ConsoleReader reader;
+
+	private boolean enableBold = true;
 	private int indent = 0;
 
 	public CliWriter() {
@@ -34,6 +36,11 @@ public class CliWriter {
 
 	public void close() {
 		Terminal.resetTerminal();
+	}
+
+	public CliWriter enableBold(boolean enableBold) {
+		this.enableBold = enableBold;
+		return this;
 	}
 
 	public CliWriter indent(int delta) {
@@ -70,7 +77,14 @@ public class CliWriter {
 			message = Strings.repeat("  ", indent) + marker + message;
 		}
 		if (indent <= 0) {
-			message = new ANSIBuffer().bold(message).toString();
+			ANSIBuffer buffer = new ANSIBuffer();
+			if (enableBold) {
+				buffer.bold(message);
+			}
+			else {
+				buffer.append(message);
+			}
+			message = buffer.toString();
 		}
 
 		switch (context) {

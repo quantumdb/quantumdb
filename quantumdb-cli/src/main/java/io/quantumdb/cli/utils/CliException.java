@@ -1,6 +1,6 @@
 package io.quantumdb.cli.utils;
 
-public class CliException extends Exception {
+public class CliException extends RuntimeException {
 
 	public CliException(String message) {
 		super(message);
