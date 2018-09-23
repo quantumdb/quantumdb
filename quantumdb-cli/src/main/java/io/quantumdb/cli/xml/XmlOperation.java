@@ -28,6 +28,10 @@ public interface XmlOperation<T extends Operation> {
 				return XmlAddForeignKey.convert(element);
 			case XmlDropForeignKey.TAG:
 				return XmlDropForeignKey.convert(element);
+			case XmlCreateView.TAG:
+				return XmlCreateView.convert(element);
+			case XmlDropView.TAG:
+				return XmlDropView.convert(element);
 			case XmlCreateIndex.TAG:
 				return XmlCreateIndex.convert(element);
 			case XmlDropIndex.TAG:

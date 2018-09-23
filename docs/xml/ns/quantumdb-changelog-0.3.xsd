@@ -44,6 +44,9 @@
 					<xsd:element ref="createIndex" />
 					<xsd:element ref="dropIndex" />
 
+					<xsd:element ref="createView" />
+					<xsd:element ref="dropView" />
+
 					<xsd:element ref="createForeignKey" />
 					<xsd:element ref="dropForeignKey" />
 
@@ -156,6 +159,23 @@
 		<xsd:complexType>
 			<xsd:attribute name="tableName" type="xsd:string" use="required" />
 			<xsd:attribute name="foreignKeyName" type="xsd:string" use="required" />
+		</xsd:complexType>
+	</xsd:element>
+
+	<xsd:element name="createView">
+		<xsd:complexType>
+			<xsd:sequence minOccurs="1" maxOccurs="1">
+				<xsd:element ref="sql" />
+			</xsd:sequence>
+			<xsd:attribute name="viewName" type="xsd:string" use="required" />
+			<xsd:attribute name="temporary" type="xsd:boolean" />
+			<xsd:attribute name="recursive" type="xsd:boolean" />
+		</xsd:complexType>
+	</xsd:element>
+
+	<xsd:element name="dropView">
+		<xsd:complexType>
+			<xsd:attribute name="viewName" type="xsd:string" use="required" />
 		</xsd:complexType>
 	</xsd:element>
 
