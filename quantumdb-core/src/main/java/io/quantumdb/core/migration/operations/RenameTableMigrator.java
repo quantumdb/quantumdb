@@ -15,7 +15,7 @@ public class RenameTableMigrator implements SchemaOperationMigrator<RenameTable>
 	public void migrate(Catalog catalog, RefLog refLog, Version version, RenameTable operation) {
 		refLog.fork(version);
 		TableRef tableRef = refLog.getTableRef(version, operation.getTableName());
-		TableRef ghost = tableRef.ghost(tableRef.getTableId(), version);
+		TableRef ghost = tableRef.ghost(tableRef.getRefId(), version);
 		ghost.rename(operation.getNewTableName());
 	}
 

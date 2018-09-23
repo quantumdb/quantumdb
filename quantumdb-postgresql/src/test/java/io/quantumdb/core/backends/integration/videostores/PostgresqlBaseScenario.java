@@ -149,25 +149,25 @@ public class PostgresqlBaseScenario extends PostgresqlDatabase {
 		catalog = state.getCatalog();
 		refLog = state.getRefLog();
 
-		Map<String, String> tableIds = Maps.newHashMap();
-		tableIds.put("stores", STORES_ID);
-		tableIds.put("staff", STAFF_ID);
-		tableIds.put("customers", CUSTOMERS_ID);
-		tableIds.put("films", FILMS_ID);
-		tableIds.put("inventory", INVENTORY_ID);
-		tableIds.put("paychecks", PAYCHECKS_ID);
-		tableIds.put("payments", PAYMENTS_ID);
-		tableIds.put("rentals", RENTALS_ID);
+		Map<String, String> refIds = Maps.newHashMap();
+		refIds.put("stores", STORES_ID);
+		refIds.put("staff", STAFF_ID);
+		refIds.put("customers", CUSTOMERS_ID);
+		refIds.put("films", FILMS_ID);
+		refIds.put("inventory", INVENTORY_ID);
+		refIds.put("paychecks", PAYCHECKS_ID);
+		refIds.put("payments", PAYMENTS_ID);
+		refIds.put("rentals", RENTALS_ID);
 
-		tableIds.entrySet().forEach(entry -> {
+		refIds.entrySet().forEach(entry -> {
 			String tableName = entry.getKey();
-			String tableId = entry.getValue();
-			Table table = catalog.getTable(tableId);
+			String refId = entry.getValue();
+			Table table = catalog.getTable(refId);
 			List<ColumnRef> columns = table.getColumns().stream()
 					.map(column -> new ColumnRef(column.getName()))
 					.collect(Collectors.toList());
 
-			refLog.addTable(tableName, tableId, changelog.getRoot(), columns);
+			refLog.addTable(tableName, refId, changelog.getRoot(), columns);
 		});
 
 		backend.persistState(state);

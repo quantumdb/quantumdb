@@ -19,8 +19,8 @@ class CreateIndexMigrator implements SchemaOperationMigrator<CreateIndex> {
 		TransitiveTableMirrorer.mirror(catalog, refLog, version, tableName);
 
 		TableRef tableRef = refLog.getTableRef(version, tableName);
-		String tableId = tableRef.getTableId();
-		Table table = catalog.getTable(tableId);
+		String refId = tableRef.getRefId();
+		Table table = catalog.getTable(refId);
 		table.addIndex(new Index(operation.getColumns(), operation.isUnique()));
 	}
 

@@ -61,7 +61,7 @@ public class AddForeignKeyMigratorTest {
 
 	private Table getGhostTable(Table table) {
 		TableRef tableRef = refLog.getTableRef(changelog.getLastAdded(), table.getName());
-		return catalog.getTable(tableRef.getTableId());
+		return catalog.getTable(tableRef.getRefId());
 	}
 
 }

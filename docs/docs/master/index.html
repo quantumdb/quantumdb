@@ -330,6 +330,28 @@ changelog.addChangeSet("track_users", "Michael de Jong",
                 same table, this operation will no longer be &quot;free&quot; and require the creation of a ghost
                 table during the migration.
             </p>
+
+            <h3>CREATE VIEW</h3>
+
+            <pre class="code"><code class="java">SchemaOperations.createView("admin_users")
+        .as("SELECT * FROM users WHERE admin = true");</code></pre>
+
+            <pre class="code"><code class="xml">&lt;createView viewName="admin_users"&gt;
+  &lt;sql&gt;SELECT * FROM users WHERE admin = true&lt;/sql&gt;
+&lt;/createView&gt;</code></pre>
+
+            <p>
+                This example will create a new <code>admin_users</code> view which executes the specified query on
+                the <code>users</code> table.
+            </p>
+
+            <h3>DROP VIEW</h3>
+
+            <pre class="code"><code class="java">SchemaOperations.dropView("admin_users");</code></pre>
+
+            <pre class="code"><code class="xml">&lt;dropView viewName="admin_users" /&gt;</code></pre>
+
+            <p>This example code drops the existing <code>admin_users</code> view from the database.</p>
         </section>
 
         <section id="dataoperations">

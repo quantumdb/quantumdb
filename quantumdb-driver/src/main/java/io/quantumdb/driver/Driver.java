@@ -93,8 +93,8 @@ public class Driver implements java.sql.Driver {
 		return delegate.getParentLogger();
 	}
 
-	public String getTableId(String tableName) {
-		return transformer.getTableId(tableName);
+	public String getRefId(String tableName) {
+		return transformer.getRefId(tableName);
 	}
 
 	private String parseVersion(String url) {

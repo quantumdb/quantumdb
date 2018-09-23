@@ -65,38 +65,38 @@ public class RenameCustomersTable {
 	public void verifyTableStructure() {
 		RefLog refLog = state.getRefLog();
 
-		Table stores = new Table(refLog.getTableRef(origin, "stores").getTableId())
+		Table stores = new Table(refLog.getTableRef(origin, "stores").getRefId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL))
 				.addColumn(new Column("manager_id", integer(), NOT_NULL));
 
-		Table staff = new Table(refLog.getTableRef(origin, "staff").getTableId())
+		Table staff = new Table(refLog.getTableRef(origin, "staff").getRefId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL))
 				.addColumn(new Column("store_id", integer(), NOT_NULL));
 
-		Table customers = new Table(refLog.getTableRef(origin, "customers").getTableId())
+		Table customers = new Table(refLog.getTableRef(origin, "customers").getRefId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL))
 				.addColumn(new Column("store_id", integer(), NOT_NULL))
 				.addColumn(new Column("referred_by", integer()));
 
-		Table films = new Table(refLog.getTableRef(origin, "films").getTableId())
+		Table films = new Table(refLog.getTableRef(origin, "films").getRefId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL));
 
-		Table inventory = new Table(refLog.getTableRef(origin, "inventory").getTableId())
+		Table inventory = new Table(refLog.getTableRef(origin, "inventory").getRefId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("store_id", integer(), NOT_NULL))
 				.addColumn(new Column("film_id", integer(), NOT_NULL));
 
-		Table paychecks = new Table(refLog.getTableRef(origin, "paychecks").getTableId())
+		Table paychecks = new Table(refLog.getTableRef(origin, "paychecks").getRefId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("staff_id", integer(), NOT_NULL))
 				.addColumn(new Column("date", date(), NOT_NULL))
 				.addColumn(new Column("amount", floats(), NOT_NULL));
 
-		Table payments = new Table(refLog.getTableRef(origin, "payments").getTableId())
+		Table payments = new Table(refLog.getTableRef(origin, "payments").getRefId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("staff_id", integer()))
 				.addColumn(new Column("customer_id", integer(), NOT_NULL))
@@ -104,7 +104,7 @@ public class RenameCustomersTable {
 				.addColumn(new Column("date", date(), NOT_NULL))
 				.addColumn(new Column("amount", floats(), NOT_NULL));
 
-		Table rentals = new Table(refLog.getTableRef(origin, "rentals").getTableId())
+		Table rentals = new Table(refLog.getTableRef(origin, "rentals").getRefId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("staff_id", integer()))
 				.addColumn(new Column("customer_id", integer(), NOT_NULL))
@@ -137,13 +137,13 @@ public class RenameCustomersTable {
 	public void verifyTableMappings() {
 		RefLog refLog = state.getRefLog();
 
-		Map<String, String> originTableIds = refLog.getTableRefs(origin).stream()
-				.collect(Collectors.toMap(TableRef::getTableId, TableRef::getName));
+		Map<String, String> originRefIds = refLog.getTableRefs(origin).stream()
+				.collect(Collectors.toMap(TableRef::getRefId, TableRef::getName));
 
-		Map<String, String> targetTableIds = refLog.getTableRefs(target).stream()
-				.collect(Collectors.toMap(TableRef::getTableId, TableRef::getName));
+		Map<String, String> targetRefIds = refLog.getTableRefs(target).stream()
+				.collect(Collectors.toMap(TableRef::getRefId, TableRef::getName));
 
-		Map<String, String> expectedOriginTableIds = ImmutableMap.<String, String>builder()
+		Map<String, String> expectedOriginRefIds = ImmutableMap.<String, String>builder()
 				.put(STORES_ID, "stores")
 				.put(STAFF_ID, "staff")
 				.put(CUSTOMERS_ID, "customers")
@@ -154,7 +154,7 @@ public class RenameCustomersTable {
 				.put(RENTALS_ID, "rentals")
 				.build();
 
-		Map<String, String>expectedTargetTableIds = ImmutableMap.<String, String>builder()
+		Map<String, String>expectedTargetRefIds = ImmutableMap.<String, String>builder()
 				.put(STORES_ID, "stores")
 				.put(STAFF_ID, "staff")
 				.put(CUSTOMERS_ID, "clients")
@@ -165,8 +165,8 @@ public class RenameCustomersTable {
 				.put(RENTALS_ID, "rentals")
 				.build();
 
-		assertEquals(expectedOriginTableIds, originTableIds);
-		assertEquals(expectedTargetTableIds, targetTableIds);
+		assertEquals(expectedOriginRefIds, originRefIds);
+		assertEquals(expectedTargetRefIds, targetRefIds);
 	}
 
 }

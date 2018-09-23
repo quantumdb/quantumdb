@@ -41,12 +41,12 @@ public class SchemaOperationMigratorTest {
 		Version current = changelog.getLastAdded();
 		migrator.migrate(current, (SchemaOperation) current.getOperation());
 
-		String tableId = refLog.getTableRef(current, "users").getTableId();
+		String refId = refLog.getTableRef(current, "users").getRefId();
 
-		Table expected = new Table(tableId)
+		Table expected = new Table(refId)
 				.addColumn(new Column("id", bigint(), NOT_NULL, AUTO_INCREMENT, IDENTITY));
 
-		assertEquals(expected, catalog.getTable(tableId));
+		assertEquals(expected, catalog.getTable(refId));
 	}
 
 }

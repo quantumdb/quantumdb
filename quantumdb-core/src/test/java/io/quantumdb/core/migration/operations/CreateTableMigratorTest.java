@@ -44,9 +44,9 @@ public class CreateTableMigratorTest {
 		migrator.migrate(catalog, refLog, changelog.getLastAdded(), operation);
 
 		TableRef tableRef = refLog.getTableRef(changelog.getLastAdded(), "users");
-		String tableId = tableRef.getTableId();
-		Table ghostTable = catalog.getTable(tableId);
-		Table expectedGhostTable = new Table(tableId)
+		String refId = tableRef.getRefId();
+		Table ghostTable = catalog.getTable(refId);
+		Table expectedGhostTable = new Table(refId)
 				.addColumn(new Column("id", integer(), IDENTITY, NOT_NULL, AUTO_INCREMENT))
 				.addColumn(new Column("name", varchar(255), NOT_NULL));
 

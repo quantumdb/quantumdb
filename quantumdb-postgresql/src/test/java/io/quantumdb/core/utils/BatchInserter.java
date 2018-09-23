@@ -11,16 +11,16 @@ import com.google.common.base.Preconditions;
 
 public class BatchInserter {
 
-	public static BatchInserter insertInto(Connection connection, String tableId, String... columnNames)
+	public static BatchInserter insertInto(Connection connection, String refId, String... columnNames)
 			throws SQLException {
 
-		return new BatchInserter(connection, tableId, columnNames);
+		return new BatchInserter(connection, refId, columnNames);
 	}
 
 	private final String[] columnNames;
 	private final PreparedStatement statement;
 
-	private BatchInserter(Connection connection, String tableId, String... columnNames) throws SQLException {
+	private BatchInserter(Connection connection, String refId, String... columnNames) throws SQLException {
 		this.columnNames = columnNames;
 
 		String parameters = Arrays.stream(columnNames)
@@ -30,7 +30,7 @@ public class BatchInserter {
 		String names = Arrays.stream(columnNames)
 				.collect(Collectors.joining(", "));
 
-		this.statement = connection.prepareStatement("INSERT INTO " + tableId + " (" + names + ") VALUES (" + parameters + ")");
+		this.statement = connection.prepareStatement("INSERT INTO " + refId + " (" + names + ") VALUES (" + parameters + ")");
 	}
 
 	public BatchInserter values(Object... values) throws SQLException {

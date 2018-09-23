@@ -20,23 +20,23 @@ class CopyTableMigrator implements SchemaOperationMigrator<CopyTable> {
 
 	@Override
 	public void migrate(Catalog catalog, RefLog refLog, Version version, CopyTable operation) {
-		String tableId = RandomHasher.generateTableId(refLog);
+		String refId = RandomHasher.generateRefId(refLog);
 		String sourceTableName = operation.getSourceTableName();
 		String targetTableName = operation.getTargetTableName();
 
 		refLog.fork(version);
 		TableRef sourceTableRef = refLog.getTableRef(version.getParent(), sourceTableName);
-		refLog.addTable(targetTableName, tableId, version, sourceTableRef.getColumns().entrySet().stream()
+		refLog.addTable(targetTableName, refId, version, sourceTableRef.getColumns().entrySet().stream()
 				.map(Entry::getValue)
 				.map(ColumnRef::ghost)
 				.collect(Collectors.toList()));
 
-		Table sourceTable = catalog.getTable(sourceTableRef.getTableId());
-		Table targetTable = sourceTable.copy().rename(tableId);
+		Table sourceTable = catalog.getTable(sourceTableRef.getRefId());
+		Table targetTable = sourceTable.copy().rename(refId);
 		for (ForeignKey foreignKey : sourceTable.getForeignKeys()) {
-			String referredTableId = foreignKey.getReferredTableName();
+			String referredRefId = foreignKey.getReferredTableName();
 
-			Table referredTable = catalog.getTable(referredTableId);
+			Table referredTable = catalog.getTable(referredRefId);
 			targetTable.addForeignKey(foreignKey.getReferencingColumns())
 					.named(foreignKey.getForeignKeyName())
 					.onUpdate(foreignKey.getOnUpdate())

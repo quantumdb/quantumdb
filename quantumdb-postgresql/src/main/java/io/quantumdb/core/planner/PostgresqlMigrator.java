@@ -22,6 +22,7 @@ import io.quantumdb.core.backends.planner.Operation;
 import io.quantumdb.core.backends.planner.Plan;
 import io.quantumdb.core.backends.planner.PlanValidator;
 import io.quantumdb.core.backends.planner.Step;
+import io.quantumdb.core.backends.postgresql.migrator.ViewCreator;
 import io.quantumdb.core.migration.Migrator.Stage;
 import io.quantumdb.core.migration.VersionTraverser.Direction;
 import io.quantumdb.core.schema.definitions.Catalog;
@@ -89,7 +90,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 
 		PostgresqlQueryRewriter rewriter = new PostgresqlQueryRewriter();
 		Map<String, String> mapping = refLog.getTableRefs(stage.getParent()).stream()
-				.collect(Collectors.toMap(TableRef::getName, TableRef::getTableId));
+				.collect(Collectors.toMap(TableRef::getName, TableRef::getRefId));
 		rewriter.setTableMapping(mapping);
 
 		try (Connection connection = backend.connect()) {
@@ -195,8 +196,8 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		connection.setAutoCommit(false);
 
 		for (TableRef table : tablesToDrop) {
-			String tableId = table.getTableId();
-			TableRef tableRef = refLog.getTableRefById(tableId);
+			String refId = table.getRefId();
+			TableRef tableRef = refLog.getTableRefById(refId);
 			Set<SyncRef> tableSyncs = Sets.newHashSet();
 			tableSyncs.addAll(tableRef.getInboundSyncs());
 			tableSyncs.addAll(tableRef.getOutboundSyncs());
@@ -212,14 +213,14 @@ class PostgresqlMigrator implements DatabaseMigrator {
 	private void dropSynchronizer(Connection connection, SyncRef sync) throws SQLException {
 		String triggerName = sync.getName();
 		String functionName = sync.getFunctionName();
-		String sourceTableId = sync.getSource().getTableId();
-		String targetTableId = sync.getTarget().getTableId();
+		String sourceRefId = sync.getSource().getRefId();
+		String targetRefId = sync.getTarget().getRefId();
 
 		try (Statement statement = connection.createStatement()) {
-			statement.execute("DROP TRIGGER " + triggerName + " ON " + sourceTableId + ";");
+			statement.execute("DROP TRIGGER " + triggerName + " ON " + sourceRefId + ";");
 			statement.execute("DROP FUNCTION " + functionName + "();");
 			sync.drop();
-			log.info("Dropped synchronizer: {}/{} for: {} -> {}", triggerName, functionName, sourceTableId, targetTableId);
+			log.info("Dropped synchronizer: {}/{} for: {} -> {}", triggerName, functionName, sourceRefId, targetRefId);
 		}
 	}
 
@@ -228,13 +229,13 @@ class PostgresqlMigrator implements DatabaseMigrator {
 
 		connection.setAutoCommit(false);
 
-		Set<String> tableIdsToDrop = tablesToDrop.stream()
-				.map(TableRef::getTableId)
+		Set<String> refIdsToDrop = tablesToDrop.stream()
+				.map(TableRef::getRefId)
 				.collect(Collectors.toSet());
 
 		for (TableRef tableRef : tablesToDrop) {
-			String tableId = tableRef.getTableId();
-			Table table = catalog.getTable(tableId);
+			String refId = tableRef.getRefId();
+			Table table = catalog.getTable(refId);
 
 			Set<Sequence> usedSequences = table.getColumns().stream()
 					.filter(column -> column.getSequence() != null)
@@ -242,7 +243,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 					.collect(Collectors.toSet());
 
 			Set<Table> tablesNotToBeDeleted = catalog.getTables().stream()
-					.filter(otherTable -> !tableIdsToDrop.contains(otherTable.getName()))
+					.filter(otherTable -> !refIdsToDrop.contains(otherTable.getName()))
 					.collect(Collectors.toSet());
 
 			for (Table otherTable : tablesNotToBeDeleted) {
@@ -268,7 +269,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 			}
 
 			try (Statement statement = connection.createStatement()) {
-				statement.execute("DROP TABLE " + tableId + " CASCADE;");
+				statement.execute("DROP TABLE " + refId + " CASCADE;");
 			}
 		}
 
@@ -328,6 +329,8 @@ class PostgresqlMigrator implements DatabaseMigrator {
 
 			refLog.setVersionState(to, true);
 
+			createViews(to);
+
 			persistState();
 		}
 
@@ -369,6 +372,16 @@ class PostgresqlMigrator implements DatabaseMigrator {
 			}
 		}
 
+		private void createViews(Version version) throws MigrationException {
+			try (Connection connection = backend.connect()) {
+				ViewCreator creator = new ViewCreator();
+				creator.create(connection, plan.getViews(), refLog, version);
+			}
+			catch (SQLException e) {
+				throw new MigrationException(e);
+			}
+		}
+
 		private void createGhostTables() throws MigrationException {
 			try (Connection connection = backend.connect()) {
 				TableCreator creator = new TableCreator();
@@ -395,7 +408,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 				Catalog catalog = state.getCatalog();
 				Multimap<TableRef, TableRef> tableMapping = state.getRefLog().getTableMapping(from, to);
 				for (Entry<TableRef, TableRef> entry : tableMapping.entries()) {
-					if (entry.getValue().getTableId().equals(targetTable.getName())) {
+					if (entry.getValue().getRefId().equals(targetTable.getName())) {
 						TableRef source = entry.getKey();
 						TableRef target = entry.getValue();
 						ensureSyncFunctionExists(connection, refLog, source, target, catalog, targetColumns);
@@ -410,9 +423,9 @@ class PostgresqlMigrator implements DatabaseMigrator {
 			Catalog catalog = state.getCatalog();
 			Multimap<TableRef, TableRef> tableMapping = state.getRefLog().getTableMapping(from, to);
 			for (Entry<TableRef, TableRef> entry : tableMapping.entries()) {
-				if (entry.getValue().getTableId().equals(targetTable.getName())) {
-					Table source = catalog.getTable(entry.getKey().getTableId());
-					Table target = catalog.getTable(entry.getValue().getTableId());
+				if (entry.getValue().getRefId().equals(targetTable.getName())) {
+					Table source = catalog.getTable(entry.getKey().getRefId());
+					Table target = catalog.getTable(entry.getValue().getRefId());
 					TableDataMigrator tableDataMigrator = new TableDataMigrator(backend, refLog);
 					tableDataMigrator.migrateData(nullRecords, source, target, from, to, migratedColumns, columnsToMigrate);
 				}
@@ -427,7 +440,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 				for (Entry<TableRef, TableRef> entry : tableMapping.entries()) {
 					TableRef target = entry.getKey();
 					TableRef source = entry.getValue();
-					Table targetTable = catalog.getTable(target.getTableId());
+					Table targetTable = catalog.getTable(target.getRefId());
 
 					Set<String> columns = targetTable.getColumns().stream()
 							.map(Column::getName)
@@ -445,20 +458,20 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		void ensureSyncFunctionExists(Connection connection, RefLog refLog, TableRef source,
 				TableRef target, Catalog catalog, Set<String> columns) throws SQLException {
 
-			String sourceTableId = source.getTableId();
-			String targetTableId = target.getTableId();
+			String sourceRefId = source.getRefId();
+			String targetRefId = target.getRefId();
 
-			SyncFunction syncFunction = syncFunctions.get(sourceTableId, targetTableId);
+			SyncFunction syncFunction = syncFunctions.get(sourceRefId, targetRefId);
 			if (syncFunction == null) {
 				Map<ColumnRef, ColumnRef> mapping = refLog.getColumnMapping(source, target);
 				syncFunction = new SyncFunction(refLog, source, target, mapping, catalog, nullRecords);
 				syncFunction.setColumnsToMigrate(columns);
-				syncFunctions.put(sourceTableId, targetTableId, syncFunction);
+				syncFunctions.put(sourceRefId, targetRefId, syncFunction);
 
-				log.info("Creating sync function: {} for table: {}", syncFunction.getFunctionName(), sourceTableId);
+				log.info("Creating sync function: {} for table: {}", syncFunction.getFunctionName(), sourceRefId);
 				PostgresqlMigrator.execute(connection, syncFunction.createFunctionStatement());
 
-				log.info("Creating trigger: {} for table: {}", syncFunction.getTriggerName(), sourceTableId);
+				log.info("Creating trigger: {} for table: {}", syncFunction.getTriggerName(), sourceRefId);
 				PostgresqlMigrator.execute(connection, syncFunction.createTriggerStatement());
 
 				Map<ColumnRef, ColumnRef> columnMapping = refLog.getColumnMapping(source, target);
@@ -467,10 +480,10 @@ class PostgresqlMigrator implements DatabaseMigrator {
 			else {
 				syncFunction.setColumnsToMigrate(columns);
 
-				log.info("Updating sync function: {} for table: {}", syncFunction.getFunctionName(), sourceTableId);
+				log.info("Updating sync function: {} for table: {}", syncFunction.getFunctionName(), sourceRefId);
 				PostgresqlMigrator.execute(connection, syncFunction.createFunctionStatement());
 
-				TableRef sourceTable = refLog.getTableRefById(sourceTableId);
+				TableRef sourceTable = refLog.getTableRefById(sourceRefId);
 				sourceTable.getOutboundSyncs().stream()
 						.filter(ref -> ref.getTarget().equals(target))
 						.forEach(ref -> refLog.getColumnMapping(source, target).forEach((from, to) -> {
@@ -481,7 +494,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 							}
 						}));
 
-				TableRef targetTable = refLog.getTableRefById(targetTableId);
+				TableRef targetTable = refLog.getTableRefById(targetRefId);
 				targetTable.getInboundSyncs().stream()
 						.filter(ref -> ref.getSource().equals(source))
 						.forEach(ref -> refLog.getColumnMapping(target, source).forEach((from, to) -> {

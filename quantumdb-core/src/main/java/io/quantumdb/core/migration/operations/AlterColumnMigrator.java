@@ -26,7 +26,7 @@ class AlterColumnMigrator implements SchemaOperationMigrator<AlterColumn> {
 		TransitiveTableMirrorer.mirror(catalog, refLog, version, tableName);
 
 		TableRef tableRef = refLog.getTableRef(version, tableName);
-		Table table = catalog.getTable(tableRef.getTableId());
+		Table table = catalog.getTable(tableRef.getRefId());
 		Column column = table.getColumn(operation.getColumnName());
 
 		operation.getNewColumnName().ifPresent(columnName -> {

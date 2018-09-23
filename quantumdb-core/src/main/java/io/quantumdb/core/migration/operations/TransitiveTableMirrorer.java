@@ -35,35 +35,35 @@ class TransitiveTableMirrorer {
 				continue;
 			}
 
-			String newTableId = RandomHasher.generateTableId(refLog);
-			Table table = catalog.getTable(tableRef.getTableId());
-			tableRef.ghost(newTableId, version);
-			catalog.addTable(table.copy().rename(newTableId));
+			String newRefId = RandomHasher.generateRefId(refLog);
+			Table table = catalog.getTable(tableRef.getRefId());
+			tableRef.ghost(newRefId, version);
+			catalog.addTable(table.copy().rename(newRefId));
 
 			mirrored.add(tableRef.getName());
 
 			// Traverse incoming foreign keys
-			Set<String> referencingTableIds = catalog.getTablesReferencingTable(tableRef.getTableId());
-			tablesToMirror.addAll(referencingTableIds.stream()
-					.map(tableId -> refLog.getTableRefById(tableId))
+			Set<String> referencingRefIds = catalog.getTablesReferencingTable(tableRef.getRefId());
+			tablesToMirror.addAll(referencingRefIds.stream()
+					.map(refId -> refLog.getTableRefById(refId))
 					.collect(Collectors.toList()));
 		}
 
 		// Copying foreign keys for each affected table.
 		for(String tableName : mirrored) {
-			String oldTableId = refLog.getTableRef(parentVersion, tableName).getTableId();
-			String newTableId = refLog.getTableRef(version, tableName).getTableId();
+			String oldRefId = refLog.getTableRef(parentVersion, tableName).getRefId();
+			String newRefId = refLog.getTableRef(version, tableName).getRefId();
 
-			Table oldTable = catalog.getTable(oldTableId);
-			Table newTable = catalog.getTable(newTableId);
+			Table oldTable = catalog.getTable(oldRefId);
+			Table newTable = catalog.getTable(newRefId);
 
 			List<ForeignKey> outgoingForeignKeys = Lists.newArrayList(oldTable.getForeignKeys());
 			for (ForeignKey foreignKey : outgoingForeignKeys) {
-				String oldReferredTableId = foreignKey.getReferredTableName();
-				String oldReferredTableName = refLog.getTableRefById(oldReferredTableId).getName();
-				String newReferredTableId = refLog.getTableRef(version, oldReferredTableName).getTableId();
+				String oldReferredRefId = foreignKey.getReferredTableName();
+				String oldReferredTableName = refLog.getTableRefById(oldReferredRefId).getName();
+				String newReferredRefId = refLog.getTableRef(version, oldReferredTableName).getRefId();
 
-				Table newReferredTable = catalog.getTable(newReferredTableId);
+				Table newReferredTable = catalog.getTable(newReferredRefId);
 				newTable.addForeignKey(foreignKey.getReferencingColumns())
 						.named(foreignKey.getForeignKeyName())
 						.onUpdate(foreignKey.getOnUpdate())

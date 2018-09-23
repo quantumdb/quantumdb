@@ -62,8 +62,8 @@ public class DropColumnMigratorTest {
 
 	private Table getGhostTable(Table table) {
 		TableRef tableRef = refLog.getTableRef(changelog.getLastAdded(), table.getName());
-		String tableId = tableRef.getTableId();
-		return catalog.getTable(tableId);
+		String refId = tableRef.getRefId();
+		return catalog.getTable(refId);
 	}
 
 }

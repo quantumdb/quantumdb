@@ -19,7 +19,7 @@ class DropForeignKeyMigrator implements SchemaOperationMigrator<DropForeignKey> 
 		TransitiveTableMirrorer.mirror(catalog, refLog, version, tableName);
 
 		TableRef tableRef = refLog.getTableRef(version, tableName);
-		Table table = catalog.getTable(tableRef.getTableId());
+		Table table = catalog.getTable(tableRef.getRefId());
 
 		ForeignKey matchedForeignKey = table.getForeignKeys().stream()
 				.filter(foreignKey -> foreignKey.getForeignKeyName().equals(operation.getForeignKeyName()))

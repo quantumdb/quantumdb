@@ -66,38 +66,38 @@ public class ModifyTypeInPaymentsTable {
 
 		// Original tables and foreign keys.
 
-		Table stores = new Table(refLog.getTableRef(origin, "stores").getTableId())
+		Table stores = new Table(refLog.getTableRef(origin, "stores").getRefId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL))
 				.addColumn(new Column("manager_id", integer(), NOT_NULL));
 
-		Table staff = new Table(refLog.getTableRef(origin, "staff").getTableId())
+		Table staff = new Table(refLog.getTableRef(origin, "staff").getRefId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL))
 				.addColumn(new Column("store_id", integer(), NOT_NULL));
 
-		Table customers = new Table(refLog.getTableRef(origin, "customers").getTableId())
+		Table customers = new Table(refLog.getTableRef(origin, "customers").getRefId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL))
 				.addColumn(new Column("store_id", integer(), NOT_NULL))
 				.addColumn(new Column("referred_by", integer()));
 
-		Table films = new Table(refLog.getTableRef(origin, "films").getTableId())
+		Table films = new Table(refLog.getTableRef(origin, "films").getRefId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL));
 
-		Table inventory = new Table(refLog.getTableRef(origin, "inventory").getTableId())
+		Table inventory = new Table(refLog.getTableRef(origin, "inventory").getRefId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("store_id", integer(), NOT_NULL))
 				.addColumn(new Column("film_id", integer(), NOT_NULL));
 
-		Table paychecks = new Table(refLog.getTableRef(origin, "paychecks").getTableId())
+		Table paychecks = new Table(refLog.getTableRef(origin, "paychecks").getRefId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("staff_id", integer(), NOT_NULL))
 				.addColumn(new Column("date", date(), NOT_NULL))
 				.addColumn(new Column("amount", floats(), NOT_NULL));
 
-		Table payments = new Table(refLog.getTableRef(origin, "payments").getTableId())
+		Table payments = new Table(refLog.getTableRef(origin, "payments").getRefId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("staff_id", integer()))
 				.addColumn(new Column("customer_id", integer(), NOT_NULL))
@@ -105,7 +105,7 @@ public class ModifyTypeInPaymentsTable {
 				.addColumn(new Column("date", date(), NOT_NULL))
 				.addColumn(new Column("amount", floats(), NOT_NULL));
 
-		Table rentals = new Table(refLog.getTableRef(origin, "rentals").getTableId())
+		Table rentals = new Table(refLog.getTableRef(origin, "rentals").getRefId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("staff_id", integer()))
 				.addColumn(new Column("customer_id", integer(), NOT_NULL))
@@ -128,7 +128,7 @@ public class ModifyTypeInPaymentsTable {
 
 		// New tables and foreign keys.
 
-		Table newPayments = new Table(refLog.getTableRef(target, "payments").getTableId())
+		Table newPayments = new Table(refLog.getTableRef(target, "payments").getRefId())
 				.addColumn(new Column("id", integer(), payments.getColumn("id").getSequence(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("staff_id", integer()))
 				.addColumn(new Column("customer_id", integer(), NOT_NULL))
@@ -154,16 +154,16 @@ public class ModifyTypeInPaymentsTable {
 		RefLog refLog = state.getRefLog();
 
 		// Unchanged tables
-		assertEquals(STORES_ID, refLog.getTableRef(target, "stores").getTableId());
-		assertEquals(STAFF_ID, refLog.getTableRef(target, "staff").getTableId());
-		assertEquals(CUSTOMERS_ID, refLog.getTableRef(target, "customers").getTableId());
-		assertEquals(PAYCHECKS_ID, refLog.getTableRef(target, "paychecks").getTableId());
-		assertEquals(FILMS_ID, refLog.getTableRef(target, "films").getTableId());
-		assertEquals(INVENTORY_ID, refLog.getTableRef(target, "inventory").getTableId());
-		assertEquals(RENTALS_ID, refLog.getTableRef(target, "rentals").getTableId());
+		assertEquals(STORES_ID, refLog.getTableRef(target, "stores").getRefId());
+		assertEquals(STAFF_ID, refLog.getTableRef(target, "staff").getRefId());
+		assertEquals(CUSTOMERS_ID, refLog.getTableRef(target, "customers").getRefId());
+		assertEquals(PAYCHECKS_ID, refLog.getTableRef(target, "paychecks").getRefId());
+		assertEquals(FILMS_ID, refLog.getTableRef(target, "films").getRefId());
+		assertEquals(INVENTORY_ID, refLog.getTableRef(target, "inventory").getRefId());
+		assertEquals(RENTALS_ID, refLog.getTableRef(target, "rentals").getRefId());
 
 		// Ghosted tables
-		assertNotEquals(PAYMENTS_ID, refLog.getTableRef(target, "payments").getTableId());
+		assertNotEquals(PAYMENTS_ID, refLog.getTableRef(target, "payments").getRefId());
 	}
 
 }

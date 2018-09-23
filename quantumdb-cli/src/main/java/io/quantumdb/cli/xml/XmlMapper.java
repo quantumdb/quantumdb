@@ -17,11 +17,6 @@ import org.xml.sax.helpers.DefaultHandler;
 
 public class XmlMapper {
 
-	public static void main(String[] args) throws IOException {
-		XmlChangelog changelog = new XmlMapper().loadChangelog("/changelog.xml");
-		System.out.println(changelog);
-	}
-
 	public XmlChangelog loadChangelog(String file) throws IOException {
 		XmlElement element = load(file);
 		return XmlChangelog.convert(element);

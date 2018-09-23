@@ -57,7 +57,7 @@ public class RefLogTest {
 		assertEquals(1, refs.size());
 		TableRef ref = refs.get(0);
 		assertEquals("users", ref.getName());
-		assertEquals("users", ref.getTableId());
+		assertEquals("users", ref.getRefId());
 		assertEquals(ImmutableSet.of("id", "name"), ref.getColumns().keySet());
 		assertEquals(Sets.newHashSet(version), ref.getVersions());
 	}
@@ -88,7 +88,7 @@ public class RefLogTest {
 		assertEquals(1, refs.size());
 		TableRef ref = refs.get(0);
 		assertEquals("users", ref.getName());
-		assertEquals("users", ref.getTableId());
+		assertEquals("users", ref.getRefId());
 		assertEquals(ImmutableSet.of("id", "name"), ref.getColumns().keySet());
 		assertEquals(Sets.newHashSet(version, nextVersion), ref.getVersions());
 	}
@@ -112,65 +112,65 @@ public class RefLogTest {
 
 	@Test
 	public void testReplacingTable() {
-		String tableId = generateHash();
-		refLog.replaceTable(version, "users", "users", tableId);
+		String refId = generateHash();
+		refLog.replaceTable(version, "users", "users", refId);
 
 		List<TableRef> refs = Lists.newArrayList(refLog.getTableRefs());
 
 		assertEquals(1, refs.size());
 		TableRef ref = refs.get(0);
 		assertEquals("users", ref.getName());
-		assertEquals(tableId, ref.getTableId());
+		assertEquals(refId, ref.getRefId());
 		assertEquals(ImmutableSet.of("id", "name"), ref.getColumns().keySet());
 		assertEquals(Sets.newHashSet(version), ref.getVersions());
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testReplacingTableThrowsExceptionOnNullVersion() {
-		String tableId = generateHash();
-		refLog.replaceTable(null, "users", "users", tableId);
+		String refId = generateHash();
+		refLog.replaceTable(null, "users", "users", refId);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testReplacingTableThrowsExceptionOnNullSourceTableName() {
-		String tableId = generateHash();
-		refLog.replaceTable(version, null, "users", tableId);
+		String refId = generateHash();
+		refLog.replaceTable(version, null, "users", refId);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testReplacingTableThrowsExceptionOnEmptySourceTableName() {
-		String tableId = generateHash();
-		refLog.replaceTable(version, "", "users", tableId);
+		String refId = generateHash();
+		refLog.replaceTable(version, "", "users", refId);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testReplacingTableThrowsExceptionOnNullTargetTableName() {
-		String tableId = generateHash();
-		refLog.replaceTable(version, "users", null, tableId);
+		String refId = generateHash();
+		refLog.replaceTable(version, "users", null, refId);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testReplacingTableThrowsExceptionOnEmptyTargetTableName() {
-		String tableId = generateHash();
-		refLog.replaceTable(version, "users", "", tableId);
+		String refId = generateHash();
+		refLog.replaceTable(version, "users", "", refId);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
-	public void testReplacingTableThrowsExceptionOnNullTableId() {
+	public void testReplacingTableThrowsExceptionOnNullRefId() {
 		refLog.replaceTable(version, "users", "users", null);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
-	public void testReplacingTableThrowsExceptionOnEmptyTableId() {
+	public void testReplacingTableThrowsExceptionOnEmptyRefId() {
 		refLog.replaceTable(version, "users", "users", "");
 	}
 
 	@Test
 	public void testReplacingTableInNextVersion() {
-		String tableId = generateHash();
+		String refId = generateHash();
 		Version nextVersion = new Version(generateHash(), version);
 		refLog.fork(nextVersion);
-		refLog.replaceTable(nextVersion, "users", "users", tableId);
+		refLog.replaceTable(nextVersion, "users", "users", refId);
 
 		Map<Version, TableRef> refs = refLog.getTableRefs().stream()
 				.collect(Collectors.toMap(ref -> ref.getVersions().stream().findFirst().get(), Function.identity()));
@@ -179,13 +179,13 @@ public class RefLogTest {
 
 		TableRef ref1 = refs.get(version);
 		assertEquals("users", ref1.getName());
-		assertEquals("users", ref1.getTableId());
+		assertEquals("users", ref1.getRefId());
 		assertEquals(ImmutableSet.of("id", "name"), ref1.getColumns().keySet());
 		assertEquals(Sets.newHashSet(version), ref1.getVersions());
 
 		TableRef ref2 = refs.get(nextVersion);
 		assertEquals("users", ref2.getName());
-		assertEquals(tableId, ref2.getTableId());
+		assertEquals(refId, ref2.getRefId());
 		assertEquals(ImmutableSet.of("id", "name"), ref2.getColumns().keySet());
 		assertEquals(Sets.newHashSet(nextVersion), ref2.getVersions());
 
@@ -210,8 +210,8 @@ public class RefLogTest {
 
 	@Test
 	public void testAddingNewTable() {
-		String tableId = generateHash();
-		refLog.addTable("transactions", tableId, version, Lists.newArrayList(
+		String refId = generateHash();
+		refLog.addTable("transactions", refId, version, Lists.newArrayList(
 				new ColumnRef("id"),
 				new ColumnRef("sender_id"),
 				new ColumnRef("receiver_id"),
@@ -220,25 +220,25 @@ public class RefLogTest {
 
 		TableRef tableRef = refLog.getTableRef(version, "transactions");
 		assertEquals("transactions", tableRef.getName());
-		assertEquals(tableId, tableRef.getTableId());
+		assertEquals(refId, tableRef.getRefId());
 		assertEquals(ImmutableSet.of("id", "sender_id", "receiver_id", "amount"), tableRef.getColumns().keySet());
 		assertEquals(Sets.newHashSet(version), tableRef.getVersions());
 	}
 
 	@Test
 	public void testAddingNewTableBasedOnOtherTable() {
-		String tableId = generateHash();
+		String refId = generateHash();
 		TableRef users = refLog.getTableRef(version, "users");
 		ImmutableMap<String, ColumnRef> userColumns = users.getColumns();
 		Version nextVersion = new Version(generateHash(), version);
 
 		ColumnRef idColumn = new ColumnRef("id", Sets.newHashSet(userColumns.get("id")));
 		ColumnRef nameColumn = new ColumnRef("name", Sets.newHashSet(userColumns.get("name")));
-		refLog.addTable("users_v2", tableId, nextVersion, Lists.newArrayList(idColumn, nameColumn));
+		refLog.addTable("users_v2", refId, nextVersion, Lists.newArrayList(idColumn, nameColumn));
 
 		TableRef usersV2 = refLog.getTableRef(nextVersion, "users_v2");
 		assertEquals("users_v2", usersV2.getName());
-		assertEquals(tableId, usersV2.getTableId());
+		assertEquals(refId, usersV2.getRefId());
 		assertEquals(ImmutableMap.of("id", idColumn, "name", nameColumn), usersV2.getColumns());
 		assertEquals(Sets.newHashSet(nextVersion), usersV2.getVersions());
 	}
@@ -275,11 +275,11 @@ public class RefLogTest {
 
 	@Test
 	public void testAddingSync() {
-		String tableId = generateHash();
+		String refId = generateHash();
 		Version nextVersion = new Version(generateHash(), version);
 		refLog.fork(nextVersion);
 		TableRef oldRef = refLog.getTableRef(version, "users");
-		TableRef newRef = refLog.replaceTable(nextVersion, "users", "users", tableId);
+		TableRef newRef = refLog.replaceTable(nextVersion, "users", "users", refId);
 
 		Map<ColumnRef, ColumnRef> columnMapping = oldRef.getColumns().entrySet().stream()
 				.collect(Collectors.toMap(Entry::getValue, entry -> newRef.getColumns().get(entry.getKey())));

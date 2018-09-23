@@ -22,7 +22,7 @@ public class Graph {
 		private final Set<String> tableNames;
 	}
 
-	public static Graph fromCatalog(Catalog catalog, Set<String> tableNames) {
+	public static Graph fromCatalog(Catalog catalog, Set<String> tableNames, Set<String> viewNames) {
 		Graph graph = new Graph(catalog);
 		for (String tableName : tableNames) {
 			graph.nodes.put(tableName, new TableNode(tableName, Lists.newArrayList()));
@@ -51,7 +51,7 @@ public class Graph {
 		this.nodes = Maps.newHashMap();
 	}
 
-	public Set<String> getTableIds() {
+	public Set<String> getRefIds() {
 		return nodes.keySet();
 	}
 
@@ -79,18 +79,18 @@ public class Graph {
 		}
 	}
 
-	public Optional<GraphResult> leastOutgoingForeignKeys(Set<String> tableIds) {
+	public Optional<GraphResult> leastOutgoingForeignKeys(Set<String> refIds) {
 		Map<String, Long> outgoingForeignKeys = nodes.entrySet().stream()
-				.filter(entry -> tableIds.contains(entry.getKey()))
+				.filter(entry -> refIds.contains(entry.getKey()))
 				.collect(Collectors.toMap(Entry::getKey, entry -> entry.getValue().getForeignKeys().stream()
 						.filter(foreignKey -> !foreignKey.isSelfReferencing())
-						.filter(foreignKey -> tableIds.contains(foreignKey.getReferredTableName()))
+						.filter(foreignKey -> refIds.contains(foreignKey.getReferredTableName()))
 						.map(ForeignKey::getReferredTable)
 						.distinct()
 						.count()));
 
 		if (outgoingForeignKeys.isEmpty()) {
-			return Optional.of(new GraphResult(0, tableIds));
+			return Optional.of(new GraphResult(0, refIds));
 		}
 
 		long minimum = outgoingForeignKeys.values().stream()
@@ -104,9 +104,9 @@ public class Graph {
 		return Optional.of(new GraphResult(minimum, tableNames));
 	}
 
-	public Optional<GraphResult> mostIncomingForeignKeys(Set<String> tableIds) {
+	public Optional<GraphResult> mostIncomingForeignKeys(Set<String> refIds) {
 		Map<String, Long> incomingForeignKeys = nodes.entrySet().stream()
-				.filter(entry -> tableIds.contains(entry.getKey()))
+				.filter(entry -> refIds.contains(entry.getKey()))
 				.collect(Collectors.toMap(Entry::getKey, entry -> {
 					String tableName = entry.getKey();
 					return catalog.getForeignKeys().stream()
@@ -118,7 +118,7 @@ public class Graph {
 				}));
 
 		if (incomingForeignKeys.isEmpty()) {
-			return Optional.of(new GraphResult(0, tableIds));
+			return Optional.of(new GraphResult(0, refIds));
 		}
 
 		long maximum = incomingForeignKeys.values().stream()

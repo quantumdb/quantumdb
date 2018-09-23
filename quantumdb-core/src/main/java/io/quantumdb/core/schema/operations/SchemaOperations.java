@@ -77,6 +77,14 @@ public class SchemaOperations {
 		return new DropIndex(tableName, columns);
 	}
 
+	public static CreateView createView(String viewName) {
+		return new CreateView(viewName);
+	}
+
+	public static DropView dropView(String viewName) {
+		return new DropView(viewName);
+	}
+
 	public static DataOperation execute(String query) {
 		return new DataOperation(query);
 	}

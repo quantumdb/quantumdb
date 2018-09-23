@@ -69,8 +69,8 @@ public class SyncFunction {
 	}
 
 	public void setColumnsToMigrate(Set<String> columnsToMigrate) {
-		Table sourceTable = catalog.getTable(source.getTableId());
-		Table targetTable = catalog.getTable(target.getTableId());
+		Table sourceTable = catalog.getTable(source.getRefId());
+		Table targetTable = catalog.getTable(target.getRefId());
 
 		Map<String, String> mapping = columnMapping.entrySet().stream()
 				.filter(entry -> {
@@ -80,10 +80,8 @@ public class SyncFunction {
 				.collect(Collectors.toMap(entry -> entry.getKey().getName(), entry -> entry.getValue().getName()));
 
 		Map<String, String> expressions = mapping.entrySet().stream()
-//				.collect(Collectors.toMap(entry -> "\"" + entry.getKey() + "\"",
 				.collect(Collectors.toMap(entry -> "\"" + entry.getValue() + "\"",
 						entry -> "NEW.\"" + entry.getKey() + "\"",
-//						entry -> "NEW.\"" + entry.getValue() + "\"",
 						(u, v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
 						Maps::newLinkedHashMap));
 
@@ -141,24 +139,24 @@ public class SyncFunction {
 				.append("RETURNS TRIGGER AS $$")
 				.append("BEGIN")
 				.append("  IF TG_OP = 'INSERT' THEN")
-				.append("    INSERT INTO " + target.getTableId())
+				.append("    INSERT INTO " + target.getRefId())
 				.append("      (" + represent(insertExpressions, Entry::getKey, ", ") + ") VALUES")
 				.append("      (" + represent(insertExpressions, Entry::getValue, ", ") + ");")
 				.append("  ELSIF TG_OP = 'UPDATE' THEN")
 				.append("    LOOP")
-				.append("      UPDATE " + target.getTableId())
+				.append("      UPDATE " + target.getRefId())
 				.append("        SET " + represent(updateIdentitiesForInserts, " = ", ", "))
 				.append("        WHERE " + represent(updateIdentities, " = ", " AND ") + ";")
 				.append("      IF found THEN EXIT; END IF;")
 				.append("      BEGIN")
-				.append("        INSERT INTO " + target.getTableId())
+				.append("        INSERT INTO " + target.getRefId())
 				.append("          (" + represent(insertExpressions, Entry::getKey, ", ") + ") VALUES")
 				.append("          (" + represent(insertExpressions, Entry::getValue, ", ") + ");")
 				.append("      EXIT;")
 				.append("      EXCEPTION WHEN unique_violation THEN END;")
 				.append("	END LOOP;")
 				.append("  ELSIF TG_OP = 'DELETE' THEN")
-				.append("    DELETE FROM " + target.getTableId())
+				.append("    DELETE FROM " + target.getRefId())
 				.append("      WHERE " + represent(updateIdentities, " = ", " AND ") + ";")
 				.append("  END IF;")
 				.append("  RETURN NEW;")
@@ -182,7 +180,7 @@ public class SyncFunction {
 		return new QueryBuilder()
 				.append("CREATE TRIGGER " + triggerName)
 				.append("AFTER INSERT OR UPDATE OR DELETE")
-				.append("ON " + source.getTableId())
+				.append("ON " + source.getRefId())
 				.append("FOR EACH ROW")
 				.append("WHEN (pg_trigger_depth() = 0)")
 				.append("EXECUTE PROCEDURE " + functionName + "();");
