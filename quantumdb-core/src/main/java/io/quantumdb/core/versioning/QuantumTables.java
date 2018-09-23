@@ -29,19 +29,19 @@ public class QuantumTables {
 			"ALTER TABLE quantumdb.changesets ADD CONSTRAINT changesets_version_id_unique UNIQUE (version_id);",
 			"ALTER TABLE quantumdb.changesets ADD CONSTRAINT changesets_version_id FOREIGN KEY (version_id) REFERENCES quantumdb.changelog (version_id) ON DELETE CASCADE;",
 
-			// Creates the "tableids" table which describes table ids exist.
-			"CREATE TABLE quantumdb.tables (table_id VARCHAR(255) NOT NULL, PRIMARY KEY (table_id));",
+			// Creates the "refs" table which describes table ids exist.
+			"CREATE TABLE quantumdb.refs (ref_id VARCHAR(255) NOT NULL, PRIMARY KEY (ref_id));",
 
-			// Creates the "table_versions" table which describes which (physical) table exists at which version of the changelog.
-			"CREATE TABLE quantumdb.table_versions (table_id VARCHAR(255) NOT NULL, version_id VARCHAR(10) NOT NULL, table_name VARCHAR(255) NOT NULL, PRIMARY KEY (table_id, version_id));",
-			"ALTER TABLE quantumdb.table_versions ADD CONSTRAINT table_versions_table_id FOREIGN KEY (table_id) REFERENCES quantumdb.tables (table_id) ON DELETE CASCADE;",
-			"ALTER TABLE quantumdb.table_versions ADD CONSTRAINT table_versions_version_id FOREIGN KEY (version_id) REFERENCES quantumdb.changelog (version_id) ON DELETE CASCADE;",
+			// Creates the "ref_versions" table which describes which (physical) table exists at which version of the changelog.
+			"CREATE TABLE quantumdb.ref_versions (ref_id VARCHAR(255) NOT NULL, version_id VARCHAR(10) NOT NULL, table_name VARCHAR(255) NOT NULL, PRIMARY KEY (ref_id, version_id));",
+			"ALTER TABLE quantumdb.ref_versions ADD CONSTRAINT ref_versions_ref_id FOREIGN KEY (ref_id) REFERENCES quantumdb.refs (ref_id) ON DELETE CASCADE;",
+			"ALTER TABLE quantumdb.ref_versions ADD CONSTRAINT ref_versions_version_id FOREIGN KEY (version_id) REFERENCES quantumdb.changelog (version_id) ON DELETE CASCADE;",
 
 			// Creates the "table_columns" table which describes which columns exist in the (physical) tables.
 			"CREATE SEQUENCE quantumdb.table_columns_id;",
-			"CREATE TABLE quantumdb.table_columns (id BIGINT NOT NULL DEFAULT NEXTVAL('quantumdb.table_columns_id'), table_id VARCHAR(255) NOT NULL, column_name VARCHAR(255) NOT NULL, PRIMARY KEY (id));",
-			"ALTER TABLE quantumdb.table_columns ADD CONSTRAINT table_columns_table_id FOREIGN KEY (table_id) REFERENCES quantumdb.tables (table_id) ON DELETE CASCADE;",
-			"ALTER TABLE quantumdb.table_columns ADD CONSTRAINT table_columns_table_id_column_name_uniqueness UNIQUE (table_id, column_name);",
+			"CREATE TABLE quantumdb.table_columns (id BIGINT NOT NULL DEFAULT NEXTVAL('quantumdb.table_columns_id'), ref_id VARCHAR(255) NOT NULL, column_name VARCHAR(255) NOT NULL, PRIMARY KEY (id));",
+			"ALTER TABLE quantumdb.table_columns ADD CONSTRAINT table_columns_ref_id FOREIGN KEY (ref_id) REFERENCES quantumdb.refs (ref_id) ON DELETE CASCADE;",
+			"ALTER TABLE quantumdb.table_columns ADD CONSTRAINT table_columns_ref_id_column_name_uniqueness UNIQUE (ref_id, column_name);",
 
 			// Creates the "column_mappings" table which describes how columns are related to each other over time (ie prev/next version of the changelog).
 			"CREATE SEQUENCE quantumdb.column_mappings_id;",
@@ -52,10 +52,10 @@ public class QuantumTables {
 
 			// Creates the "synchronizers" table which describes which function and trigger is responsible for migrating data between a source and target table.
 			"CREATE SEQUENCE quantumdb.synchronizers_id;",
-			"CREATE TABLE quantumdb.synchronizers (id BIGINT NOT NULL DEFAULT NEXTVAL('quantumdb.synchronizers_id'), source_table_id VARCHAR(255) NOT NULL, target_table_id VARCHAR(255) NOT NULL, function_name VARCHAR(255) NOT NULL, trigger_name VARCHAR(255) NOT NULL, PRIMARY KEY(id));",
-			"ALTER TABLE quantumdb.synchronizers ADD CONSTRAINT synchronizers_source_table_id FOREIGN KEY (source_table_id) REFERENCES quantumdb.tables (table_id) ON DELETE CASCADE;",
-			"ALTER TABLE quantumdb.synchronizers ADD CONSTRAINT synchronizers_target_table_id FOREIGN KEY (target_table_id) REFERENCES quantumdb.tables (table_id) ON DELETE CASCADE;",
-			"ALTER TABLE quantumdb.synchronizers ADD CONSTRAINT synchronizers_source_target_uniqueness UNIQUE (source_table_id, target_table_id);",
+			"CREATE TABLE quantumdb.synchronizers (id BIGINT NOT NULL DEFAULT NEXTVAL('quantumdb.synchronizers_id'), source_ref_id VARCHAR(255) NOT NULL, target_ref_id VARCHAR(255) NOT NULL, function_name VARCHAR(255) NOT NULL, trigger_name VARCHAR(255) NOT NULL, PRIMARY KEY(id));",
+			"ALTER TABLE quantumdb.synchronizers ADD CONSTRAINT synchronizers_source_ref_id FOREIGN KEY (source_ref_id) REFERENCES quantumdb.refs (ref_id) ON DELETE CASCADE;",
+			"ALTER TABLE quantumdb.synchronizers ADD CONSTRAINT synchronizers_target_ref_id FOREIGN KEY (target_ref_id) REFERENCES quantumdb.refs (ref_id) ON DELETE CASCADE;",
+			"ALTER TABLE quantumdb.synchronizers ADD CONSTRAINT synchronizers_source_target_uniqueness UNIQUE (source_ref_id, target_ref_id);",
 			"ALTER TABLE quantumdb.synchronizers ADD CONSTRAINT synchronizers_unique_function_name UNIQUE (function_name);",
 			"ALTER TABLE quantumdb.synchronizers ADD CONSTRAINT synchronizers_unique_trigger_name UNIQUE (trigger_name);",
 
@@ -68,7 +68,7 @@ public class QuantumTables {
 			// Creates the "active_versions" table which describes which versions are active at this time.
 			"CREATE TABLE quantumdb.active_versions (version_id VARCHAR(10), PRIMARY KEY (version_id));",
 			"ALTER TABLE quantumdb.active_versions ADD CONSTRAINT active_versions_version_id FOREIGN KEY (version_id) REFERENCES quantumdb.changelog (version_id) ON DELETE CASCADE;"
-		);
+	);
 
 	public static int prepare(Connection connection) throws SQLException {
 		connection.setAutoCommit(false);

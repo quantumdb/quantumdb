@@ -18,8 +18,8 @@ class DropIndexMigrator implements SchemaOperationMigrator<DropIndex> {
 		TransitiveTableMirrorer.mirror(catalog, refLog, version, tableName);
 
 		TableRef tableRef = refLog.getTableRef(version, tableName);
-		String tableId = tableRef.getTableId();
-		Table table = catalog.getTable(tableId);
+		String refId = tableRef.getRefId();
+		Table table = catalog.getTable(refId);
 		table.removeIndex(operation.getColumns());
 	}
 

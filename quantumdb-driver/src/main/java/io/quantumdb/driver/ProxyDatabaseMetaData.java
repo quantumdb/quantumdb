@@ -649,7 +649,7 @@ public class ProxyDatabaseMetaData implements DatabaseMetaData {
 			String columnNamePattern) throws SQLException {
 
 		if (tableNamePattern != null && !tableNamePattern.isEmpty()) {
-			tableNamePattern = transformer.getTableId(tableNamePattern);
+			tableNamePattern = transformer.getRefId(tableNamePattern);
 		}
 
 		ResultSet columns = metaData.getColumns(catalog, schemaPattern, tableNamePattern, columnNamePattern);

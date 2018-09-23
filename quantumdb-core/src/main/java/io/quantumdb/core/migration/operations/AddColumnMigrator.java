@@ -19,7 +19,7 @@ class AddColumnMigrator implements SchemaOperationMigrator<AddColumn> {
 		TransitiveTableMirrorer.mirror(catalog, refLog, version, tableName);
 
 		TableRef tableRef = refLog.getTableRef(version, tableName);
-		Table table = catalog.getTable(tableRef.getTableId());
+		Table table = catalog.getTable(tableRef.getRefId());
 
 		table.addColumn(operation.getColumnDefinition().createColumn());
 		tableRef.addColumn(new ColumnRef(operation.getColumnDefinition().getName()));

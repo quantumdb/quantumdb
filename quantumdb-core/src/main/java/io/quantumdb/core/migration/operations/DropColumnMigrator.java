@@ -22,10 +22,10 @@ class DropColumnMigrator implements SchemaOperationMigrator<DropColumn> {
 		TransitiveTableMirrorer.mirror(catalog, refLog, version, tableName);
 
 		TableRef tableRef = refLog.getTableRef(version, tableName);
-		String tableId = tableRef.getTableId();
+		String refId = tableRef.getRefId();
 		tableRef.dropColumn(operation.getColumnName());
 
-		Table table = catalog.getTable(tableId);
+		Table table = catalog.getTable(refId);
 		table.removeColumn(operation.getColumnName());
 
 		List<Index> indexes = Lists.newArrayList(table.getIndexes());

@@ -43,15 +43,15 @@ class MetaResultSet implements ResultSet {
 			}
 
 			String tableName = resultSet.getString("TABLE_NAME");
-			String tableId = tableMapping.get(tableName);
+			String refId = tableMapping.get(tableName);
 
-			if (tableId == null) {
+			if (refId == null) {
 				// Check if this is a target table and return true, or false otherwise.
 				if (tableMapping.values().contains(tableName)) {
 					return true;
 				}
 			}
-			else if (tableId.equals(tableName)) {
+			else if (refId.equals(tableName)) {
 				// Self-referenced table mapping.
 				return true;
 			}

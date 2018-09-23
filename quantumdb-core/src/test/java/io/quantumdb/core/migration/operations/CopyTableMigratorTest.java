@@ -47,9 +47,9 @@ public class CopyTableMigratorTest {
 		changelog.addChangeSet("Michael de Jong", "Copying 'users' table to 'customers'.", operation);
 		migrator.migrate(catalog, refLog, changelog.getLastAdded(), operation);
 
-		String tableId = refLog.getTableRef(changelog.getLastAdded(), "customers").getTableId();
-		Table ghostTable = catalog.getTable(tableId);
-		Table expectedGhostTable = new Table(tableId)
+		String refId = refLog.getTableRef(changelog.getLastAdded(), "customers").getRefId();
+		Table ghostTable = catalog.getTable(refId);
+		Table expectedGhostTable = new Table(refId)
 				.addColumn(new Column("id", integer(), IDENTITY, NOT_NULL, AUTO_INCREMENT))
 				.addColumn(new Column("name", varchar(255), NOT_NULL));
 

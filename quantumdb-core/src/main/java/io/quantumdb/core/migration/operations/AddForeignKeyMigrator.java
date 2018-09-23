@@ -18,11 +18,11 @@ class AddForeignKeyMigrator implements SchemaOperationMigrator<AddForeignKey> {
 		TransitiveTableMirrorer.mirror(catalog, refLog, version, tableName);
 
 		TableRef tableRef = refLog.getTableRef(version, tableName);
-		Table table = catalog.getTable(tableRef.getTableId());
+		Table table = catalog.getTable(tableRef.getRefId());
 
 		String referencedTableName = operation.getReferencedTableName();
 		TableRef referencedTableRef = refLog.getTableRef(version, referencedTableName);
-		Table referencedTable = catalog.getTable(referencedTableRef.getTableId());
+		Table referencedTable = catalog.getTable(referencedTableRef.getRefId());
 
 		table.addForeignKey(operation.getReferringColumnNames())
 				.named(operation.getName())

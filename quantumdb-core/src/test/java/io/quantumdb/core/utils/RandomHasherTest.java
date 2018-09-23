@@ -25,21 +25,21 @@ public class RandomHasherTest {
 	}
 
 	@Test
-	public void testGeneratingUniqueTableIdWithEmptyTableMapping() {
+	public void testGeneratingUniqueRefIdWithEmptyTableMapping() {
 		RefLog refLog = new RefLog();
-		String tableId = RandomHasher.generateTableId(refLog);
-		assertFalse(isNullOrEmpty(tableId));
+		String refId = RandomHasher.generateRefId(refLog);
+		assertFalse(isNullOrEmpty(refId));
 	}
 
 	@Test
-	public void testGeneratingUniqueTableIdWithFilledTableMapping() {
+	public void testGeneratingUniqueRefIdWithFilledTableMapping() {
 		RefLog refLog = new RefLog();
 		Version version = new Version(RandomHasher.generateHash(), null);
 		refLog.addTable("users", "users", version, Lists.newArrayList());
 
-		String tableId = RandomHasher.generateTableId(refLog);
-		assertFalse(isNullOrEmpty(tableId));
-		assertNotEquals("users", tableId);
+		String refId = RandomHasher.generateRefId(refLog);
+		assertFalse(isNullOrEmpty(refId));
+		assertNotEquals("users", refId);
 	}
 
 }

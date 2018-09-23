@@ -1533,12 +1533,12 @@ public class GreedyMigrationPlannerTest {
 		}
 	}
 
-	private String getTableId(String tableId) {
-		return refLog.getTableRef(changelog.getLastAdded(), tableId).getTableId();
+	private String getRefId(String refId) {
+		return refLog.getTableRef(changelog.getLastAdded(), refId).getRefId();
 	}
 
-	public Table table(String tableId) {
-		return catalog.getTable(getTableId(tableId));
+	public Table table(String refId) {
+		return catalog.getTable(getRefId(refId));
 	}
 
 }

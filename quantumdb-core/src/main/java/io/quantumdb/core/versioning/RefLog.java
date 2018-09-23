@@ -35,22 +35,99 @@ import org.apache.commons.lang.builder.HashCodeBuilder;
 public class RefLog {
 
 	@Data
-	@ToString(of = { "tableId", "name", "versions", "columns" })
-	public static class TableRef {
+	@ToString(of = { "refId", "name", "versions" })
+	public static abstract class DataRef {
 
 		private String name;
-		private String tableId;
+		private String refId;
 		private final Set<Version> versions;
+		private final RefLog refLog;
+
+		private DataRef(RefLog refLog, String name, String refId, Version version) {
+			this.name = name;
+			this.refId = refId;
+			this.refLog = refLog;
+			this.versions = Sets.newHashSet();
+		}
+
+		public DataRef rename(String newName) {
+			this.name = newName;
+			return this;
+		}
+
+		protected DataRef markAsPresent(Version version) {
+			getVersions().add(version);
+			getRefLog().refMapping.put(version, this);
+			log.debug("Marked TableRef: {} ({}) as present in version: {}", getName(), getRefId(), version.getId());
+			return this;
+		}
+
+		protected DataRef markAsAbsent(Version version) {
+			getVersions().remove(version);
+			getRefLog().refMapping.remove(version, this);
+			log.debug("Marked TableRef: {} ({}) as absent in version: {}", getName(), getRefId(), version.getId());
+			return this;
+		}
+
+		@Override
+		public boolean equals(Object other) {
+			if (other instanceof DataRef) {
+				DataRef otherRef = (DataRef) other;
+				return new EqualsBuilder()
+						.append(name, otherRef.getName())
+						.append(refId, otherRef.getRefId())
+						.append(versions, otherRef.getVersions())
+						.isEquals();
+			}
+			return false;
+		}
+
+		@Override
+		public int hashCode() {
+			return new HashCodeBuilder()
+					.append(name)
+					.append(refId)
+					.toHashCode();
+		}
+
+	}
+
+	@Data
+	@ToString(callSuper = true)
+	public static class ViewRef extends DataRef {
+
+		private ViewRef(RefLog refLog, String name, String viewId, Version version) {
+			super(refLog, name, viewId, version);
+
+			markAsPresent(version);
+		}
+
+		public ViewRef ghost(String newViewId, Version version) {
+			markAsAbsent(version);
+			return new ViewRef(getRefLog(), getName(), newViewId, version);
+		}
+
+		public ViewRef rename(String newViewName) {
+			super.rename(newViewName);
+			return this;
+		}
+
+		public void drop() {
+
+		}
+
+	}
+
+	@Data
+	@ToString(callSuper = true, of = { "columns" })
+	public static class TableRef extends DataRef {
+
 		private final Map<String, ColumnRef> columns;
 		private final Set<SyncRef> outboundSyncs;
 		private final Set<SyncRef> inboundSyncs;
-		private final RefLog refLog;
 
-		private TableRef(RefLog refLog, String name, String tableId, Version version, Collection<ColumnRef> columns) {
-			this.name = name;
-			this.tableId = tableId;
-			this.refLog = refLog;
-			this.versions = Sets.newHashSet();
+		private TableRef(RefLog refLog, String name, String refId, Version version, Collection<ColumnRef> columns) {
+			super(refLog, name, refId, version);
 			this.columns = Maps.newLinkedHashMap();
 			this.outboundSyncs = Sets.newHashSet();
 			this.inboundSyncs = Sets.newHashSet();
@@ -95,28 +172,13 @@ public class RefLog {
 					.collect(Collectors.toSet());
 		}
 
-		TableRef markAsPresent(Version version) {
-			versions.add(version);
-			refLog.tables.put(version, this);
-			log.debug("Marked TableRef: {} ({}) as present in version: {}", name, tableId, version.getId());
-			return this;
-		}
-
-		TableRef markAsAbsent(Version version) {
-//			checkArgument(versions.contains(version));
-			versions.remove(version);
-			refLog.tables.remove(version, this);
-			log.debug("Marked TableRef: {} ({}) as absent in version: {}", name, tableId, version.getId());
-			return this;
-		}
-
-		public TableRef ghost(String newTableId, Version version) {
+		public TableRef ghost(String newRefId, Version version) {
 			Collection<ColumnRef> newColumns = columns.values().stream()
 					.map(ColumnRef::ghost)
 					.collect(Collectors.toList());
 
 			markAsAbsent(version);
-			return new TableRef(refLog, name, newTableId, version, newColumns);
+			return new TableRef(getRefLog(), getName(), newRefId, version, newColumns);
 		}
 
 		public TableRef addColumn(ColumnRef column) {
@@ -138,8 +200,8 @@ public class RefLog {
 		}
 
 		public TableRef renameColumn(String oldName, String newName) {
-			checkState(columns.containsKey(oldName), "Table: " + tableId + " does not contain a column: " + oldName);
-			checkState(!columns.containsKey(newName), "Table: " + tableId + " already contains a column: " + newName);
+			checkState(columns.containsKey(oldName), "Table: " + getRefId() + " does not contain a column: " + oldName);
+			checkState(!columns.containsKey(newName), "Table: " + getRefId() + " already contains a column: " + newName);
 
 			ColumnRef removed = columns.remove(oldName);
 			removed.name = newName;
@@ -148,17 +210,15 @@ public class RefLog {
 		}
 
 		public TableRef rename(String newTableName) {
-			this.name = newTableName;
+			super.rename(newTableName);
 			return this;
 		}
 
+		@Override
 		public boolean equals(Object other) {
 			if (other instanceof TableRef) {
 				TableRef otherRef = (TableRef) other;
-				return new EqualsBuilder()
-						.append(name, otherRef.getName())
-						.append(tableId, otherRef.getTableId())
-						.append(versions, otherRef.getVersions())
+				return super.equals(other) && new EqualsBuilder()
 						.append(columns, otherRef.getColumns())
 						.append(inboundSyncs, otherRef.getInboundSyncs())
 						.append(outboundSyncs, otherRef.getOutboundSyncs())
@@ -167,12 +227,6 @@ public class RefLog {
 			return false;
 		}
 
-		public int hashCode() {
-			return new HashCodeBuilder()
-					.append(name)
-					.append(tableId)
-					.toHashCode();
-		}
 	}
 
 	@Data
@@ -368,14 +422,14 @@ public class RefLog {
 		return new RefLog().bootstrap(catalog, version);
 	}
 
-	private final Multimap<Version, TableRef> tables;
+	private final Multimap<Version, DataRef> refMapping;
 	private final Set<Version> activeVersions;
 
 	/**
 	 * Creates a new RefLog object.
 	 */
 	public RefLog() {
-		this.tables = LinkedHashMultimap.create();
+		this.refMapping = LinkedHashMultimap.create();
 		this.activeVersions = Sets.newLinkedHashSet();
 	}
 
@@ -417,10 +471,10 @@ public class RefLog {
 		checkArgument(version.getParent() != null, "You cannot fork to a root version!");
 
 		Version parent = version.getParent();
-		checkArgument(tables.isEmpty() || tables.keySet().contains(parent),
+		checkArgument(refMapping.isEmpty() || refMapping.keySet().contains(parent),
 				"You cannot fork to a version whose parent is not in the RefLog!");
 
-		tables.get(parent).forEach(table -> table.markAsPresent(version));
+		refMapping.get(parent).forEach(table -> table.markAsPresent(version));
 		return this;
 	}
 
@@ -428,7 +482,10 @@ public class RefLog {
 	 * @return a Collection of TableRef objects currently registered with this RefLog object.
 	 */
 	public Collection<TableRef> getTableRefs() {
-		return ImmutableSet.copyOf(tables.values());
+		return ImmutableSet.copyOf(refMapping.values().stream()
+				.filter(ref -> ref instanceof TableRef)
+				.map(ref -> (TableRef) ref)
+				.collect(Collectors.toSet()));
 	}
 
 	/**
@@ -437,7 +494,10 @@ public class RefLog {
 	 */
 	public Collection<TableRef> getTableRefs(Version version) {
 		checkArgument(version != null, "You must specify a version!");
-		return ImmutableSet.copyOf(tables.get(version));
+		return ImmutableSet.copyOf(refMapping.get(version).stream()
+				.filter(ref -> ref instanceof TableRef)
+				.map(ref -> (TableRef) ref)
+				.collect(Collectors.toSet()));
 	}
 
 	/**
@@ -453,7 +513,9 @@ public class RefLog {
 		checkArgument(version != null, "You must specify a version!");
 		checkArgument(!isNullOrEmpty(tableName), "You must specify a table name!");
 
-		return tables.get(version).stream()
+		return refMapping.get(version).stream()
+				.filter(ref -> ref instanceof TableRef)
+				.map(ref -> (TableRef) ref)
 				.filter(table -> table.getName().equals(tableName))
 				.findFirst()
 				.orElseThrow(() -> new IllegalArgumentException("Version: " + version.getId()
@@ -464,17 +526,19 @@ public class RefLog {
 	 * This method retrieves the TableRef object from the RefLog with the specified table ID. If no TableRef
 	 * matches the criteria an IllegalArgumentException will be thrown.
 	 *
-	 * @param tableId The ID of the table represented by the TableRef.
+	 * @param refId The ID of the table represented by the TableRef.
 	 * @return The retrieved TableRef object.
 	 * @throws IllegalArgumentException When no TableRef matches the specified criteria.
 	 */
-	public TableRef getTableRefById(String tableId) {
-		checkArgument(!isNullOrEmpty(tableId), "You must specify a table ID!");
+	public TableRef getTableRefById(String refId) {
+		checkArgument(!isNullOrEmpty(refId), "You must specify a table ID!");
 
-		return tables.values().stream()
-				.filter(table -> table.getTableId().equals(tableId))
+		return refMapping.values().stream()
+				.filter(ref -> ref instanceof TableRef)
+				.map(ref -> (TableRef) ref)
+				.filter(table -> table.getRefId().equals(refId))
 				.findFirst()
-				.orElseThrow(() -> new IllegalArgumentException("No table with id: " + tableId));
+				.orElseThrow(() -> new IllegalArgumentException("No table with id: " + refId));
 	}
 
 	/**
@@ -485,17 +549,17 @@ public class RefLog {
 	 * @param version The version at which the replace takes place.
 	 * @param sourceTableName The table name of the TableRef to replace.
 	 * @param targetTableName The table name of the TableRef which will replace the old TableRef.
-	 * @param tableId The table ID of the TableRef which will replace the old TableRef.
+	 * @param refId The table ID of the TableRef which will replace the old TableRef.
 	 * @return The created TableRef object.
 	 */
-	public TableRef replaceTable(Version version, String sourceTableName, String targetTableName, String tableId) {
+	public TableRef replaceTable(Version version, String sourceTableName, String targetTableName, String refId) {
 		checkArgument(version != null, "You must specify a version!");
 		checkArgument(!isNullOrEmpty(sourceTableName), "You must specify a source table name!");
 		checkArgument(!isNullOrEmpty(targetTableName), "You must specify a target table name!");
-		checkArgument(!isNullOrEmpty(tableId), "You must specify a table ID!");
+		checkArgument(!isNullOrEmpty(refId), "You must specify a table ID!");
 
 		TableRef tableRef = dropTable(version, sourceTableName);
-		return new TableRef(this, targetTableName, tableId, version, tableRef.getColumns().values().stream()
+		return new TableRef(this, targetTableName, refId, version, tableRef.getColumns().values().stream()
 				.map(columnRef -> new ColumnRef(columnRef.getName(), Lists.newArrayList(columnRef)))
 				.collect(Collectors.toList()));
 	}
@@ -514,10 +578,10 @@ public class RefLog {
 		checkArgument(!isNullOrEmpty(tableName), "You must specify a table name!");
 
 		TableRef tableRef = getTableRef(version, tableName);
-		tableRef.versions.remove(version);
-		tables.remove(version, tableRef);
+		tableRef.getVersions().remove(version);
+		refMapping.remove(version, tableRef);
 
-		if (tableRef.versions.isEmpty()) {
+		if (tableRef.getVersions().isEmpty()) {
 			tableRef.drop();
 		}
 
@@ -532,12 +596,12 @@ public class RefLog {
 	public void dropTable(TableRef tableRef) {
 		checkArgument(tableRef != null, "You must specify a TableRef!");
 
-		List<Version> versions = tables.entries().stream()
+		List<Version> versions = refMapping.entries().stream()
 				.filter(entry -> entry.getValue().equals(tableRef))
 				.map(Entry::getKey)
 				.collect(Collectors.toList());
 
-		versions.forEach(version -> tables.remove(version, tableRef));
+		versions.forEach(version -> refMapping.remove(version, tableRef));
 		tableRef.drop();
 	}
 
@@ -545,31 +609,31 @@ public class RefLog {
 	 * Creates a new TableRef for the specified table ID, name, and columns at the specified version.
 	 *
 	 * @param name The name of the table.
-	 * @param tableId The table ID of the table.
+	 * @param refId The table ID of the table.
 	 * @param version The version at which this table exists.
 	 * @param columns The columns present in the table.
 	 * @return The constructed TableRef object.
 	 */
-	public TableRef addTable(String name, String tableId, Version version, ColumnRef... columns) {
-		return addTable(name, tableId, version, Lists.newArrayList(columns));
+	public TableRef addTable(String name, String refId, Version version, ColumnRef... columns) {
+		return addTable(name, refId, version, Lists.newArrayList(columns));
 	}
 
 	/**
 	 * Creates a new TableRef for the specified table ID, name, and columns at the specified version.
 	 *
 	 * @param name The name of the table.
-	 * @param tableId The table ID of the table.
+	 * @param refId The table ID of the table.
 	 * @param version The version at which this table exists.
 	 * @param columns The columns present in the table.
 	 * @return The constructed TableRef object.
 	 */
-	public TableRef addTable(String name, String tableId, Version version, Collection<ColumnRef> columns) {
+	public TableRef addTable(String name, String refId, Version version, Collection<ColumnRef> columns) {
 		checkArgument(!isNullOrEmpty(name), "You must specify a 'name'!");
-		checkArgument(!isNullOrEmpty(tableId), "You must specify a 'tableId'!");
+		checkArgument(!isNullOrEmpty(refId), "You must specify a 'refId'!");
 		checkArgument(version != null, "You must specify a 'version'!");
 		checkArgument(columns != null, "You must specify a collection of 'columns'!");
 
-		long matches = tables.get(version).stream()
+		long matches = refMapping.get(version).stream()
 				.filter(table -> table.getName().equals(name))
 				.count();
 
@@ -578,11 +642,159 @@ public class RefLog {
 					+ " is already present for version: " + version.getId());
 		}
 
-		return new TableRef(this, name, tableId, version, columns);
+		return new TableRef(this, name, refId, version, columns);
 	}
 
 	/**
-	 * Defines that there's a trigger and function which manage the synchronization between two different tables
+	 * @return a Collection of ViewRef objects currently registered with this RefLog object.
+	 */
+	public Collection<ViewRef> getViewRefs() {
+		return ImmutableSet.copyOf(refMapping.values().stream()
+				.filter(ref -> ref instanceof ViewRef)
+				.map(ref -> (ViewRef) ref)
+				.collect(Collectors.toSet()));
+	}
+
+	/**
+	 * @return a Collection of ViewRef objects currently registered with this RefLog object that are present in
+	 * the specified version.
+	 */
+	public Collection<ViewRef> getViewRefs(Version version) {
+		checkArgument(version != null, "You must specify a version!");
+		return ImmutableSet.copyOf(refMapping.get(version).stream()
+				.filter(ref -> ref instanceof ViewRef)
+				.map(ref -> (ViewRef) ref)
+				.collect(Collectors.toSet()));
+	}
+
+	/**
+	 * This method retrieves the ViewRef object from the RefLog with the specified table name at the specified
+	 * version. If no such ViewRef matches these criteria an IllegalArgumentException will be thrown.
+	 *
+	 * @param version The version in which the ViewRef should be present.
+	 * @param viewName The name of the view represented by the ViewRef.
+	 * @return The retrieved ViewRef object.
+	 * @throws IllegalArgumentException When no ViewRef matches the specified criteria.
+	 */
+	public ViewRef getViewRef(Version version, String viewName) {
+		checkArgument(version != null, "You must specify a version!");
+		checkArgument(!isNullOrEmpty(viewName), "You must specify a view name!");
+
+		return refMapping.get(version).stream()
+				.filter(ref -> ref instanceof ViewRef)
+				.map(ref -> (ViewRef) ref)
+				.filter(view -> view.getName().equals(viewName))
+				.findFirst()
+				.orElseThrow(() -> new IllegalArgumentException("Version: " + version.getId()
+						+ " does not contain a ViewRef with viewName: " + viewName));
+	}
+
+	/**
+	 * This method retrieves the ViewRef object from the RefLog with the specified view ID. If no ViewRef
+	 * matches the criteria an IllegalArgumentException will be thrown.
+	 *
+	 * @param refId The ID of the view represented by the ViewRef.
+	 * @return The retrieved ViewRef object.
+	 * @throws IllegalArgumentException When no ViewRef matches the specified criteria.
+	 */
+	public ViewRef getViewRefById(String refId) {
+		checkArgument(!isNullOrEmpty(refId), "You must specify a view ID!");
+
+		return refMapping.values().stream()
+				.filter(ref -> ref instanceof ViewRef)
+				.map(ref -> (ViewRef) ref)
+				.filter(view -> view.getRefId().equals(refId))
+				.findFirst()
+				.orElseThrow(() -> new IllegalArgumentException("No view with id: " + refId));
+	}/**
+	 * This method replaces an existing ViewRef specified through the version, and source view name, drops that
+	 * ViewRef for that particular version, and creates a new ViewRef with the new target view name, and view ID
+	 * for that particular version.
+	 *
+	 * @param version The version at which the replace takes place.
+	 * @param sourceViewName The view name of the ViewRef to replace.
+	 * @param targetViewName The view name of the ViewRef which will replace the old ViewRef.
+	 * @param refId The view ID of the ViewRef which will replace the old ViewRef.
+	 * @return The created ViewRef object.
+	 */
+	public ViewRef replaceView(Version version, String sourceViewName, String targetViewName, String refId) {
+		checkArgument(version != null, "You must specify a version!");
+		checkArgument(!isNullOrEmpty(sourceViewName), "You must specify a source view name!");
+		checkArgument(!isNullOrEmpty(targetViewName), "You must specify a target view name!");
+		checkArgument(!isNullOrEmpty(refId), "You must specify a view ID!");
+
+		ViewRef viewRef = dropView(version, sourceViewName);
+		return new ViewRef(this, targetViewName, refId, version);
+	}
+
+	/**
+	 * Drops a ViewRef at a particular version, with a specific view name. If the ViewRef is only connected
+	 * to the specified version, it will be disconnected from the RefLog. If the ViewRef is connected to multiple
+	 * versions it will remain connected to the RefLog.
+	 *
+	 * @param version The version at which to remove the ViewRef from the RefLog.
+	 * @param viewName The name of the view which the ViewRef represents.
+	 * @return The dropped ViewRef object.
+	 */
+	public ViewRef dropView(Version version, String viewName) {
+		checkArgument(version != null, "You must specify a version!");
+		checkArgument(!isNullOrEmpty(viewName), "You must specify a view name!");
+
+		ViewRef viewRef = getViewRef(version, viewName);
+		viewRef.getVersions().remove(version);
+		refMapping.remove(version, viewRef);
+
+		if (viewRef.getVersions().isEmpty()) {
+			viewRef.drop();
+		}
+
+		return viewRef;
+	}
+
+	/**
+	 * Drops a ViewRef entirely from the RefLog regardless of which versions it's connected to.
+	 *
+	 * @param viewRef The ViewRef object to drop from the RefLog.
+	 */
+	public void dropView(ViewRef viewRef) {
+		checkArgument(viewRef != null, "You must specify a ViewRef!");
+
+		List<Version> versions = refMapping.entries().stream()
+				.filter(entry -> entry.getValue().equals(viewRef))
+				.map(Entry::getKey)
+				.collect(Collectors.toList());
+
+		versions.forEach(version -> refMapping.remove(version, viewRef));
+		viewRef.drop();
+	}
+
+	/**
+	 * Creates a new ViewRef for the specified view ID, and name at the specified version.
+	 *
+	 * @param name The name of the view.
+	 * @param refId The view ID of the view.
+	 * @param version The version at which this view exists.
+	 * @return The constructed ViewRef object.
+	 */
+	public ViewRef addView(String name, String refId, Version version) {
+		checkArgument(!isNullOrEmpty(name), "You must specify a 'name'!");
+		checkArgument(!isNullOrEmpty(refId), "You must specify a 'refId'!");
+		checkArgument(version != null, "You must specify a 'version'!");
+
+		long matches = refMapping.get(version).stream()
+				.filter(view -> view.getName().equals(name))
+				.count();
+
+		if (matches > 0) {
+			throw new IllegalStateException("A ViewRef for viewName: " + name
+					+ " is already present for version: " + version.getId());
+		}
+
+		return new ViewRef(this, name, refId, version);
+	}
+
+	/**
+	 * Defines that there's a trigger and function which manage the synchronization between two different refMapping
 	 * in one particular direction.
 	 *
 	 * @param name The name of the trigger.
@@ -591,7 +803,7 @@ public class RefLog {
 	 * @return The constructed SyncRef object.
 	 */
 	public SyncRef addSync(String name, String functionName, Map<ColumnRef, ColumnRef> columns) {
-		long matches = tables.values().stream()
+		long matches = refMapping.values().stream()
 				.filter(table -> table.getName().equals(name))
 				.count();
 
@@ -625,7 +837,7 @@ public class RefLog {
 			while (!toCheck.isEmpty()) {
 				TableRef pointer = toCheck.remove(0);
 				if (pointer.getVersions().contains(to)) {
-					if (!filterUnchanged || !pointer.getTableId().equals(tableRef.getTableId())) {
+					if (!filterUnchanged || !pointer.getRefId().equals(tableRef.getRefId())) {
 						targets.add(pointer);
 					}
 				}
@@ -694,13 +906,6 @@ public class RefLog {
 	private boolean isForwards(TableRef from, TableRef to) {
 		boolean forwards = false;
 		if (!from.equals(to)) {
-//			List<TableRef> toDo = Lists.newLinkedList(from.getBasisFor());
-//			while (!toDo.isEmpty()) {
-//				TableRef current = toDo.remove(0);
-//				if (current.equals(to)) {
-//					forwards = true;
-//				}
-//			}
 			Version origin = VersionTraverser.getFirst(from.getVersions());
 			Version target = VersionTraverser.getFirst(to.getVersions());
 			forwards = VersionTraverser.getDirection(origin, target) == Direction.FORWARDS;

@@ -30,17 +30,18 @@ public class RandomHasher {
 		return builder.toString();
 	}
 
-	public static String generateTableId(RefLog refLog) {
+	public static String generateRefId(RefLog refLog) {
 		checkArgument(refLog != null, "You must specify a 'refLog'.");
 
-		Set<String> tableIds = refLog.getTableRefs().stream()
-				.map(TableRef::getTableId)
+		Set<String> refIds = refLog.getTableRefs().stream()
+				.map(TableRef::getRefId)
 				.collect(Collectors.toSet());
 
 		String hash = "table_" + generateHash();
-		while (tableIds.contains(hash)) {
+		while (refIds.contains(hash)) {
 			hash = "table_" + generateHash();
 		}
+
 		return hash;
 	}
 
