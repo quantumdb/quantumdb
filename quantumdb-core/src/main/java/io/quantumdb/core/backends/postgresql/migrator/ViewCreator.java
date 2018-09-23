@@ -57,9 +57,6 @@ public class ViewCreator {
 			log.debug("Executing: " + query);
 			statement.execute(query);
 		}
-		catch (SQLException e) {
-			throw new SQLException(query, e);
-		}
 	}
 
 }
