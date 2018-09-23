@@ -1,0 +1,559 @@
+---
+layout: default
+---
+
+
+<div class="content row">
+    <div class="col-md-3">
+        <nav class="docs-sidebar hidden-print hidden-sm hidden-xs">
+            <ul class="nav">
+                <li><a href="#versioning">Versioning</a></li>
+                <li><a href="#changesets">Changesets</a></li>
+                <li><a href="#schemaoperations">Schema operations</a></li>
+                <li><a href="#dataoperations">Data operations</a></li>
+                <li><a href="#cli">Command-line interface</a></li>
+            </ul>
+        </nav>
+    </div>
+    <div class="col-md-9">
+        <section id="versioning">
+            <h2>Versioning</h2>
+            <p>
+                QuantumDB currently tracks the database schema in a linear manner historically. Each version has at
+                most one parent version, and at most one child version.This means that every operation you apply on
+                an existing database schema version, produces a new identifiable version of the database schema.
+            </p>
+
+            <svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 15 847 170">
+                <!-- version 1 -->
+                <circle cx="33" cy="50" r="15" stroke="#ce1836" stroke-width="6" fill="#ffffff"></circle>
+                <text x="63" y="50" dy="4" font-family="Roboto" font-size="14" fill="#444444" style="font-weight: bold;">8fb3b4e71a</text>
+                <text x="150" y="50" dy="4" font-family="Roboto" font-size="14" fill="#888888">Initial database schema</text>
+
+                <!-- version 2 -->
+                <line x1="33" y1="68" x2="33" y2="85" stroke="#f85931" stroke-width="6"></line>
+                <circle cx="33" cy="100" r="15" stroke="#f85931" stroke-width="6" fill="#ffffff"></circle>
+                <text x="63" y="100" dy="4" font-family="Roboto" font-size="14" fill="#444444" style="font-weight: bold;">cf3323a79b</text>
+                <text x="150" y="100" dy="4" font-family="Roboto" font-size="14" fill="#888888">Add column "last_seen" to table "users"</text>
+
+                <!-- version 3 -->
+                <line x1="33" y1="118" x2="33" y2="135" stroke="#edb92e" stroke-width="6"></line>
+                <circle cx="33" cy="150" r="15" stroke="#edb92e" stroke-width="6" fill="#ffffff"></circle>
+                <text x="63" y="150" dy="4" font-family="Roboto" font-size="14" fill="#444444" style="font-weight: bold;">ed9eb9be2e</text>
+                <text x="150" y="150" dy="4" font-family="Roboto" font-size="14" fill="#888888">Add index "user_last_seen" on "users"."last_seen"</text>
+            </svg>
+        </section>
+
+        <section id="changesets">
+            <h2>Changesets</h2>
+            <p>
+                QuantumDB, like a lot of other schema evolution tools, allows the user to define their changes in sets
+                of operations which belong to each other and need to be executed together in a particular sequence.
+                Although each operation in a changeset will yield a new version of the database schema, each change set
+                can be identified by the final resulting version of that change set.
+            </p>
+
+            <p>
+                Below you can see an example changelog with 5 versions in total, 2 change sets each containing 2
+                operations. The first change set can be identified as <strong>ed9eb9be2e</strong>, whereas the second
+                change set can be identified as <strong>cc92b7b121</strong>.
+            </p>
+
+            <svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 15 847 455">
+                <!-- changeset 1 -->
+                <rect x="0" y="80" width="847" height="180" fill="#edb92e" fill-opacity="0.13"></rect>
+                <line x1="1.5" y1="80" x2="1.5" y2="260" stroke="#edb92e" stroke-width="3"></line>
+                <foreignObject x="62" y="100" width="767" height="20">
+                    <p xmlns="http://www.w3.org/1999/xhtml" style="color: #444444; margin: 0; padding: 0;">
+                        <strong>Author:</strong> Michael de Jong</br>
+                        Track the time the user was last seen.
+                    </p>
+                </foreignObject>
+
+                <!-- changeset 2 -->
+                <rect x="0" y="265" width="847" height="180" fill="#009989" fill-opacity="0.13"></rect>
+                <line x1="1.5" y1="265" x2="1.5" y2="445" stroke="#009989" stroke-width="3"></line>
+                <foreignObject x="62" y="285" width="767" height="20">
+                    <p xmlns="http://www.w3.org/1999/xhtml" style="color: #444444; margin: 0; padding: 0;">
+                        <strong>Author:</strong> Michael de Jong</br>
+                        Track when users are created and updated.
+                    </p>
+                </foreignObject>
+
+                <!-- version 1 -->
+                <circle cx="33" cy="50" r="15" stroke="#ce1836" stroke-width="6" fill="#ffffff"></circle>
+                <text x="63" y="50" dy="4" font-family="Roboto" font-size="14" fill="#444444" style="font-weight: bold;">8fb3b4e71a</text>
+                <text x="150" y="50" dy="4" font-family="Roboto" font-size="14" fill="#888888">Initial database schema</text>
+
+                <!-- version 2 -->
+                <line x1="33" y1="68" x2="33" y2="165" stroke="#f85931" stroke-width="6"></line>
+                <circle cx="33" cy="180" r="15" stroke="#f85931" stroke-width="6" fill="#ffffff"></circle>
+                <text x="63" y="180" dy="4" font-family="Roboto" font-size="14" fill="#444444" style="font-weight: bold;">cf3323a79b</text>
+                <text x="150" y="180" dy="4" font-family="Roboto" font-size="14" fill="#888888">Add column "last_seen" to table "users"</text>
+
+                <!-- version 3 -->
+                <line x1="33" y1="198" x2="33" y2="215" stroke="#edb92e" stroke-width="6"></line>
+                <circle cx="33" cy="230" r="15" stroke="#edb92e" stroke-width="6" fill="#ffffff"></circle>
+                <text x="63" y="230" dy="4" font-family="Roboto" font-size="14" fill="#444444" style="font-weight: bold;">ed9eb9be2e</text>
+                <text x="150" y="230" dy="4" font-family="Roboto" font-size="14" fill="#888888">Add index "user_last_seen" on "users"."last_seen"</text>
+
+                <!-- version 4 -->
+                <line x1="33" y1="248" x2="33" y2="360" stroke="#a3a948" stroke-width="6"></line>
+                <circle cx="33" cy="365" r="15" stroke="#a3a948" stroke-width="6" fill="#ffffff"></circle>
+                <text x="63" y="365" dy="4" font-family="Roboto" font-size="14" fill="#444444" style="font-weight: bold;">72ae28b49a</text>
+                <text x="150" y="365" dy="4" font-family="Roboto" font-size="14" fill="#888888">Add column "created_at" to table "users"</text>
+
+                <!-- version 5 -->
+                <line x1="33" y1="383" x2="33" y2="400" stroke="#009989" stroke-width="6"></line>
+                <circle cx="33" cy="415" r="15" stroke="#009989" stroke-width="6" fill="#ffffff"></circle>
+                <text x="63" y="415" dy="4" font-family="Roboto" font-size="14" fill="#444444" style="font-weight: bold;">cc92b7b121</text>
+                <text x="150" y="415" dy="4" font-family="Roboto" font-size="14" fill="#888888">Add column "updated_at" to table "users"</text>
+            </svg>
+
+            <p>
+                In addition we also allow the user to specify an author, and a description for each change set for
+                auditing and debugging purposes.
+            </p>
+
+            <p>Using the following code we can define these changelog entries in Java.</p>
+
+            <pre class="code"><code class="java">changelog.addChangeSet("add_last_seen_column", "Michael de Jong",
+        "Track the time the user was last seen.",
+        addColumn("users", "last_seen", timestamp(true)),
+        createIndex("users", false, "last_seen"));
+
+changelog.addChangeSet("track_users", "Michael de Jong",
+        "Track when users are created and updated.",
+        addColumn("users", "created_at", timestamp(true), "NOW()", Hint.NOT_NULL),
+        addColumn("users", "updated_at", timestamp(true)));</code></pre>
+
+            <p>Or alternatively, in a XML file to be used together with the CLI tool.</p>
+
+            <pre class="code"><code class="xml">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+
+&lt;changelog xmlns="http://www.quantumdb.io/xml/ns/quantumdb-changelog"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:schemaLocation="http://www.quantumdb.io/xml/ns/quantumdb-changelog-0.3.xsd"&gt;
+
+  &lt;changeset id="add_last_seen_column" author="Michael de Jong"&gt;
+    &lt;description&gt;Track the time the user was last seen.&lt;/description&gt;
+    &lt;operations&gt;
+      &lt;addColumn tableName="users"&gt;
+        &lt;column name="last_seen" type="timestamp with time zone" /&gt;
+      &lt;/addColumn&gt;
+      &lt;createIndex tableName="users" columnNames="last_seen" /&gt;
+    &lt;/operations&gt;
+  &lt;/changeset&gt;
+
+  &lt;changeset id="track_users" author="Michael de Jong"&gt;
+    &lt;description&gt;Track when users are created and updated.&lt;/description&gt;
+    &lt;operations&gt;
+      &lt;addColumn tableName="users"&gt;
+        &lt;column name="created_at" type="timestamp with time zone" defaultExpression="NOW()" nullable="false" /&gt;
+      &lt;/addColumn&gt;
+      &lt;addColumn tableName="users"&gt;
+        &lt;column name="updated_at" type="timestamp with time zone" /&gt;
+      &lt;/addColumn&gt;
+    &lt;/operations&gt;
+  &lt;/changeset&gt;
+&lt;/changelog&gt;</code></pre>
+
+        </section>
+
+        <section id="schemaoperations">
+            <h2>Schema operations</h2>
+            <p>QuantumDB currently supports the following schema operations:</p>
+
+            <h3>ADD COLUMN</h3>
+
+            <pre class="code"><code class="java">SchemaOperations.addColumn("users", "admin", PostgresTypes.bool(), "false", Hint.NOT_NULL);</code></pre>
+
+            <pre class="code"><code class="xml">&lt;addColumn tableName="users"&gt;
+  &lt;column name="admin" type="boolean" defaultExpression="false" nullable="false" /&gt;
+&lt;/addColumn&gt;</code></pre>
+
+            <p>
+                This code will create a new <code>admin</code> column in the <code>users</code> table, of type
+                <code>boolean</code>, which defaults to the <code>false</code> value, and cannot hold <code>NULL</code>
+                values. It's not required to set a default value. You can specify zero, one, or multiple hints of the
+                following types <code>AUTO_INCREMENT</code>, <code>NOT_NULL</code>, <code>IDENTITY</code>.
+            </p>
+
+            <h3>ADD FOREIGN KEY</h3>
+
+            <pre class="code"><code class="java">SchemaOperations.addForeignKey("messages", "sender_id")
+        .named("message_sender_id_fk")
+        .onDelete(Action.CASCADE)
+        .referencing("users", "id");</code></pre>
+
+            <pre class="code"><code class="xml">&lt;addForeignKey tableName="messages" columnNames="sender_id"
+               referencesTableName="users" referencesColumnNames="id"
+               name="message_sender_id_fk" onDelete="CASCADE" /&gt;</code></pre>
+
+            <p>
+                This code will create a new foreign key called <code>message_sender_id_fk</code> on the
+                <code>messages</code> table, which references the <code>id</code> column of the <code>users</code> table
+                and which will cascade deletes to the <code>messages</code> table when an entry in the
+                <code>users</code> table is deleted. Although this example only uses one column (<code>sender_id</code>)
+                which references one other column (<code>id</code>), you can also specify composite foreign key constraints
+                by stating multiple column names.
+            </p>
+
+            <h3>ALTER COLUMN</h3>
+
+            <pre class="code"><code class="java">SchemaOperations.alterColumn("users", "admin")
+        .rename("superuser")
+        .addHint(Hint.NOT_NULL)
+        .modifyDefaultExpression("false");</code></pre>
+
+            <pre class="code"><code class="xml">&lt;alterColumn tableName="users" columnName="admin" newColumnName="superuser" nullable="false" /&gt;
+&lt;alterDefaultExpression tableName="users" columnName="admin" defaultExpression="false" /&gt;</code></pre>
+
+            <p>
+                Using the <code>ALTER COLUMN</code> operation you can alter the name, data type, default
+                value/expression, and add and remove hints, all in one go.
+            </p>
+
+            <h3>COPY TABLE</h3>
+
+            <pre class="code"><code class="java">SchemaOperations.copyTable("users", "customers");</code></pre>
+
+            <pre class="code"><code class="xml">&lt;copyTable sourceTableName="users" targetTableName="customers" /&gt;</code></pre>
+
+            <p>
+                This will create a structural copy of the <code>users</code> table with the name <code>customers</code>.
+            </p>
+
+            <div class="alert alert-info">
+                <i class="glyphicon glyphicon-info-sign"></i>
+                <p>
+                    Please note that this operation does not copy the contents of the original table to the new table.
+                    For that you'll have to use a <a href="#dataoperations">DataOperation</a>.
+                </p>
+            </div>
+
+            <h3>CREATE INDEX</h3>
+
+            <pre class="code"><code class="java">SchemaOperations.createIndex("users", true, "email");</code></pre>
+
+            <pre class="code"><code class="xml">&lt;createIndex tableName="users" columnNames="email" unique="true" /&gt;</code></pre>
+
+            <p>
+                This example will create a new index on the <code>email</code> column of the <code>users</code> table.
+                In this particular case an index which enforces that every value in the <code>email</code> column must
+                be unique. If you wish to allow duplicate entries, you'll need to pass <code>false</code> instead of
+                <code>true</code>. You can create indices based on multiple columns as well by specifying multiple
+                column names.
+            </p>
+
+            <h3>CREATE TABLE</h3>
+
+            <pre class="code"><code class="java">SchemaOperations.createTable("users")
+        .with("id", PostgresTypes.bigint(), Hint.IDENTITY, Hint.AUTO_INCREMENT)
+        .with("first_name", PostgresTypes.text(), Hint.NOT_NULL)
+        .with("last_name", PostgresTypes.text(), Hint.NOT_NULL));</code></pre>
+
+            <pre class="code"><code class="xml">&lt;createTable tableName="users"&gt;
+  &lt;column name="id" type="bigint" primaryKey="true" autoIncrement="true" /&gt;
+  &lt;column name="first_name" type="text" nullable="false" /&gt;
+  &lt;column name="last_name" type="text" nullable="false" /&gt;
+&lt;/createTable&gt;</code></pre>
+
+            <p>
+                This example will create a new <code>users</code> table with three columns <code>id</code>,
+                <code>first_name</code>, and <code>last_name</code>.
+            </p>
+
+            <h3>DROP COLUMN</h3>
+
+            <pre class="code"><code class="java">SchemaOperations.dropColumn("users", "last_name");</code></pre>
+
+            <pre class="code"><code class="xml">&lt;dropColumn tableName="users" columnName="last_name" /&gt;</code></pre>
+
+            <p>
+                This example code drops an existing column from a table. In this particular case it will drop the
+                <code>last_name</code> column from the <code>users</code> table.
+            </p>
+
+            <h3>DROP FOREIGN KEY</h3>
+
+            <pre class="code"><code class="java">SchemaOperations.dropForeignKey("users", "user_referral_fk");</code></pre>
+
+            <pre class="code"><code class="xml">&lt;dropForeignKey tableName="users" foreignKeyName="user_referral_fk" /&gt;</code></pre>
+
+            <p>
+                This example code drops an existing foreign key constraint, named <code>user_referral_fk</code> from
+                the <code>users</code> table.
+            </p>
+
+            <h3>DROP INDEX</h3>
+
+            <pre class="code"><code class="java">SchemaOperations.dropIndex("users", "email");</code></pre>
+
+            <pre class="code"><code class="xml">&lt;dropIndex tableName="users" columnNames="email" /&gt;</code></pre>
+
+            <p>
+                This example code drops an existing index, based on the <code>email</code> column from
+                the <code>users</code> table.
+            </p>
+
+            <h3>DROP TABLE</h3>
+
+            <pre class="code"><code class="java">SchemaOperations.dropTable("users");</code></pre>
+
+            <pre class="code"><code class="xml">&lt;dropTable tableName="users" /&gt;</code></pre>
+
+            <p>This example code drops the existing <code>users</code> table from the database.</p>
+            <p>
+                Note that this operation is essentially &quot;free&quot; provided that the table is still in use by an
+                older version of the database schema. When the last database schema still using this table is dropped,
+                this table will be actually dropped from the database.
+            </p>
+
+            <h3>RENAME TABLE</h3>
+
+            <pre class="code"><code class="java">SchemaOperations.renameTable("users", "customers");</code></pre>
+
+            <pre class="code"><code class="xml">&lt;renameTable oldTableName="users" newTableName="customers" /&gt;</code></pre>
+
+            <p>This operation renames an existing <code>users</code> table to <code>customers</code>.</p>
+            <p>
+                It's worth noting that this operation is essentially &quot;free&quot;, as the current version of
+                QuantumDB doesn't actually change the database structure at all. The rename is handled by adding an
+                alias to QuantumDB's table mapping, pointing to the same physical table as the original. The
+                quantumdb-driver will use this table mapping to ensure your queries are addressed to the same physical
+                table even though you're using the new table name in your queries.
+            </p>
+
+            <p>
+                If you mix a &quot;rename table&quot; operation with any other &quot;non-free&quot; operation on the
+                same table, this operation will no longer be &quot;free&quot; and require the creation of a ghost
+                table during the migration.
+            </p>
+        </section>
+
+        <section id="dataoperations">
+            <h2>Data operations</h2>
+            <p>
+                QuantumDB currently supports simple data operations during the migration. These types of operations are
+                useful (if not necessary) to perform certain migrations. Here's an example:
+            </p>
+
+            <pre class="code"><code class="java">SchemaOperations.execute("INSERT INTO users" +
+        "(first_name, last_name) VALUES ('Michael', 'de Jong');");</code></pre>
+
+            <pre class="code"><code class="xml">&lt;sql&gt;INSERT INTO users (first_name, last_name) VALUES ('Michael', 'de Jong');&lt;/sql&gt;</code></pre>
+
+            <div class="alert alert-info">
+                <i class="glyphicon glyphicon-info-sign"></i>
+                <p>
+                    Please note that this operation should only be used to execute <i>Data Modification Language</i>
+                    operations, such as UPDATE, DELETE, and INSERT.
+                </p>
+            </div>
+        </section>
+
+        <section id="cli">
+            <h2>Command-line interface</h2>
+            <p>
+                The command-line interface can perform various tasks and migrations for you. These can be performed by
+                executing commands in the following manner: <pre class="terminal">$ quantumdb &lt;command&gt; [&lt;parameters...&gt;]</pre>
+            </p>
+
+            <p>The command-line interface can also list all supported commands by executing the help command:
+            <pre class="terminal">$ quantumdb help
+
+<strong>==> Available commands:</strong>
+    > init: Initializes and prepares the database for use with QuantumDB.
+    > changelog: Lists changes recorded in the changelog.
+    > status: Display currently available versions of the database schema.
+    > fork: Forks an existing database schema, and applies a set of operations to the fork.
+    > nuke: Drops everything in the database.
+    > drop: Drops the specified version of the database schema.
+    > query: Execute a query on a specific version of the database schema.</pre></p>
+
+            <h3>init</h3>
+            <p>
+                When you start using QuantumDB for the first time in a new PostgreSQL database you'll need to
+                initialize QuantumDB first. This is done with the <code>init</code> command. After executing this command:
+            </p>
+
+            <pre class="terminal">$ quantumdb init --host=&lt;host(s)&gt; --database=&lt;database&gt; --username=&lt;username&gt; [--password=&lt;password&gt;]</pre>
+
+            <p>
+                QuantumDB will scan the database and create tables used to track changes, and store the changelog in
+                the database. If you're running a master/slave setup with hot failover, you should specify all your servers'
+                hostnames and ports, comma separated.
+            </p>
+
+            <pre class="terminal">$ quantumdb init --host=localhost:5432 --database=quantumdb --user=quantumdb --password=quantumdb
+<strong>==> Scanning database...</strong>
+    > Vendor: PostgreSQL 9.6.5
+    > Found: 0 tables
+    > Found: 0 foreign keys
+    > Found: 0 sequences
+<strong>==> Persisting current state to database...</strong>
+<span class="green"><strong>==> Database is operating at version(s):</strong>
+    > 8fb3b4e71a: Initial state of the database.</span></pre>
+
+            <h3>changelog</h3>
+            <p>
+                When calling the <code>changelog</code> command, QuantumDB will retrieve the currently known changelog
+                from the database and display it. If a <code>changelog.xml</code> file is present in the working
+                directory, it will be taken into account as well.
+            </p>
+
+            <pre class="terminal">$ quantumdb changelog
+<span class="green"><strong>==> 8fb3b4e71a (active) - initial</strong></span>
+    > Date: 2018-04-24 21:05:57.074
+    > Author: QuantumDB
+    > Description: Initial state of the database.
+
+<span class="green"><strong>==> ed9eb9be2e - add_last_seen_column</strong></span>
+    > Date: Tue Apr 24 21:13:29 CEST 2018
+    > Author: Michael de Jong
+    > Operations: 1
+    > Description: Track the time the user was last seen.
+
+<span class="green"><strong>==> cc92b7b121 - track_users</strong></span>
+    > Date: Tue Apr 24 21:13:29 CEST 2018
+    > Author: Michael de Jong
+    > Operations: 1
+    > Description: Track when users are created and updated.</pre>
+
+            <p>
+                If this output is too verbose you can use the <code>--short</code> argument to produce a collapsed list
+                of changesets.
+            </p>
+
+            <pre class="terminal">$ quantumdb changelog --short
+<span class="green"><strong>==> 8fb3b4e71a (active) - initial</strong></span>
+<span class="green"><strong>==> ed9eb9be2e - add_last_seen_column</strong></span>
+<span class="green"><strong>==> cc92b7b121 - track_users</strong></span></pre>
+
+            <p>
+                In addition to <code>--short</code> you can also limit which changesets should be returned by using one
+                of, or a combination of the following arguments: <code>--from=&lt;version&gt;</code>,
+                <code>--until=&lt;version&gt;</code>, <code>--limit=&lt;number&gt;</code>
+            </p>
+
+            <pre class="terminal">$ quantumdb changelog --from=8fb3b4e71a --until=ed9eb9be2e --limit=1
+<span class="green"><strong>==> 8fb3b4e71a (active) - initial</strong></span>
+    > Date: 2018-04-24 21:05:57.074
+    > Author: QuantumDB
+    > Description: Initial state of the database.</pre>
+
+            <h3>status</h3>
+            <p>
+                When calling the <code>status</code> command, QuantumDB will display the currently active versions of
+                the changelog. In other words the versions of the changelog that can be used to query the database.
+            </p>
+
+            <pre class="terminal">$ quantumdb status
+<span class="green"><strong>==> Database is operating at version(s):</strong>
+    > 8fb3b4e71a: Initial state of the database.</span></pre>
+
+            <h3>fork</h3>
+            <p>
+                Entering a <i>Mixed-State</i> (ie. multiple versions of the database schema being active), can be done by
+                executing the <code>fork</code> command. This effectively means QuantumDB will try to find a migration
+                path from the currently active database schema version to the new version, and execute it.
+            </p>
+
+            <p>It might be that you're already in a <i>Mixed-State</i> and have multiple active database schemas. Although
+                forking even more versions into existence is possible, this feature should be considered experimental
+                for the time being, and require more hardware resources from your database server, than expected.
+                Should you want to perform such a fork, you'll have to specify from which other version you'd like to
+                fork. Usually this should be the "closest" active version.
+            </p>
+
+            <pre class="terminal">$ quantumdb fork [--from=&lt;version&gt;] &lt;version&gt;</pre>
+
+            <pre class="terminal">$ quantumdb fork ed9eb9be2e
+<strong>==> Scanning database...</strong>
+<strong>==> Forking database from: 8fb3b4e71a to: ed9eb9be2e...</strong>
+<span class="green"><strong>==> Database is operating at version(s):</strong>
+    > 8fb3b4e71a: Initial state of the database.
+    > ed9eb9be2e: Track the time the user was last seen.</span></pre>
+
+            <h3>nuke</h3>
+            <p>
+                Executing the <code>nuke</code> command will drop <strong>everything</strong> inside the database. This
+                not only includes the QuantumDB meta-info tables, but also your own tables. This command has been
+                specifically added for testing purposes.
+            </p>
+
+            <pre class="terminal">$ quantumdb nuke
+<span class="green"><strong>==> Successfully dropped everything!</strong></span></pre>
+
+            <div class="alert alert-danger">
+                <i class="glyphicon glyphicon-exclamation-sign"></i>
+                <p>
+                    Since this command removes all tables and data from the database, <strong>it is not recommended
+                    to use this command in production!</strong>
+                </p>
+            </div>
+
+            <h3>drop</h3>
+            <p>
+                When you're in <i>Mixed-State</i>, you can move back to a <i>Single-State</i> by dropping everything
+                but one version of the database schema. This can be done with the <code>drop</code> command, which
+                will drop everything inside the database that's associated with the specified database schema version
+                (and not used by another active database schema version.
+            </p>
+
+            <pre class="terminal">$ quantumdb drop &lt;version&gt;</pre>
+
+            <p>Here's an example when we want to drop the older database schema version:</p>
+
+            <pre class="terminal">$ quantumdb drop 8fb3b4e71a
+<strong>==> Scanning database...</strong>
+<strong>==> Checking how many clients are still connected to: 8fb3b4e71a</strong>
+    > 0 clients are using this version of the database schema.
+<strong>==> Dropping database schema version: 8fb3b4e71a...</strong>
+<span class="green"><strong>==> Database is operating at version(s):</strong>
+    > ed9eb9be2e: Track the time the user was last seen.</span></pre>
+
+            <div class="alert alert-info">
+                <i class="glyphicon glyphicon-info-sign"></i>
+                <p>
+                    Please note that before dropping a database schema, QuantumDB will first ensure no client is still
+                    using it. If there is a client that is still using the specified database schema version through
+                    the QuantumDB driver, it will not perform the operation.
+                </p>
+            </div>
+
+            <h3>query</h3>
+            <p>
+                <code>query</code> is another debugging command that can be used. The <code>query</code> will execute
+                a specified query on the database, and if applicable return the results from that query. If there's
+                only one active database schema, it will default to that version and you won't have to specify a
+                version. However if multiple database schema versions are active, you'll need to specify the version
+                of the database schema you want to execute the query on.
+            </p>
+
+            <pre class="terminal">$ quantumdb query [--version=&lt;version&gt;] "&lt;query&gt;"</pre>
+
+            <p>For instance, to insert a new record we can execute the following command:</p>
+
+            <pre class="terminal">$ quantumdb query "INSERT INTO users (email, first_name, last_name) VALUES ('michael@example.org', 'Michael', 'de Jong') RETURNING *;"
+ id | email               | first_name | last_name | last_seen
+--------------------------------------------------------------------------------
+  1 | michael@example.org | Michael    | de Jong   | 2018-04-28 19:03:56.876755
+(1 rows)</pre>
+
+            <p>
+                But later on when we're in a <i>Mixed-State</i>, and we want to query the database we'll have to provide a
+                version to apply the query to:
+            </p>
+
+            <pre class="terminal">$ quantumdb query --version=ed9eb9be2e "SELECT * FROM users;"
+ id | email               | first_name | last_name | last_seen
+--------------------------------------------------------------------------------
+  1 | michael@example.org | Michael    | de Jong   | 2018-04-28 19:03:56.876755
+(1 rows)</pre>
+
+        </section>
+
+    </div>
+</div>
