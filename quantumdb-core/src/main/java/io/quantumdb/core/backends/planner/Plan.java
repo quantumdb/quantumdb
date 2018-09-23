@@ -15,6 +15,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.quantumdb.core.backends.planner.Operation.Type;
 import io.quantumdb.core.schema.definitions.Table;
+import io.quantumdb.core.schema.definitions.View;
 import io.quantumdb.core.versioning.RefLog;
 import lombok.Data;
 
@@ -90,8 +91,8 @@ public class Plan {
 					.findFirst();
 		}
 
-		public Plan build(RefLog refLog, Set<Table> ghostTables) {
-			return new Plan(Lists.newArrayList(steps), refLog, ghostTables);
+		public Plan build(RefLog refLog, Set<Table> ghostTables, Set<View> views) {
+			return new Plan(Lists.newArrayList(steps), refLog, ghostTables, views);
 		}
 
 	}
@@ -103,11 +104,13 @@ public class Plan {
 	private final ImmutableList<Step> steps;
 	private final RefLog refLog;
 	private final ImmutableSet<Table> ghostTables;
+	private final ImmutableSet<View> views;
 
-	public Plan(List<Step> steps, RefLog refLog, Set<Table> ghostTables) {
+	public Plan(List<Step> steps, RefLog refLog, Set<Table> ghostTables, Set<View> views) {
 		this.steps = ImmutableList.copyOf(steps);
 		this.refLog = refLog;
 		this.ghostTables = ImmutableSet.copyOf(ghostTables);
+		this.views = ImmutableSet.copyOf(views);
 	}
 
 	public ImmutableList<Step> getSteps() {
