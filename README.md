@@ -8,8 +8,8 @@ work.
 
 For more information, please checkout these links:
 
-* [Overall presentation on QuantumDB / Zero-downtime database schema evolution](https://speakerdeck.com/michaeldejong/zero-downtime-database-schema-evolution)
-* [My Msc Thesis on Zero-downtime database schema evolution](http://repository.tudelft.nl/assets/uuid:af89f8ba-fc34-4084-b479-154be397718f/thesis.pdf)
+* [Overall presentation on QuantumDB / Zero-downtime database schema evolution](https://speakerdeck.com/michaeldejong/icse-17-zero-downtime-sql-database-schema-evolution-for-continuous-deployment-1)
+* [My Msc Thesis on Zero-downtime database schema evolution](http://resolver.tudelft.nl/uuid:af89f8ba-fc34-4084-b479-154be397718f)
 * Our paper [Zero-Downtime SQL Database Schema Evolution for Continuous Deployment](https://pure.tudelft.nl/portal/en/publications/zerodowntime-sql-database-schema-evolution-for-continuous-deployment(a1fa43f9-9066-4f21-a199-56793f0d2614).html) published at [ICSE SEIP 2017](http://dx.doi.org/10.1109/ICSE-SEIP.2017.5).
 
 ## Setup dev-environment
