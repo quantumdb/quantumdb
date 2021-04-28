@@ -136,6 +136,11 @@ public class SyncFunction {
 				.append("CREATE OR REPLACE FUNCTION " + functionName + "()")
 				.append("RETURNS TRIGGER AS $$")
 				.append("BEGIN")
+				.append("  SET LOCAL quantumdb." + source.getRefId() + " = 'true';")
+				.append("  IF current_setting('quantumdb." + target.getRefId() + "', true) = 'true' THEN")
+				.append("    RETURN NEW;")
+				.append("  END IF;")
+				.append("  SET LOCAL quantumdb." + target.getRefId() + " = 'true';")
 				.append("  IF TG_OP = 'INSERT' THEN")
 				.append("    INSERT INTO " + target.getRefId())
 				.append("      (" + represent(insertExpressions, Entry::getKey, ", ") + ") VALUES")
@@ -180,7 +185,6 @@ public class SyncFunction {
 				.append("AFTER INSERT OR UPDATE OR DELETE")
 				.append("ON " + source.getRefId())
 				.append("FOR EACH ROW")
-				.append("WHEN (pg_trigger_depth() = 0)")
 				.append("EXECUTE PROCEDURE " + functionName + "();");
 	}
 
