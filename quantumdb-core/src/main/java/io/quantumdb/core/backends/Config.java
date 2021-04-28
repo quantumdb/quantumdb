@@ -96,21 +96,26 @@ public class Config {
 
 	public Backend getBackend() {
 		String jdbcUrl = getUrl();
-
-		for (String backendName : SUPPORTED_BACKENDS) {
-			try {
-				Class<?> type = Class.forName(backendName);
-				Backend backend = (Backend) type.getDeclaredConstructor(Config.class).newInstance(this);
-				if (backend.isJdbcUrlSupported(jdbcUrl)) {
-					return backend;
+		if (jdbcUrl != null) {
+			for (String backendName : SUPPORTED_BACKENDS) {
+				try {
+					Class<?> type = Class.forName(backendName);
+					Backend backend = (Backend) type.getDeclaredConstructor(Config.class).newInstance(this);
+					if (backend.isJdbcUrlSupported(jdbcUrl)) {
+						return backend;
+					}
+				}
+				catch (ReflectiveOperationException e) {
+					throw new IllegalArgumentException("Something went wrong selecting backends.");
+					// Skip this one.
 				}
 			}
-			catch (ReflectiveOperationException e) {
-				// Skip this one.
-			}
+
+			throw new IllegalArgumentException("No backend support for JDBC URL: " + jdbcUrl);
+		} else {
+			throw new IllegalArgumentException("You have not specified a backend URL");
 		}
 
-		throw new IllegalArgumentException("No backend support for JDBC URL: " + jdbcUrl);
 	}
 
 }

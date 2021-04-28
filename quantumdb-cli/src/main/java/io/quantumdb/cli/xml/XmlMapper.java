@@ -22,6 +22,12 @@ public class XmlMapper {
 		return XmlChangelog.convert(element);
 	}
 
+	/**
+	 * Parses the current XML file into XmlElements and gives back the root XmlElement
+	 * @param file the file the parser should load
+	 * @return root XmlElement of XML file
+	 * @throws IOException when XML file is not correct
+	 */
 	private XmlElement load(String file) throws IOException {
 		try {
 			SAXParserFactory factory = SAXParserFactory.newInstance();
@@ -65,7 +71,7 @@ public class XmlMapper {
 				}
 
 				@SneakyThrows
-				public void characters(char ch[], int start, int length) {
+				public void characters(char[] ch, int start, int length) {
 					String body = new String(ch, start, length);
 					if (body.trim().isEmpty()) {
 						return;

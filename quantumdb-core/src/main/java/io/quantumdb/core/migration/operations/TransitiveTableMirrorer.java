@@ -16,7 +16,9 @@ import io.quantumdb.core.versioning.RefLog.TableRef;
 import io.quantumdb.core.versioning.Version;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 class TransitiveTableMirrorer {
 
@@ -28,6 +30,8 @@ class TransitiveTableMirrorer {
 		List<TableRef> tablesToMirror = Arrays.stream(tableNames)
 				.map(tableName -> refLog.getTableRef(parentVersion, tableName))
 				.collect(Collectors.toList());
+
+		log.debug("These tables are mirrored {}", tablesToMirror);
 
 		while(!tablesToMirror.isEmpty()) {
 			TableRef tableRef = tablesToMirror.remove(0);
@@ -71,6 +75,8 @@ class TransitiveTableMirrorer {
 						.referencing(newReferredTable, foreignKey.getReferredColumns());
 			}
 		}
+
+		// ToDo recreate any existing indexes concurrently
 
 		return mirrored;
 	}

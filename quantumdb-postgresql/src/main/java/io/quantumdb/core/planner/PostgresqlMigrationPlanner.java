@@ -388,15 +388,8 @@ public class PostgresqlMigrationPlanner implements MigrationPlanner {
 				}
 
 				for (ForeignKey foreignKey : table.getForeignKeys()) {
-					if (operationType == Type.COPY) {
-						if (!foreignKey.isNotNullable() && !foreignKey.isInheritanceRelation()) {
-							continue;
-						}
-					}
-					else if (operationType == Type.ADD_NULL) {
-						if (!foreignKey.isNotNullable() && !foreignKey.isInheritanceRelation()) {
-							continue;
-						}
+					if (!foreignKey.isNotNullable() && !foreignKey.isInheritanceRelation()) {
+						continue;
 					}
 
 					Table otherTable = foreignKey.getReferredTable();

@@ -16,6 +16,7 @@ public class ColumnType {
 		TEXT,
 		SMALLINT,
 		INTEGER,
+		NUMERIC,
 		BIGINT,
 		DOUBLE,
 		FLOAT,

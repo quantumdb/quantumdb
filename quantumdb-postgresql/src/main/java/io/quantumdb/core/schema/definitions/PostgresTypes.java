@@ -37,6 +37,8 @@ public class PostgresTypes {
 				return PostgresTypes.bigint();
 			case "integer":
 				return PostgresTypes.integer();
+			case "numeric":
+				return PostgresTypes.numeric();
 			case "bool":
 			case "boolean":
 				return PostgresTypes.bool();
@@ -105,6 +107,11 @@ public class PostgresTypes {
 	public static ColumnType integer() {
 		return new ColumnType(ColumnType.Type.INTEGER, false, "integer", () -> 0,
 				(statement, position, value) -> statement.setInt(position, ((Number) value).intValue()));
+	}
+
+	public static ColumnType numeric() {
+		return new ColumnType(ColumnType.Type.NUMERIC, false, "numeric", () -> 0.00d,
+				(statement, position, value) -> statement.setDouble(position, ((Double) value)));
 	}
 	
 	public static ColumnType bigint() {

@@ -2,11 +2,8 @@ package io.quantumdb.core.planner;
 
 import static io.quantumdb.core.utils.RandomHasher.generateHash;
 
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -112,25 +109,26 @@ public class SyncFunction {
 		this.insertExpressions = ImmutableMap.copyOf(expressions);
 		this.updateExpressions = ImmutableMap.copyOf(insertExpressions);
 
-		this.updateIdentitiesForInserts = ImmutableMap.copyOf(targetTable.getIdentityColumns().stream()
+		this.updateIdentitiesForInserts = ImmutableMap.copyOf((Map<? extends String, ? extends String>)targetTable.getColumns().stream()
+				.filter(column -> reverseLookup(mapping, column.getName()).isPresent())
 				.collect(Collectors.toMap(column -> "\"" + column.getName() + "\"",
-						column -> "NEW.\"" + reverseLookup(mapping, column.getName()) + "\"",
+						column -> "NEW.\"" + reverseLookup(mapping, column.getName()).get() + "\"",
 						(u, v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
 						Maps::newLinkedHashMap)));
 
-		this.updateIdentities = ImmutableMap.copyOf(targetTable.getIdentityColumns().stream()
+		this.updateIdentities = ImmutableMap.copyOf((Map<? extends String, ? extends String>)targetTable.getIdentityColumns().stream()
+				.filter(column -> reverseLookup(mapping, column.getName()).isPresent())
 				.collect(Collectors.toMap(column -> "\"" + column.getName() + "\"",
-						column -> "OLD.\"" + reverseLookup(mapping, column.getName()) + "\"",
+						column -> "OLD.\"" + reverseLookup(mapping, column.getName()).get() + "\"",
 						(u, v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
 						Maps::newLinkedHashMap)));
 	}
 
-	private String reverseLookup(Map<String, String> mapping, String value) {
+	private Optional<String> reverseLookup(Map<String, String> mapping, String value) {
 		return mapping.entrySet().stream()
 				.filter(entry -> entry.getValue().equals(value))
 				.findFirst()
-				.map(Entry::getKey)
-				.get();
+				.map(Entry::getKey);
 	}
 
 	public QueryBuilder createFunctionStatement() {

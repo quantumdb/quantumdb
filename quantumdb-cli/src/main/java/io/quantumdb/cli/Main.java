@@ -41,6 +41,7 @@ public class Main {
 			String command = arguments.remove(0);
 			Command delegate = commands.get(command);
 			if (delegate != null) {
+				writer.write("Executing command: " + command + " with arguments: " + arguments);
 				delegate.perform(writer, arguments);
 			}
 			else {

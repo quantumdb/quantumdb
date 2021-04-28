@@ -160,7 +160,6 @@ public class RefLog {
 			return columns.values().stream()
 					.flatMap(column -> column.getBasedOn().stream())
 					.map(ColumnRef::getTable)
-					.distinct()
 					.collect(Collectors.toSet());
 		}
 
@@ -168,7 +167,6 @@ public class RefLog {
 			return columns.values().stream()
 					.flatMap(column -> column.getBasisFor().stream())
 					.map(ColumnRef::getTable)
-					.distinct()
 					.collect(Collectors.toSet());
 		}
 
@@ -828,7 +826,9 @@ public class RefLog {
 	 * @return The mapping between TableRefs between these two versions.
 	 */
 	public Multimap<TableRef, TableRef> getTableMapping(Version from, Version to, boolean filterUnchanged) {
+		log.debug("Getting table mapping from {} to {}", from.getId(), to.getId());
 		Multimap<TableRef, TableRef> mapping = HashMultimap.create();
+		log.debug("TableRefs existing in from version: {}", getTableRefs(from));
 		getTableRefs(from).forEach(tableRef -> {
 			Set<TableRef> targets = Sets.newHashSet();
 			List<TableRef> toCheck = Lists.newLinkedList();

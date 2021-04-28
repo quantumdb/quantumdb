@@ -42,7 +42,7 @@ public class XmlAddColumn implements XmlOperation<AddColumn> {
 		String defaultExpression = column.getDefaultExpression();
 
 		List<Hint> hints = Lists.newArrayList();
-		if (column.isNullable()) {
+		if (!column.isNullable()) {
 			hints.add(Hint.NOT_NULL);
 		}
 		if (column.isAutoIncrement()) {

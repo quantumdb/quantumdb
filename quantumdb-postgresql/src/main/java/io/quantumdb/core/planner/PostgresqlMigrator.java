@@ -5,11 +5,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.HashBasedTable;
@@ -32,6 +29,7 @@ import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.schema.operations.DataOperation;
 import io.quantumdb.core.schema.operations.Operation.Type;
 import io.quantumdb.core.utils.QueryBuilder;
+import io.quantumdb.core.versioning.ChangeSet;
 import io.quantumdb.core.versioning.RefLog;
 import io.quantumdb.core.versioning.RefLog.ColumnRef;
 import io.quantumdb.core.versioning.RefLog.SyncRef;
@@ -124,14 +122,60 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		RefLog refLog = state.getRefLog();
 		Catalog catalog = state.getCatalog();
 
-		List<TableRef> tablesToDrop = refLog.getTableRefs().stream()
-				.filter(tableRef -> tableRef.getVersions().contains(version))
-				.filter(tableRef -> tableRef.getVersions().stream()
-						.filter(otherVersion -> otherVersion.getOperation().getType() == Type.DDL)
-						.count() == 1)
-				.collect(Collectors.toList());
+		Set<Version> activeVersions = refLog.getVersions();
+		checkArgument(activeVersions.contains(version), "Version to drop is not part of the active versions!");
+
+		// Check if version is at the end of the active versions
+		Version first = version;
+		Version last = version;
+		Version intermediateV = version.getChild();
+		while (intermediateV != null) {
+			if (activeVersions.contains(intermediateV)) {
+				last = intermediateV;
+			}
+			intermediateV = intermediateV.getChild();
+		}
+		// Or first
+		intermediateV = version.getParent();
+		while (intermediateV != null) {
+			if (activeVersions.contains(intermediateV)) {
+				first = intermediateV;
+			}
+			intermediateV = intermediateV.getParent();
+		}
+
+		checkArgument(!(first.equals(version) && last.equals(version)), "Cannot drop the only active version!");
+		checkArgument(first.equals(version) || last.equals(version), "The version to drop is not at the beginning or end of the active versions!");
+
+		List<Version> versionsToDrop = new ArrayList<Version>();
+		List<Version> versionsToKeep = new ArrayList<Version>();
+
+		//New implementation - active version to drop should always be the previous versions to drop
+		ChangeSet changeSetToDrop = version.getChangeSet();
+		versionsToDrop.add(version);
+		Version intermediateVersion = version.getChild();
+		while (true) {
+			if (intermediateVersion != null && intermediateVersion.getChangeSet().equals(changeSetToDrop)) {
+				versionsToDrop.add(intermediateVersion);
+				intermediateVersion = intermediateVersion.getChild();
+			} else {
+				break;
+			}
+		}
+
+		LinkedHashSet<TableRef> tablesToDropSet = new LinkedHashSet<TableRef>();
+		for (Version version1 : versionsToDrop) {
+			tablesToDropSet.addAll(refLog.getTableRefs().stream()
+					.filter(tableRef -> tableRef.getVersions().contains(version1))
+					.filter(tableRef -> tableRef.getVersions().stream().noneMatch(activeVersions::contains))
+					// only drop table if it actually exists in the catalog because it may already be deleted
+					.filter(tableRef -> catalog.getTables().stream().anyMatch(table -> tableRef.getRefId().equals(table.getName())))
+					.collect(Collectors.toSet()));
+		}
 
 		Map<SyncRef, SyncFunction> newSyncFunctions = Maps.newLinkedHashMap();
+
+		List<TableRef> tablesToDrop = new ArrayList<>(tablesToDropSet);
 
 		log.info("Determined the following tables will be dropped: {}", tablesToDrop);
 		for (TableRef tableRef : tablesToDrop) {

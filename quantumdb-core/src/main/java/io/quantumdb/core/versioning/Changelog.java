@@ -26,6 +26,9 @@ import lombok.Setter;
 @EqualsAndHashCode(exclude = { "idGenerator" })
 public class Changelog {
 
+	/**
+	 * The root Version of the Changelog
+	 */
 	private final Version root;
 
 	@Getter(AccessLevel.NONE)
