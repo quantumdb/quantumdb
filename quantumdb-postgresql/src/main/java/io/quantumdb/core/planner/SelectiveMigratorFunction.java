@@ -41,7 +41,7 @@ public class SelectiveMigratorFunction {
 	private static MigratorFunction createUpdateMigrator(RefLog refLog, Table source, Table target, Version from,
 			Version to, long batchSize, Stage stage, Set<String> columnsToBeMigrated) {
 
-		List<Column> identityColumns = source.getIdentityColumns();
+		List<Column> identityColumns = source.getPrimaryKeyColumns();
 		Map<String, String> functionParameterMapping = Maps.newHashMap();
 		for (int i = 0; i < identityColumns.size(); i++) {
 			functionParameterMapping.put(identityColumns.get(i).getName(), "q" + i);
@@ -123,7 +123,7 @@ public class SelectiveMigratorFunction {
 				})
 				.collect(Collectors.joining(", "));
 
-		String identityCondition = source.getIdentityColumns().stream()
+		String identityCondition = source.getPrimaryKeyColumns().stream()
 				.map(column -> {
 					String mappedColumnName = columnMapping.entrySet().stream()
 							.filter(entry -> entry.getKey().getName().equals(column.getName()))
@@ -166,7 +166,7 @@ public class SelectiveMigratorFunction {
 	private static MigratorFunction createInsertMigrator(NullRecords nullRecords, RefLog refLog, Table source,
 			Table target, Version from, Version to, long batchSize, Stage stage, Set<String> columns) {
 
-		List<Column> identityColumns = source.getIdentityColumns();
+		List<Column> identityColumns = source.getPrimaryKeyColumns();
 		Map<String, String> functionParameterMapping = Maps.newHashMap();
 		for (int i = 0; i < identityColumns.size(); i++) {
 			functionParameterMapping.put(identityColumns.get(i).getName(), "q" + i);

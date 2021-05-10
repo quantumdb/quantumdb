@@ -102,7 +102,7 @@ public class ForeignKey {
 	}
 
 	public boolean isInheritanceRelation() {
-		Set<String> identityColumns = getReferencingTable().getIdentityColumns().stream()
+		Set<String> identityColumns = getReferencingTable().getPrimaryKeyColumns().stream()
 				.map(Column::getName)
 				.collect(Collectors.toSet());
 

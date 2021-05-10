@@ -1,7 +1,7 @@
 package io.quantumdb.core.backends;
 
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
-import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
+import static io.quantumdb.core.schema.definitions.Column.Hint.PRIMARY_KEY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.integer;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.varchar;
@@ -50,11 +50,11 @@ public class TransactionalityTest {
 		Catalog catalog = new Catalog(database.getCatalogName());
 
 		Table source = new Table("source")
-				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL));
 
 		Table target = new Table("target")
-				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL));
 
 		catalog.addTable(source);

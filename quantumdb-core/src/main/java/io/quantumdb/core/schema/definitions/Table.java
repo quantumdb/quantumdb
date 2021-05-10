@@ -115,9 +115,7 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 		checkArgument(!columns.isEmpty(), "You must specify at least one entry in 'columns'.");
 
 		return indexes.stream()
-				.filter(c -> c.getColumns().equals(Lists.newArrayList(columns)))
-				.findFirst()
-				.isPresent();
+				.anyMatch(c -> c.getColumns().equals(Lists.newArrayList(columns)));
 	}
 
 	public Index removeIndex(String... columns) {
@@ -175,9 +173,9 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 						"Table: " + name + " does not contain column: " + columnName));
 	}
 
-	public List<Column> getIdentityColumns() {
+	public List<Column> getPrimaryKeyColumns() {
 		return getColumns().stream()
-				.filter(Column::isIdentity)
+				.filter(Column::isPrimaryKey)
 				.collect(Collectors.toList());
 	}
 
@@ -185,9 +183,7 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 		checkArgument(!Strings.isNullOrEmpty(columnName), "You must specify a 'name'.");
 
 		return columns.stream()
-				.filter(c -> c.getName().equals(columnName))
-				.findFirst()
-				.isPresent();
+				.anyMatch(c -> c.getName().equals(columnName));
 	}
 
 	public Column removeColumn(String columnName) {
@@ -198,7 +194,7 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 		checkState(column.getIncomingForeignKeys().isEmpty(),
 				"You cannot remove a column that is still referenced by foreign keys.");
 
-		List<Column> identityColumns = getIdentityColumns();
+		List<Column> identityColumns = getPrimaryKeyColumns();
 		identityColumns.remove(column);
 		checkState(!identityColumns.isEmpty(), "You drop the last remaining identity column of a table.");
 
@@ -249,17 +245,15 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 
 	void dropOutgoingForeignKeys() {
 		columns.stream()
-				.filter(column -> column.getOutgoingForeignKey() != null)
-				.map(column -> column.getOutgoingForeignKey())
+				.map(Column::getOutgoingForeignKey)
+				.filter(Objects::nonNull)
 				.distinct()
 				.forEach(ForeignKey::drop);
 	}
 
 	public boolean referencesTable(String tableName) {
 		return foreignKeys.stream()
-				.filter(foreignKey -> foreignKey.getReferredTableName().equals(tableName))
-				.findAny()
-				.isPresent();
+				.anyMatch(foreignKey -> foreignKey.getReferredTableName().equals(tableName));
 	}
 
 	public Set<String> enumerateReferencedByTables() {

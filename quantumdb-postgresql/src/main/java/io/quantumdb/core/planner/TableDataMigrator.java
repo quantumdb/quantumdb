@@ -121,7 +121,7 @@ class TableDataMigrator {
 	}
 
 	private Map<String, Object> queryHighestId(Table from) throws SQLException {
-		List<String> identityColumns = from.getIdentityColumns().stream()
+		List<String> identityColumns = from.getPrimaryKeyColumns().stream()
 				.map(Column::getName)
 				.collect(Collectors.toList());
 
@@ -221,7 +221,7 @@ class TableDataMigrator {
 		}
 
 		Map<String, Object> identity = Maps.newHashMap();
-		List<Column> identityColumns = from.getIdentityColumns();
+		List<Column> identityColumns = from.getPrimaryKeyColumns();
 		for (int i = 0; i < identityColumns.size(); i++) {
 			Column column = identityColumns.get(i);
 			String columnName = column.getName();

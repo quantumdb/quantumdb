@@ -49,10 +49,13 @@ public class XmlAddColumn implements XmlOperation<AddColumn> {
 			hints.add(Hint.AUTO_INCREMENT);
 		}
 		if (column.isPrimaryKey()) {
-			hints.add(Hint.IDENTITY);
+			hints.add(Hint.PRIMARY_KEY);
+		}
+		if (column.isUnique()) {
+			hints.add(Hint.UNIQUE);
 		}
 
-		Hint[] hintArray = hints.toArray(new Hint[hints.size()]);
+		Hint[] hintArray = hints.toArray(new Hint[0]);
 		return SchemaOperations.addColumn(tableName, columnName, dataType, defaultExpression, hintArray);
 	}
 

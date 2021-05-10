@@ -75,7 +75,7 @@ public class ColumnTest {
 	public void testGetParentReturnsNullWhenColumnDoesNotBelongToTable() {
 		Column column = new Column("id", bigint());
 
-		assertEquals(null, column.getParent());
+		assertNull(column.getParent());
 	}
 
 	@Test
@@ -90,11 +90,11 @@ public class ColumnTest {
 	@Test
 	public void testAddingForeignKeyToSingleColumn() {
 		Table users = new Table("users")
-				.addColumn(new Column("id", bigint(), IDENTITY, NOT_NULL, AUTO_INCREMENT))
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT))
 				.addColumn(new Column("address_id", bigint(), NOT_NULL));
 
 		Table addresses = new Table("addresses")
-				.addColumn(new Column("id", bigint(), IDENTITY, NOT_NULL, AUTO_INCREMENT));
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT));
 
 		ForeignKey constraint = users.addForeignKey("address_id")
 				.referencing(addresses, "id");
@@ -110,22 +110,22 @@ public class ColumnTest {
 	@Test
 	public void testAddingForeignKeyToMultiColumn() {
 		Table items = new Table("items")
-				.addColumn(new Column("id", bigint(), IDENTITY, NOT_NULL, AUTO_INCREMENT));
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT));
 
 		Table locations = new Table("locations")
-				.addColumn(new Column("id", bigint(), IDENTITY, NOT_NULL, AUTO_INCREMENT));
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT));
 
 		Table stocks = new Table("stocks")
-				.addColumn(new Column("item_id", bigint(), IDENTITY, NOT_NULL))
-				.addColumn(new Column("location_id", bigint(), IDENTITY, NOT_NULL))
+				.addColumn(new Column("item_id", bigint(), PRIMARY_KEY, NOT_NULL))
+				.addColumn(new Column("location_id", bigint(), PRIMARY_KEY, NOT_NULL))
 				.addColumn(new Column("quantity", bigint(), NOT_NULL));
 
 		stocks.addForeignKey("item_id").referencing(items, "id");
 		stocks.addForeignKey("location_id").referencing(locations, "id");
 
 		Table stockNotes = new Table("stock_notes")
-				.addColumn(new Column("item_id", bigint(), IDENTITY, NOT_NULL))
-				.addColumn(new Column("location_id", bigint(), IDENTITY, NOT_NULL))
+				.addColumn(new Column("item_id", bigint(), PRIMARY_KEY, NOT_NULL))
+				.addColumn(new Column("location_id", bigint(), PRIMARY_KEY, NOT_NULL))
 				.addColumn(new Column("notes", varchar(255), NOT_NULL));
 
 		ForeignKey constraint = stockNotes.addForeignKey("item_id", "location_id")
@@ -144,11 +144,11 @@ public class ColumnTest {
 	@Test
 	public void testRemovingColumnWithOutgoingForeignKey() {
 		Table users = new Table("users")
-				.addColumn(new Column("id", bigint(), IDENTITY, NOT_NULL, AUTO_INCREMENT))
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT))
 				.addColumn(new Column("address_id", bigint(), NOT_NULL));
 
 		Table addresses = new Table("addresses")
-				.addColumn(new Column("id", bigint(), IDENTITY, NOT_NULL, AUTO_INCREMENT));
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT));
 
 		users.addForeignKey("address_id")
 				.referencing(addresses, "id");
@@ -163,11 +163,11 @@ public class ColumnTest {
 	@Test(expected = IllegalStateException.class)
 	public void testRemovingColumnWithIncomingForeignKey() {
 		Table users = new Table("users")
-				.addColumn(new Column("id", bigint(), IDENTITY, NOT_NULL, AUTO_INCREMENT))
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT))
 				.addColumn(new Column("address_id", bigint(), NOT_NULL));
 
 		Table addresses = new Table("addresses")
-				.addColumn(new Column("id", bigint(), IDENTITY, NOT_NULL, AUTO_INCREMENT))
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT))
 				.addColumn(new Column("serial_id", bigint()));
 
 		users.addForeignKey("address_id")
@@ -210,7 +210,7 @@ public class ColumnTest {
 
 	@Test
 	public void testThatCopyMethodReturnsCopy() {
-		Column column = new Column("id", bigint(), IDENTITY, AUTO_INCREMENT, NOT_NULL);
+		Column column = new Column("id", bigint(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL);
 		Column copy = column.copy();
 
 		assertEquals(column, copy);
@@ -219,7 +219,7 @@ public class ColumnTest {
 
 	@Test
 	public void toStringReturnsSomething() {
-		Column column = new Column("id", bigint(), "'0'", IDENTITY, NOT_NULL);
+		Column column = new Column("id", bigint(), "'0'", PRIMARY_KEY, NOT_NULL);
 
 		assertFalse(Strings.isNullOrEmpty(column.toString()));
 	}

@@ -64,7 +64,6 @@ public class Migrator {
 	public void migrate(String sourceVersionId, String targetVersionId) throws MigrationException {
 		log.info("Forking from version: {} to version: {}", sourceVersionId, targetVersionId);
 
-		// ToDo give state as parameter as it is already loaded before
 		State state = loadState();
 		Changelog changelog = state.getChangelog();
 		Version from = changelog.getVersion(sourceVersionId);

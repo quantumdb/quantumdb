@@ -104,7 +104,7 @@ public class NullRecords {
 
 	private Identity insertNullObject(Connection connection, Table table, Map<String, Identity> generatedIdentities) throws SQLException {
 		List<Column> columnsToSet = table.getColumns().stream()
-				.filter(column -> column.isIdentity() || column.isNotNull())
+				.filter(column -> column.isPrimaryKey() || column.isNotNull())
 				.collect(Collectors.toList());
 
 		List<String> columnNames = columnsToSet.stream()
@@ -139,7 +139,7 @@ public class NullRecords {
 				String columnName = column.getName();
 				ForeignKey outgoingForeignKey = column.getOutgoingForeignKey();
 
-				if (column.isIdentity()) {
+				if (column.isPrimaryKey()) {
 					Object value = identity.getValue(columnName);
 					valueSetter.setValue(statement, i, value);
 					values.put(column.getName(), value);
@@ -178,7 +178,7 @@ public class NullRecords {
 		Identity identity = new Identity();
 		generatedIdentities.put(table.getName(), identity);
 
-		for (Column identityColumn : table.getIdentityColumns()) {
+		for (Column identityColumn : table.getPrimaryKeyColumns()) {
 			ForeignKey outgoingForeignKey = identityColumn.getOutgoingForeignKey();
 			if (identityColumn.isAutoIncrement()) {
 				Sequence sequence = identityColumn.getSequence();

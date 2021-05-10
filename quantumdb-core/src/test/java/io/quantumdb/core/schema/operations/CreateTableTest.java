@@ -1,7 +1,7 @@
 package io.quantumdb.core.schema.operations;
 
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
-import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
+import static io.quantumdb.core.schema.definitions.Column.Hint.PRIMARY_KEY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
 import static io.quantumdb.core.schema.definitions.TestTypes.bigint;
 import static io.quantumdb.core.schema.definitions.TestTypes.varchar;
@@ -17,10 +17,10 @@ public class CreateTableTest {
 	@Test
 	public void testCreatingTableWithDefaultExpression() {
 		CreateTable operation = SchemaOperations.createTable("addresses")
-				.with("id", bigint(), "'1'", IDENTITY, NOT_NULL);
+				.with("id", bigint(), "'1'", PRIMARY_KEY, NOT_NULL);
 
 		List<ColumnDefinition> expectedColumns = Lists.newArrayList(
-				new ColumnDefinition("id", bigint(), "'1'", IDENTITY, NOT_NULL));
+				new ColumnDefinition("id", bigint(), "'1'", PRIMARY_KEY, NOT_NULL));
 
 		assertEquals("addresses", operation.getTableName());
 		assertEquals(expectedColumns, operation.getColumns());
@@ -29,7 +29,7 @@ public class CreateTableTest {
 	@Test
 	public void testCreatingTableWithMultipleColumns() {
 		CreateTable operation = SchemaOperations.createTable("addresses")
-				.with("id", bigint(), IDENTITY, AUTO_INCREMENT, NOT_NULL)
+				.with("id", bigint(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL)
 				.with("street", varchar(255), NOT_NULL)
 				.with("street_number", varchar(10), NOT_NULL)
 				.with("city", varchar(255), NOT_NULL)
@@ -37,7 +37,7 @@ public class CreateTableTest {
 				.with("country", varchar(255), NOT_NULL);
 
 		List<ColumnDefinition> expectedColumns = Lists.newArrayList(
-				new ColumnDefinition("id", bigint(), IDENTITY, AUTO_INCREMENT, NOT_NULL),
+				new ColumnDefinition("id", bigint(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL),
 				new ColumnDefinition("street", varchar(255), NOT_NULL),
 				new ColumnDefinition("street_number", varchar(10), NOT_NULL),
 				new ColumnDefinition("city", varchar(255), NOT_NULL),
@@ -62,19 +62,19 @@ public class CreateTableTest {
 	@Test(expected = IllegalArgumentException.class)
 	public void testCreatingTableWithNullForColumnName() {
 		SchemaOperations.createTable("addresses")
-				.with(null, bigint(), IDENTITY, AUTO_INCREMENT, NOT_NULL);
+				.with(null, bigint(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testCreatingTableWithEmptyStringForColumnName() {
 		SchemaOperations.createTable("addresses")
-				.with("", bigint(), IDENTITY, AUTO_INCREMENT, NOT_NULL);
+				.with("", bigint(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
 	public void testCreatingTableWithNullForColumnType() {
 		SchemaOperations.createTable("addresses")
-				.with("id", null, IDENTITY, AUTO_INCREMENT, NOT_NULL);
+				.with("id", null, PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL);
 	}
 
 }

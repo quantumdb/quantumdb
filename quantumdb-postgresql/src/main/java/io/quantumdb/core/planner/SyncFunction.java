@@ -72,7 +72,7 @@ public class SyncFunction {
 		Map<String, String> mapping = columnMapping.entrySet().stream()
 				.filter(entry -> {
 					Column column = sourceTable.getColumn(entry.getKey().getName());
-					return columnsToMigrate.contains(entry.getValue().getName()) || column.isIdentity();
+					return columnsToMigrate.contains(entry.getValue().getName()) || column.isPrimaryKey();
 				})
 				.collect(Collectors.toMap(entry -> entry.getKey().getName(), entry -> entry.getValue().getName()));
 
@@ -116,10 +116,9 @@ public class SyncFunction {
 						(u, v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
 						Maps::newLinkedHashMap)));
 
-		this.updateIdentities = ImmutableMap.copyOf((Map<? extends String, ? extends String>)targetTable.getIdentityColumns().stream()
-				.filter(column -> reverseLookup(mapping, column.getName()).isPresent())
-				.collect(Collectors.toMap(column -> "\"" + column.getName() + "\"",
-						column -> "OLD.\"" + reverseLookup(mapping, column.getName()).get() + "\"",
+		this.updateIdentities = ImmutableMap.copyOf((Map<? extends String, ? extends String>)targetTable.getPrimaryKeyColumns().stream()
+				.collect(Collectors.toMap(Column::getName,
+						column -> "OLD." + reverseLookup(mapping, column.getName()).get(),
 						(u, v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
 						Maps::newLinkedHashMap)));
 	}

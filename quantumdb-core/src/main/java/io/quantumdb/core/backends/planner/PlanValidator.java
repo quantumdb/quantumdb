@@ -103,7 +103,7 @@ public class PlanValidator {
 
 			Table table = operation.getTables().iterator().next();
 
-			List<Column> identityColumns = table.getIdentityColumns();
+			List<Column> identityColumns = table.getPrimaryKeyColumns();
 			Set<Column> columns = operation.getColumns().stream()
 					.map(table::getColumn)
 					.collect(Collectors.toSet());

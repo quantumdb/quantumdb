@@ -9,7 +9,7 @@ import static io.quantumdb.core.backends.integration.videostores.PostgresqlBaseS
 import static io.quantumdb.core.backends.integration.videostores.PostgresqlBaseScenario.STAFF_ID;
 import static io.quantumdb.core.backends.integration.videostores.PostgresqlBaseScenario.STORES_ID;
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
-import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
+import static io.quantumdb.core.schema.definitions.Column.Hint.PRIMARY_KEY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.date;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.floats;
@@ -51,7 +51,7 @@ public class CreateCreditCardsTable {
 
 		setup.getChangelog().addChangeSet("test", "Michael de Jong",
 				SchemaOperations.createTable("credit_cards")
-						.with("credit_card_number", varchar(255), IDENTITY, NOT_NULL)
+						.with("credit_card_number", varchar(255), PRIMARY_KEY, NOT_NULL)
 						.with("card_holder_name", varchar(255), NOT_NULL)
 						.with("expiration_date", date(), NOT_NULL));
 
@@ -70,38 +70,38 @@ public class CreateCreditCardsTable {
 		// Original tables and foreign keys.
 
 		Table stores = new Table(refLog.getTableRef(origin, "stores").getRefId())
-				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL))
 				.addColumn(new Column("manager_id", integer(), NOT_NULL));
 
 		Table staff = new Table(refLog.getTableRef(origin, "staff").getRefId())
-				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL))
 				.addColumn(new Column("store_id", integer(), NOT_NULL));
 
 		Table customers = new Table(refLog.getTableRef(origin, "customers").getRefId())
-				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL))
 				.addColumn(new Column("store_id", integer(), NOT_NULL))
 				.addColumn(new Column("referred_by", integer()));
 
 		Table films = new Table(refLog.getTableRef(origin, "films").getRefId())
-				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL));
 
 		Table inventory = new Table(refLog.getTableRef(origin, "inventory").getRefId())
-				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("store_id", integer(), NOT_NULL))
 				.addColumn(new Column("film_id", integer(), NOT_NULL));
 
 		Table paychecks = new Table(refLog.getTableRef(origin, "paychecks").getRefId())
-				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("staff_id", integer(), NOT_NULL))
 				.addColumn(new Column("date", date(), NOT_NULL))
 				.addColumn(new Column("amount", floats(), NOT_NULL));
 
 		Table payments = new Table(refLog.getTableRef(origin, "payments").getRefId())
-				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("staff_id", integer()))
 				.addColumn(new Column("customer_id", integer(), NOT_NULL))
 				.addColumn(new Column("rental_id", integer(), NOT_NULL))
@@ -109,7 +109,7 @@ public class CreateCreditCardsTable {
 				.addColumn(new Column("amount", floats(), NOT_NULL));
 
 		Table rentals = new Table(refLog.getTableRef(origin, "rentals").getRefId())
-				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("staff_id", integer()))
 				.addColumn(new Column("customer_id", integer(), NOT_NULL))
 				.addColumn(new Column("inventory_id", integer(), NOT_NULL))
@@ -132,7 +132,7 @@ public class CreateCreditCardsTable {
 		// New tables and foreign keys.
 
 		Table creditCards = new Table(refLog.getTableRef(target, "credit_cards").getRefId())
-				.addColumn(new Column("credit_card_number", varchar(255), IDENTITY, NOT_NULL))
+				.addColumn(new Column("credit_card_number", varchar(255), PRIMARY_KEY, NOT_NULL))
 				.addColumn(new Column("card_holder_name", varchar(255), NOT_NULL))
 				.addColumn(new Column("expiration_date", date(), NOT_NULL));
 

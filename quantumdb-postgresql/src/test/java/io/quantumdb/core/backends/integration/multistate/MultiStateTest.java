@@ -1,7 +1,7 @@
 package io.quantumdb.core.backends.integration.multistate;
 
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
-import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
+import static io.quantumdb.core.schema.definitions.Column.Hint.PRIMARY_KEY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.bigint;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.bool;
@@ -50,7 +50,7 @@ public class MultiStateTest extends PostgresqlDatabase {
 		step0 = changelog.getRoot();
 
 		step1 = changelog.addChangeSet("step1", "Michael de Jong", "Create test table.",
-				createTable("test").with("id", bigint(), IDENTITY, AUTO_INCREMENT))
+				createTable("test").with("id", bigint(), PRIMARY_KEY, AUTO_INCREMENT))
 				.getLastAdded();
 
 		changelog.addChangeSet("step2", "Michael de Jong", "Add name column to test table.",
