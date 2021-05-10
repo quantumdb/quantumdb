@@ -241,6 +241,7 @@ class TableDataMigrator {
 			case INTEGER:
 				return Integer.parseInt(value);
 			case NUMERIC:
+				return Double.parseDouble(value);
 			case BIGINT:
 				return Long.parseLong(value);
 			case BOOLEAN:

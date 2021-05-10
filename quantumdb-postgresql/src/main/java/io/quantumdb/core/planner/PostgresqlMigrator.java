@@ -9,11 +9,7 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
 import io.quantumdb.core.backends.DatabaseMigrator;
 import io.quantumdb.core.backends.planner.Operation;
 import io.quantumdb.core.backends.planner.Plan;
@@ -124,6 +120,9 @@ class PostgresqlMigrator implements DatabaseMigrator {
 
 		Set<Version> activeVersions = refLog.getVersions();
 		checkArgument(activeVersions.contains(version), "Version to drop is not part of the active versions!");
+		Set<Version> newActiveVersions = activeVersions.stream()
+				.filter(version1 -> !version1.equals(version))
+				.collect(Collectors.toSet());
 
 		// Check if version is at the end of the active versions
 		Version first = version;
@@ -153,11 +152,11 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		//New implementation - active version to drop should always be the previous versions to drop
 		ChangeSet changeSetToDrop = version.getChangeSet();
 		versionsToDrop.add(version);
-		Version intermediateVersion = version.getChild();
+		Version intermediateVersion = version.getParent();
 		while (true) {
 			if (intermediateVersion != null && intermediateVersion.getChangeSet().equals(changeSetToDrop)) {
 				versionsToDrop.add(intermediateVersion);
-				intermediateVersion = intermediateVersion.getChild();
+				intermediateVersion = intermediateVersion.getParent();
 			} else {
 				break;
 			}
@@ -167,7 +166,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		for (Version version1 : versionsToDrop) {
 			tablesToDropSet.addAll(refLog.getTableRefs().stream()
 					.filter(tableRef -> tableRef.getVersions().contains(version1))
-					.filter(tableRef -> tableRef.getVersions().stream().noneMatch(activeVersions::contains))
+					.filter(tableRef -> tableRef.getVersions().stream().noneMatch(newActiveVersions::contains))
 					// only drop table if it actually exists in the catalog because it may already be deleted
 					.filter(tableRef -> catalog.getTables().stream().anyMatch(table -> tableRef.getRefId().equals(table.getName())))
 					.collect(Collectors.toSet()));

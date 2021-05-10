@@ -33,7 +33,7 @@ public class Init extends Command {
 				String user = getArgument(arguments, "username", String.class);
 				String pass = getArgument(arguments, "password", String.class, null);
 
-				config.setUrl("jdbc:postgresql://" + hosts); // Postgresql driver 9.3 vs 42: + "/" + catalogName + "?targetServerType=master\""
+				config.setUrl("jdbc:postgresql://" + hosts);
 				config.setCatalog(catalogName);
 				config.setUser(user);
 				config.setPassword(pass);

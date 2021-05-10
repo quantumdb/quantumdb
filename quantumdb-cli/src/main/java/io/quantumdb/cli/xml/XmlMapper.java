@@ -42,6 +42,19 @@ public class XmlMapper {
 					for (int i = 0; i < attributes.getLength(); i++) {
 						String key = attributes.getQName(i);
 						String value = attributes.getValue(i);
+						// Convert all values to lowercase except when quoted
+						// PostgreSQL converts table and column names to lowercase while Oracle converts them to uppercase
+						// XML double quote escapement is &quot;
+						char[] chars = value.toCharArray();
+						boolean insideQuotes = false;
+						for (int j = 0; j < chars.length; j++) {
+							if (chars[j] == '"') {
+								insideQuotes = !insideQuotes;
+							} else if (!insideQuotes) {
+								chars[j] = Character.toLowerCase(chars[j]);
+							}
+						}
+						value = String.valueOf(chars);
 						element.getAttributes().put(key, value);
 					}
 

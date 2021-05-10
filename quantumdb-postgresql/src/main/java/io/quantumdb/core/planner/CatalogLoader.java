@@ -6,27 +6,17 @@ import static io.quantumdb.core.schema.definitions.ForeignKey.Action.RESTRICT;
 import static io.quantumdb.core.schema.definitions.ForeignKey.Action.SET_DEFAULT;
 import static io.quantumdb.core.schema.definitions.ForeignKey.Action.SET_NULL;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.sql.*;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import io.quantumdb.core.schema.definitions.Catalog;
-import io.quantumdb.core.schema.definitions.Column;
+import io.quantumdb.core.schema.definitions.*;
 import io.quantumdb.core.schema.definitions.ForeignKey.Action;
-import io.quantumdb.core.schema.definitions.Index;
-import io.quantumdb.core.schema.definitions.PostgresTypes;
-import io.quantumdb.core.schema.definitions.Sequence;
-import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.utils.QueryBuilder;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -56,7 +46,7 @@ class CatalogLoader {
 
 			ResultSet resultSet = statement.executeQuery();
 			while (resultSet.next()) {
-				String tableName = resultSet.getString("table_name");
+				String tableName = getString(resultSet.getString("table_name"));
 				tableNames.add(tableName);
 			}
 		}
@@ -67,7 +57,7 @@ class CatalogLoader {
 
 			table.getColumns().stream()
 					.map(Column::getSequence)
-					.filter(seq -> seq != null)
+					.filter(Objects::nonNull)
 					.forEach(catalog::addSequence);
 
 			addIndexes(connection, catalog, tableName);
@@ -97,7 +87,7 @@ class CatalogLoader {
 
 			ResultSet resultSet = statement.executeQuery();
 			while (resultSet.next()) {
-				String columnName = resultSet.getString("column_name");
+				String columnName = getString(resultSet.getString("column_name"));
 				String expression = resultSet.getString("column_default");
 				String type = resultSet.getString("data_type");
 				Integer characterMaximum = null;
@@ -178,7 +168,7 @@ class CatalogLoader {
 
 			ResultSet resultSet = statement.executeQuery(query);
 			while (resultSet.next()) {
-				String name = resultSet.getString("name");
+				String name = getString(resultSet.getString("name"));
 				primaryKeyColumns.add(name);
 			}
 		}
@@ -187,7 +177,6 @@ class CatalogLoader {
 	}
 
 	private static Map<String,List<String>> determineUniqueConstraints(Connection connection, String tableName) throws SQLException {
-		// TODO: get unique columns
 		String query = new QueryBuilder()
 				.append("SELECT ")
 				.append("  conkey::int[], conname ")
@@ -200,7 +189,6 @@ class CatalogLoader {
 				.append("  AND contype='u';")
 				.toString();
 
-		// TODO: There can be more than one unique constraint on a table, some with single columns, some with more
 		Map<String,List<String>> uniqueColumns = Maps.newLinkedHashMap();
 		try (Statement statement = connection.createStatement()) {
 
@@ -273,10 +261,10 @@ class CatalogLoader {
 			Map<String, String> mapping = Maps.newLinkedHashMap();
 
 			while (resultSet.next()) {
-				String referencingColumn = resultSet.getString("referencing_column");
-				String referredTable = resultSet.getString("referred_table");
-				String referredColumn = resultSet.getString("referred_column");
-				String constraintName = resultSet.getString("constraint_name");
+				String referencingColumn = getString(resultSet.getString("referencing_column"));
+				String referredTable = getString(resultSet.getString("referred_table"));
+				String referredColumn = getString(resultSet.getString("referred_column"));
+				String constraintName = getString(resultSet.getString("constraint_name"));
 
 				Action onUpdate = valueOf(resultSet.getString("confupdtype"));
 				Action onDelete = valueOf(resultSet.getString("confdeltype"));
@@ -312,6 +300,13 @@ class CatalogLoader {
 						.referencing(target, Lists.newArrayList(mapping.values()));
 			}
 		}
+	}
+
+	private static String getString(String string) {
+		if (!string.equals(string.toLowerCase())) {
+			string = "\"" + string + "\"";
+		}
+		return string;
 	}
 
 	private static Action valueOf(String input) {

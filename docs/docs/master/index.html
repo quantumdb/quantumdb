@@ -176,7 +176,7 @@ changelog.addChangeSet("track_users", "Michael de Jong",
                 This code will create a new <code>admin</code> column in the <code>users</code> table, of type
                 <code>boolean</code>, which defaults to the <code>false</code> value, and cannot hold <code>NULL</code>
                 values. It's not required to set a default value. You can specify zero, one, or multiple hints of the
-                following types <code>AUTO_INCREMENT</code>, <code>NOT_NULL</code>, <code>IDENTITY</code>.
+                following types <code>AUTO_INCREMENT</code>, <code>NOT_NULL</code>, <code>PRIMARY_KEY</code> and <code>UNIQUE</code>.
             </p>
 
             <h3>ADD FOREIGN KEY</h3>
@@ -257,11 +257,21 @@ changelog.addChangeSet("track_users", "Michael de Jong",
   &lt;column name="id" type="bigint" primaryKey="true" autoIncrement="true" /&gt;
   &lt;column name="first_name" type="text" nullable="false" /&gt;
   &lt;column name="last_name" type="text" nullable="false" /&gt;
+  &lt;column name="username" type="text" nullable="false" unique="true" /&gt;
+  &lt;column name="postal_code" type="text" nullable="false" unique="address" /&gt;
+  &lt;column name="house_number" type="integer" nullable="false" unique="address" /&gt;
+
 &lt;/createTable&gt;</code></pre>
 
             <p>
                 This example will create a new <code>users</code> table with three columns <code>id</code>,
                 <code>first_name</code>, and <code>last_name</code>.
+            </p>
+            <p>
+                The <code>unique</code> constraint works a little different than the other constraints as multiple columns
+                can be unique together. If you want a column to be unique by it self just set the unique
+                attribute to <code>true</code>. However, if you want multiple columns to be unique specify a name that is not
+                <code>true</code> or <code>false</code> and apply it to all columns. For an example look at the above code.
             </p>
 
             <h3>DROP COLUMN</h3>

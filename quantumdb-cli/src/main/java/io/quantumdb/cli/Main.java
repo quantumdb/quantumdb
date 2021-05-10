@@ -27,7 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 public class Main {
 
 	public static void main(String[] args) throws IOException, SQLException {
-		log.info("Parsing command: {}", Stream.of(args).collect(Collectors.joining(" ")));
+		log.info("Parsing command: {}", String.join(" ", args));
 
 		CliWriter writer = new CliWriter();
 		List<String> arguments = normalize(args);
@@ -41,7 +41,6 @@ public class Main {
 			String command = arguments.remove(0);
 			Command delegate = commands.get(command);
 			if (delegate != null) {
-				writer.write("Executing command: " + command + " with arguments: " + arguments);
 				delegate.perform(writer, arguments);
 			}
 			else {

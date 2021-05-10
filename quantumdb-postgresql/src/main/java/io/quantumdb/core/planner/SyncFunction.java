@@ -77,8 +77,8 @@ public class SyncFunction {
 				.collect(Collectors.toMap(entry -> entry.getKey().getName(), entry -> entry.getValue().getName()));
 
 		Map<String, String> expressions = mapping.entrySet().stream()
-				.collect(Collectors.toMap(entry -> "\"" + entry.getValue() + "\"",
-						entry -> "NEW.\"" + entry.getKey() + "\"",
+				.collect(Collectors.toMap(Entry::getValue,
+						entry -> "NEW." + entry.getKey(),
 						(u, v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
 						Maps::newLinkedHashMap));
 
@@ -101,7 +101,7 @@ public class SyncFunction {
 						}
 					}
 
-					expressions.put("\"" + columnName + "\"", value);
+					expressions.put(columnName, value);
 				}
 			}
 		}
@@ -111,8 +111,8 @@ public class SyncFunction {
 
 		this.updateIdentitiesForInserts = ImmutableMap.copyOf((Map<? extends String, ? extends String>)targetTable.getColumns().stream()
 				.filter(column -> reverseLookup(mapping, column.getName()).isPresent())
-				.collect(Collectors.toMap(column -> "\"" + column.getName() + "\"",
-						column -> "NEW.\"" + reverseLookup(mapping, column.getName()).get() + "\"",
+				.collect(Collectors.toMap(Column::getName,
+						column -> "NEW." + reverseLookup(mapping, column.getName()).get(),
 						(u, v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
 						Maps::newLinkedHashMap)));
 

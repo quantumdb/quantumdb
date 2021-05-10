@@ -10,6 +10,8 @@ import java.util.Properties;
 import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 @Slf4j
 public class Config {
 
@@ -96,25 +98,23 @@ public class Config {
 
 	public Backend getBackend() {
 		String jdbcUrl = getUrl();
-		if (jdbcUrl != null) {
-			for (String backendName : SUPPORTED_BACKENDS) {
-				try {
-					Class<?> type = Class.forName(backendName);
-					Backend backend = (Backend) type.getDeclaredConstructor(Config.class).newInstance(this);
-					if (backend.isJdbcUrlSupported(jdbcUrl)) {
-						return backend;
-					}
-				}
-				catch (ReflectiveOperationException e) {
-					throw new IllegalArgumentException("Something went wrong selecting backends.");
-					// Skip this one.
+		checkArgument(jdbcUrl != null, "You have not specified a backend URL.");
+
+		for (String backendName : SUPPORTED_BACKENDS) {
+			try {
+				Class<?> type = Class.forName(backendName);
+				Backend backend = (Backend) type.getDeclaredConstructor(Config.class).newInstance(this);
+				if (backend.isJdbcUrlSupported(jdbcUrl)) {
+					return backend;
 				}
 			}
-
-			throw new IllegalArgumentException("No backend support for JDBC URL: " + jdbcUrl);
-		} else {
-			throw new IllegalArgumentException("You have not specified a backend URL");
+			catch (ReflectiveOperationException e) {
+				throw new IllegalArgumentException("Something went wrong selecting backends.");
+				// Skip this one.
+			}
 		}
+
+		throw new IllegalArgumentException("No backend support for JDBC URL: " + jdbcUrl);
 
 	}
 

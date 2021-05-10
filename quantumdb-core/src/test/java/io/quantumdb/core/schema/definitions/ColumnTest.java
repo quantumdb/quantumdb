@@ -1,13 +1,9 @@
 package io.quantumdb.core.schema.definitions;
 
-import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
-import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
-import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
+import static io.quantumdb.core.schema.definitions.Column.Hint.*;
 import static io.quantumdb.core.schema.definitions.TestTypes.bigint;
 import static io.quantumdb.core.schema.definitions.TestTypes.varchar;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import com.google.common.base.Strings;
 import org.junit.Test;
@@ -20,7 +16,7 @@ public class ColumnTest {
 
 		assertEquals("id", column.getName());
 		assertEquals(bigint(), column.getType());
-		assertEquals(null, column.getDefaultValue());
+		assertNull(column.getDefaultValue());
 	}
 
 	@Test
@@ -221,7 +217,7 @@ public class ColumnTest {
 		Column copy = column.copy();
 
 		assertEquals(column, copy);
-		assertFalse(column == copy);
+		assertNotSame(column, copy);
 	}
 
 	@Test

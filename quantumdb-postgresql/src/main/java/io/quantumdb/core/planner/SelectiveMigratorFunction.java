@@ -109,8 +109,8 @@ public class SelectiveMigratorFunction {
 					Column newColumn = target.getColumn(newColumnName);
 					return new SimpleImmutableEntry<>(newColumn, entry.getKey().getName());
 				})
-				.collect(Collectors.toMap(entry -> "\"" + entry.getKey().getName() + "\"",
-						entry -> "\"" + entry.getValue() + "\""));
+				.collect(Collectors.toMap(entry -> entry.getKey().getName(),
+						SimpleImmutableEntry::getValue));
 
 		if (columnsToMigrate.isEmpty()) {
 			return null;
@@ -130,7 +130,7 @@ public class SelectiveMigratorFunction {
 							.map(entry -> entry.getValue().getName())
 							.findFirst().get();
 
-					return "\"" + mappedColumnName + "\" = r.\"" + column.getName() + "\"";
+					return mappedColumnName + " = r." + column.getName();
 				})
 				.collect(Collectors.joining(" AND "));
 
@@ -187,7 +187,7 @@ public class SelectiveMigratorFunction {
 		Map<String, String> values = columnMapping.entrySet().stream()
 				.filter(entry -> columns.contains(entry.getKey().getName()))
 				.collect(Collectors.toMap(entry -> entry.getValue().getName(),
-						entry -> "r.\"" + entry.getKey().getName() + "\"",
+						entry -> "r." + entry.getKey().getName(),
 						(u, v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
 						Maps::newLinkedHashMap));
 

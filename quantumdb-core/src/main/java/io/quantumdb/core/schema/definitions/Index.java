@@ -23,7 +23,7 @@ public class Index {
 	}
 
 	public Index(String indexName, List<String> columns, boolean unique) {
-		checkArgument(!isNullOrEmpty(indexName), "You must specify a 'foreignKeyName'.");
+		checkArgument(!isNullOrEmpty(indexName), "You must specify an 'indexName'.");
 		checkArgument(columns != null && !columns.isEmpty(), "You must specify at least one column.");
 
 		this.indexName = indexName;

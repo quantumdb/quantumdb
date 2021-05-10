@@ -26,7 +26,9 @@ public class XmlCreateTable implements XmlOperation<CreateTable> {
 		operation.setTableName(element.getAttributes().get("tableName"));
 
 		for (XmlElement child : element.getChildren()) {
-			if (child.getTag().equals("columns")) {
+			if (child.getTag().equals("column")) {
+				operation.getColumns().add(XmlColumn.convert(child));
+			} else if (child.getTag().equals("columns")) {
 				for (XmlElement subChild : child.getChildren()) {
 					operation.getColumns().add(XmlColumn.convert(subChild));
 				}

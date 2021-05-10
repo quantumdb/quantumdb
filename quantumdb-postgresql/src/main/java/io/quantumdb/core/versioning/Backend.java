@@ -119,9 +119,15 @@ public class Backend {
 								.map(Ints::tryParse)
 								.collect(Collectors.toList());
 
-						return PostgresTypes.from(sqlType, arguments.get(0));
+						if (arguments.size() == 2) {
+							return PostgresTypes.from(sqlType, arguments.get(0), arguments.get(1));
+						} else if (arguments.size() == 1) {
+							return PostgresTypes.from(sqlType, arguments.get(0), -1);
+						} else {
+							return PostgresTypes.from(sqlType, -1, -1);
+						}
 					}
-					return PostgresTypes.from(sqlType, null);
+					return PostgresTypes.from(sqlType, -1, -1);
 				})
 				.registerTypeAdapter(ColumnType.class, (JsonSerializer<ColumnType>)
 						(element, type, context) -> new JsonPrimitive(element.getNotation()))

@@ -13,59 +13,111 @@ import lombok.NoArgsConstructor;
 public class PostgresTypes {
 
 	public static ColumnType from(String input) {
-		Pattern pattern = Pattern.compile("^(.+)\\(([0-9]+)\\)$");
-		Matcher match = pattern.matcher(input);
+		Matcher match = Pattern.compile("^(.+)\\(([0-9]+),([0-9]+)\\)$").matcher(input);
 		if (match.find()) {
 			String type = match.group(1);
-			int length = Integer.parseInt(match.group(2));
-			return from(type, length);
+			int precision = Integer.parseInt(match.group(2));
+			int scale = Integer.parseInt(match.group(3));
+			return from(type, precision, scale);
+		} else {
+			match = Pattern.compile("^(.+)\\(([0-9]+)\\)$").matcher(input);
+			if (match.find()) {
+				String type = match.group(1);
+				int length = Integer.parseInt(match.group(2));
+				return from(type, length, -1);
+			}
 		}
-		else {
-			return from(input, null);
-		}
+		return from(input, -1, -1);
+
+
 	}
 
-	public static ColumnType from(String type, Integer length) {
-		switch (type.toLowerCase()) {
-			case "oid":
-				return PostgresTypes.oid();
-			case "uuid":
-				return PostgresTypes.uuid();
-			case "smallint":
-				return PostgresTypes.smallint();
-			case "bigint":
-				return PostgresTypes.bigint();
-			case "integer":
-				return PostgresTypes.integer();
-			case "numeric":
-				return PostgresTypes.numeric();
-			case "bool":
-			case "boolean":
-				return PostgresTypes.bool();
-			case "varchar":
-			case "character varying":
-				return PostgresTypes.varchar(length);
-			case "character":
-				return PostgresTypes.chars(length);
-			case "text":
-				return PostgresTypes.text();
-			case "timestamp with time zone":
-				return PostgresTypes.timestamp(true);
-			case "timestamp":
-			case "timestamp without time zone":
-				return PostgresTypes.timestamp(false);
-			case "date":
-				return PostgresTypes.date();
-			case "double precision":
-				return PostgresTypes.floats();
-			case "real":
-				return PostgresTypes.doubles();
-			default:
-				String error = "Unsupported type: " + type;
-				if (length != null) {
+	public static ColumnType from(String type, Integer length, Integer scale) {
+		type = type.trim();
+		if (length == null || length == -1) {
+			switch (type.toLowerCase()) {
+				case "oid":
+					return PostgresTypes.oid();
+				case "uuid":
+					return PostgresTypes.uuid();
+				case "smallserial":
+				case "int2":
+				case "smallint":
+					return PostgresTypes.smallint();
+				case "bigserial":
+				case "int8":
+				case "bigint":
+					return PostgresTypes.bigint();
+				case "serial":
+				case "int":
+				case "int4":
+				case "integer":
+					return PostgresTypes.integer();
+				case "decimal":
+				case "numeric":
+					return PostgresTypes.numeric();
+				case "bool":
+				case "boolean":
+					return PostgresTypes.bool();
+				case "varchar":
+				case "character varying":
+					return PostgresTypes.varchar();
+				case "char":
+				case "character":
+					return PostgresTypes.chars(1);
+				case "text":
+					return PostgresTypes.text();
+				case "timestamp with time zone":
+					return PostgresTypes.timestamp(true);
+				case "timestamp":
+				case "timestamp without time zone":
+					return PostgresTypes.timestamp(false);
+				case "date":
+					return PostgresTypes.date();
+				case "float8":
+				case "double precision":
+					return PostgresTypes.floats();
+				case "float4":
+				case "real":
+					return PostgresTypes.doubles();
+				case "byte array":
+				case "bytea":
+					return PostgresTypes.bytea();
+				default:
+					String error = "Unsupported type: " + type;
+					throw new IllegalArgumentException(error);
+			}
+		} else if (scale == null || scale == -1) {
+			switch (type.toLowerCase()) {
+				case "decimal":
+				case "numeric":
+					return PostgresTypes.numeric(length);
+				case "varchar":
+				case "character varying":
+					return PostgresTypes.varchar(length);
+				case "char":
+				case "character":
+					return PostgresTypes.chars(length);
+				case "timestamp with time zone":
+					return PostgresTypes.timestamp(true, length);
+				case "timestamp":
+				case "timestamp without time zone":
+					return PostgresTypes.timestamp(false, length);
+				default:
+					String error = "Unsupported type: " + type;
 					error += " (length: " + length + ")";
-				}
-				throw new IllegalArgumentException(error);
+					throw new IllegalArgumentException(error);
+			}
+		} else {
+			switch (type.toLowerCase()) {
+				case "decimal":
+				case "numeric":
+					return PostgresTypes.numeric(length, scale);
+				default:
+					String error = "Unsupported type: " + type;
+					error += " (precision: " + length + ", scale: " + scale + ")";
+					throw new IllegalArgumentException(error);
+			}
 		}
 	}
 
@@ -75,12 +127,17 @@ public class PostgresTypes {
 	}
 
 	public static ColumnType uuid() {
-		return new ColumnType(ColumnType.Type.UUID, true, "uuid", () -> UUID.randomUUID(),
+		return new ColumnType(ColumnType.Type.UUID, true, "uuid", UUID::randomUUID,
 				(statement, position, value) -> statement.setObject(position, value));
 	}
 
 	public static ColumnType varchar(int length) {
 		return new ColumnType(ColumnType.Type.VARCHAR, true, "varchar(" + length + ")", () -> "",
+				(statement, position, value) -> statement.setString(position, value.toString()));
+	}
+
+	public static ColumnType varchar() {
+		return new ColumnType(ColumnType.Type.VARCHAR, true, "varchar", () -> "",
 				(statement, position, value) -> statement.setString(position, value.toString()));
 	}
 
@@ -109,6 +166,15 @@ public class PostgresTypes {
 				(statement, position, value) -> statement.setInt(position, ((Number) value).intValue()));
 	}
 
+	public static ColumnType numeric(Integer precision, Integer scale) {
+		return new ColumnType(ColumnType.Type.NUMERIC, false, "numeric(" + precision + "," + scale + ")", () -> 0.00d,
+				(statement, position, value) -> statement.setDouble(position, ((Double) value)));
+	}
+	public static ColumnType numeric(Integer precision) {
+		return new ColumnType(ColumnType.Type.NUMERIC, false, "numeric(" + precision + ")", () -> 0.00d,
+				(statement, position, value) -> statement.setDouble(position, ((Double) value)));
+	}
+
 	public static ColumnType numeric() {
 		return new ColumnType(ColumnType.Type.NUMERIC, false, "numeric", () -> 0.00d,
 				(statement, position, value) -> statement.setDouble(position, ((Double) value)));
@@ -121,6 +187,12 @@ public class PostgresTypes {
 
 	public static ColumnType timestamp(boolean withTimezone) {
 		String typeNotation = "timestamp" + (withTimezone ? " with time zone" : "");
+		return new ColumnType(ColumnType.Type.TIMESTAMP, true, typeNotation, () -> new Timestamp(new Date().getTime()),
+				(statement, position, value) -> statement.setTimestamp(position, (Timestamp) value));
+	}
+
+	public static ColumnType timestamp(boolean withTimezone, Integer length) {
+		String typeNotation = "timestamp (" + length + ")" + (withTimezone ? " with time zone" : "");
 		return new ColumnType(ColumnType.Type.TIMESTAMP, true, typeNotation, () -> new Timestamp(new Date().getTime()),
 				(statement, position, value) -> statement.setTimestamp(position, (Timestamp) value));
 	}
@@ -138,6 +210,11 @@ public class PostgresTypes {
 	public static ColumnType floats() {
 		return new ColumnType(ColumnType.Type.FLOAT, false, "double precision", () -> 0.00f,
 				(statement, position, value) -> statement.setFloat(position, (Float) value));
+	}
+
+	public static ColumnType bytea() {
+		return new ColumnType(ColumnType.Type.BYTEA, false, "bytea", () -> new byte[0],
+				(statement, position, value) -> statement.setBytes(position, (byte[]) value));
 	}
 	
 }
