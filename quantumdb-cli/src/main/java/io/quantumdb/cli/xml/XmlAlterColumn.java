@@ -34,6 +34,18 @@ public class XmlAlterColumn implements XmlOperation<AlterColumn> {
 				.map(Boolean.TRUE.toString()::equals)
 				.ifPresent(operation::setNullable);
 
+		Optional.ofNullable(attributes.get("unique"))
+				.map(Boolean.TRUE.toString()::equals)
+				.ifPresent(operation::setUnique);
+
+		Optional.ofNullable(attributes.get("primaryKey"))
+				.map(Boolean.TRUE.toString()::equals)
+				.ifPresent(operation::setPrimaryKey);
+
+		Optional.ofNullable(attributes.get("autoIncrementing"))
+				.map(Boolean.TRUE.toString()::equals)
+				.ifPresent(operation::setAutoIncrementing);
+
 		return operation;
 	}
 
@@ -43,6 +55,9 @@ public class XmlAlterColumn implements XmlOperation<AlterColumn> {
 	private String newColumnName;
 	private String newType;
 	private Boolean nullable;
+	private Boolean unique;
+	private Boolean primaryKey;
+	private Boolean autoIncrementing;
 
 	@Override
 	public AlterColumn toOperation() {
@@ -59,7 +74,34 @@ public class XmlAlterColumn implements XmlOperation<AlterColumn> {
 			}
 		});
 
-		// TODO: Support other hints?
+		// TODO: NOT REALLY TESTED!
+
+		Optional.ofNullable(unique).ifPresent(newUnique -> {
+			if (newUnique) {
+				operation.addHint(Hint.UNIQUE);
+			}
+			else {
+				operation.dropHint(Hint.UNIQUE);
+			}
+		});
+
+		Optional.ofNullable(primaryKey).ifPresent(newPrimarykey -> {
+			if (newPrimarykey) {
+				operation.addHint(Hint.PRIMARY_KEY);
+			}
+			else {
+				operation.dropHint(Hint.PRIMARY_KEY);
+			}
+		});
+
+		Optional.ofNullable(autoIncrementing).ifPresent(newAutoIncrementing -> {
+			if (newAutoIncrementing) {
+				operation.addHint(Hint.AUTO_INCREMENT);
+			}
+			else {
+				operation.dropHint(Hint.AUTO_INCREMENT);
+			}
+		});
 
 		return operation;
 	}

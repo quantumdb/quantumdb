@@ -90,6 +90,7 @@ class CatalogLoader {
 
 		List<Column> columns = Lists.newArrayList();
 		Set<String> primaryKeys = determinePrimaryKeys(connection, tableName);
+		Map<String,List<String>> uniqueConstraints = determineUniqueConstraints(connection, tableName);
 		try (PreparedStatement statement = connection.prepareStatement(query)) {
 			statement.setString(1, "public");
 			statement.setString(2, tableName);
@@ -103,13 +104,28 @@ class CatalogLoader {
 				if (resultSet.getObject("character_maximum_length") != null) {
 					characterMaximum = resultSet.getInt("character_maximum_length");
 				}
+				Integer numericPrecision = null;
+				if (resultSet.getObject("numeric_precision") != null) {
+					numericPrecision = resultSet.getInt("numeric_precision");
+				}
+				Integer numericScale = null;
+				if (resultSet.getObject("numeric_scale") != null) {
+					numericScale = resultSet.getInt("numeric_scale");
+				}
+				Integer datetimePrecision = null;
+				if (!type.equals("date") && resultSet.getObject("datetime_precision") != null) {
+					datetimePrecision = resultSet.getInt("datetime_precision");
+				}
 
 				Set<Column.Hint> hints = Sets.newHashSet();
 				if (!"yes".equalsIgnoreCase(resultSet.getString("is_nullable"))) {
 					hints.add(Column.Hint.NOT_NULL);
 				}
 				if (primaryKeys.contains(columnName) || (primaryKeys.isEmpty() && columns.isEmpty())) {
-					hints.add(Column.Hint.IDENTITY);
+					hints.add(Column.Hint.PRIMARY_KEY);
+				}
+				if (uniqueConstraints.values().stream().anyMatch(columnNameList -> columnNameList.contains(columnName))) {
+					hints.add(Column.Hint.UNIQUE);
 				}
 
 				Sequence sequence = null;
@@ -121,17 +137,22 @@ class CatalogLoader {
 					}
 				}
 
-				Column.Hint[] hintArray = hints.stream().toArray(Column.Hint[]::new);
+				Column.Hint[] hintArray = hints.toArray(Column.Hint[]::new);
 
 				Column column;
+				int length = characterMaximum != null ? characterMaximum : numericPrecision != null ? numericPrecision : datetimePrecision != null ? datetimePrecision : -1;
 				if (sequence == null) {
-					column = new Column(columnName, PostgresTypes.from(type, characterMaximum), expression, hintArray);
+					column = new Column(columnName, PostgresTypes.from(type, length, numericScale != null ? numericScale : -1), expression, hintArray);
 				}
 				else {
-					column = new Column(columnName, PostgresTypes.from(type, characterMaximum), sequence, hintArray);
+					column = new Column(columnName, PostgresTypes.from(type, length, numericScale != null ? numericScale : -1), sequence, hintArray);
 				}
 				columns.add(column);
 			}
+		}
+		for (Map.Entry<String,List<String>> uniqueConstraintEntry: uniqueConstraints.entrySet()) {
+			Unique unique = new Unique(uniqueConstraintEntry.getKey(), uniqueConstraintEntry.getValue());
+			table.addUnique(unique);
 		}
 
 		return table.addColumns(columns);
@@ -163,6 +184,50 @@ class CatalogLoader {
 		}
 
 		return primaryKeyColumns;
+	}
+
+	private static Map<String,List<String>> determineUniqueConstraints(Connection connection, String tableName) throws SQLException {
+		// TODO: get unique columns
+		String query = new QueryBuilder()
+				.append("SELECT ")
+				.append("  conkey::int[], conname ")
+				.append("FROM pg_constraint ")
+				.append("WHERE ")
+				.append("  conrelid = ")
+				.append("  (SELECT oid ")
+				.append("  FROM pg_class")
+				.append("  WHERE relname LIKE '" + tableName + "')")
+				.append("  AND contype='u';")
+				.toString();
+
+		// TODO: There can be more than one unique constraint on a table, some with single columns, some with more
+		Map<String,List<String>> uniqueColumns = Maps.newLinkedHashMap();
+		try (Statement statement = connection.createStatement()) {
+
+			ResultSet resultSet = statement.executeQuery(query);
+			while (resultSet.next()) {
+				Integer[] uniqueColumnIntegers = (Integer[]) resultSet.getArray("conkey").getArray();
+				String conName = resultSet.getString("conname");
+				uniqueColumns.put(conName, Lists.newArrayList());
+				query = new QueryBuilder()
+						.append("SELECT ")
+						.append("  column_name ")
+						.append("FROM information_schema.columns ")
+						.append("WHERE ")
+						.append("  table_name LIKE '" + tableName + "'")
+						.append("  AND ordinal_position IN (" + Joiner.on(',').join(uniqueColumnIntegers) + ");")
+						.toString();
+
+				try (Statement statement1 = connection.createStatement()) {
+					ResultSet resultSet2 = statement1.executeQuery(query);
+					while (resultSet2.next()) {
+						uniqueColumns.get(conName).add(resultSet2.getString(1));
+					}
+				}
+			}
+		}
+
+		return uniqueColumns;
 	}
 
 	private static void addForeignKeys(Connection connection, Catalog catalog, String tableName) throws SQLException {

@@ -9,6 +9,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.quantumdb.core.schema.definitions.Column.Hint;
 import io.quantumdb.core.schema.definitions.ColumnType;
+import io.quantumdb.core.schema.definitions.Unique;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -22,11 +23,13 @@ public class CreateTable implements SchemaOperation {
 
 	private final String tableName;
 	private final List<ColumnDefinition> columns;
+	private final List<Unique> uniques;
 
 	CreateTable(String tableName) {
 		checkArgument(!Strings.isNullOrEmpty(tableName), "You must specify a 'tableName'.");
 		this.tableName = tableName;
 		this.columns = Lists.newArrayList();
+		this.uniques = Lists.newArrayList();
 	}
 
 	public CreateTable with(String name, ColumnType type, Hint... hints) {
@@ -38,6 +41,13 @@ public class CreateTable implements SchemaOperation {
 		checkArgument(type != null, "You must specify a 'type'.");
 
 		columns.add(new ColumnDefinition(name, type, defaultValueExpression, hints));
+		return this;
+	}
+
+	public CreateTable withUnique(Unique unique) {
+		checkArgument(unique != null, "The unique is null.");
+		checkArgument(!this.uniques.contains(unique), "This table already contains that unique object.");
+		this.uniques.add(unique);
 		return this;
 	}
 

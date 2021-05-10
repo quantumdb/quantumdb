@@ -25,9 +25,9 @@ public class ColumnTest {
 
 	@Test
 	public void testCreatingIdentityColumn() {
-		Column column = new Column("id", bigint(), IDENTITY);
+		Column column = new Column("id", bigint(), PRIMARY_KEY);
 
-		assertTrue(column.isIdentity());
+		assertTrue(column.isPrimaryKey());
 	}
 
 	@Test
@@ -42,6 +42,13 @@ public class ColumnTest {
 		Column column = new Column("id", bigint(), NOT_NULL);
 
 		assertTrue(column.isNotNull());
+	}
+
+	@Test
+	public void testCreatingUniqueColumn() {
+		Column column = new Column("id", bigint(), UNIQUE);
+
+		assertTrue(column.isUnique());
 	}
 
 	@Test

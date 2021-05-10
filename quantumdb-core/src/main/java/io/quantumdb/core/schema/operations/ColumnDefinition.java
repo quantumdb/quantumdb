@@ -54,6 +54,10 @@ public class ColumnDefinition {
 		return containsHint(Column.Hint.NOT_NULL);
 	}
 
+	public boolean isUnique() {
+		return containsHint(Column.Hint.UNIQUE);
+	}
+
 	private boolean containsHint(Column.Hint needle) {
 		return Arrays.stream(hints)
 				.anyMatch(hint -> hint == needle);

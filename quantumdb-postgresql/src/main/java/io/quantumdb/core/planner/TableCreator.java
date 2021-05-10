@@ -11,12 +11,8 @@ import java.util.stream.Collectors;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
-import io.quantumdb.core.schema.definitions.Column;
-import io.quantumdb.core.schema.definitions.ForeignKey;
+import io.quantumdb.core.schema.definitions.*;
 import io.quantumdb.core.schema.definitions.ForeignKey.Action;
-import io.quantumdb.core.schema.definitions.Index;
-import io.quantumdb.core.schema.definitions.Sequence;
-import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.utils.QueryBuilder;
 import lombok.extern.slf4j.Slf4j;
 
@@ -93,6 +89,13 @@ public class TableCreator {
 
 		if (!primaryKeyColumns.isEmpty()) {
 			queryBuilder.append(", PRIMARY KEY(" + Joiner.on(", ").join(primaryKeyColumns) + ")");
+		}
+
+		for (Unique unique: table.getUniques()) {
+			List<String> uniqueColumns = unique.getColumns();
+			if (!uniqueColumns.isEmpty()) {
+				queryBuilder.append(", UNIQUE(" + Joiner.on(", ").join(uniqueColumns) + ")");
+			}
 		}
 
 		queryBuilder.append(")");

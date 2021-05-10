@@ -27,6 +27,7 @@ class CreateTableMigrator implements SchemaOperationMigrator<CreateTable> {
 
 		Table table = new Table(refId);
 		operation.getColumns().forEach(c -> table.addColumn(c.createColumn()));
+		operation.getUniques().forEach(table::addUnique);
 
 		catalog.addTable(table);
 	}
