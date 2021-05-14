@@ -16,7 +16,7 @@ public class XmlColumn {
 		column.setDefaultExpression(element.getAttributes().get("defaultExpression"));
 		column.setPrimaryKey(Boolean.TRUE.toString().equals(element.getAttributes().get("primaryKey")));
 		column.setAutoIncrement(Boolean.TRUE.toString().equals(element.getAttributes().get("autoIncrement")));
-		column.setNullable(Boolean.TRUE.toString().equals(element.getAttributes().get("nullable")));
+		column.setNullable(!Boolean.FALSE.toString().equals(element.getAttributes().get("nullable")));
 		return column;
 	}
 

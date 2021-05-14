@@ -26,8 +26,7 @@ class CopyTableMigrator implements SchemaOperationMigrator<CopyTable> {
 
 		refLog.fork(version);
 		TableRef sourceTableRef = refLog.getTableRef(version.getParent(), sourceTableName);
-		refLog.addTable(targetTableName, refId, version, sourceTableRef.getColumns().entrySet().stream()
-				.map(Entry::getValue)
+		refLog.addTable(targetTableName, refId, version, sourceTableRef.getColumns().values().stream()
 				.map(ColumnRef::ghost)
 				.collect(Collectors.toList()));
 

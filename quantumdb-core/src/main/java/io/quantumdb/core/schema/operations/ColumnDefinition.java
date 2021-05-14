@@ -56,9 +56,7 @@ public class ColumnDefinition {
 
 	private boolean containsHint(Column.Hint needle) {
 		return Arrays.stream(hints)
-				.filter(hint -> hint == needle)
-				.findFirst()
-				.isPresent();
+				.anyMatch(hint -> hint == needle);
 	}
 
 	public Column createColumn() {

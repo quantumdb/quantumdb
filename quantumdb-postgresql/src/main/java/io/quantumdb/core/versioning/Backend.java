@@ -8,14 +8,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Date;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -153,10 +147,13 @@ public class Backend {
 		while (!toDo.isEmpty()) {
 			Version version = toDo.remove(0);
 			for (Entry<RefId, String> entry : tableVersions.column(version).entrySet()) {
-				TableRef tableRef = refLog.getTableRefs(version).stream()
-						.filter(ref -> ref.getName().equals(entry.getValue()) && ref.getRefId().equals(entry.getKey().getRefId()))
-						.findFirst()
-						.orElse(null);
+				TableRef tableRef = null;
+				if (version.getParent() != null) {
+					tableRef = refLog.getTableRefs(version.getParent()).stream()
+							.filter(ref -> ref.getName().equals(entry.getValue()) && ref.getRefId().equals(entry.getKey().getRefId()))
+							.findFirst()
+							.orElse(null);
+				}
 
 				if (tableRef != null) {
 					tableRef.markAsPresent(version);
@@ -168,7 +165,7 @@ public class Backend {
 										.filter(mapping -> mapping.getTarget().equals(column))
 										.map(TableColumnMapping::getSource)
 										.map(columnCache::get)
-										.filter(ref -> ref != null)
+										.filter(Objects::nonNull)
 										.collect(Collectors.toList());
 
 								return new ColumnRef(column.getColumn(), basedOn);

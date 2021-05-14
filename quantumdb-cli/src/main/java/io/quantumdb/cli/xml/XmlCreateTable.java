@@ -24,10 +24,13 @@ public class XmlCreateTable implements XmlOperation<CreateTable> {
 		operation.setTableName(element.getAttributes().get("tableName"));
 
 		for (XmlElement child : element.getChildren()) {
+			// "columns" tag is optional in Liquibase. In QuantumDB documentation and getting started both are used
 			if (child.getTag().equals("columns")) {
 				for (XmlElement subChild : child.getChildren()) {
 					operation.getColumns().add(XmlColumn.convert(subChild));
 				}
+			} else if (child.getTag().equals("column")) {
+				operation.getColumns().add(XmlColumn.convert(child));
 			}
 		}
 
@@ -55,7 +58,7 @@ public class XmlCreateTable implements XmlOperation<CreateTable> {
 				hints.add(Hint.NOT_NULL);
 			}
 
-			Hint[] hintArray = hints.toArray(new Hint[hints.size()]);
+			Hint[] hintArray = hints.toArray(new Hint[0]);
 			operation.with(column.getName(), type, defaultExpression, hintArray);
 		}
 		return operation;

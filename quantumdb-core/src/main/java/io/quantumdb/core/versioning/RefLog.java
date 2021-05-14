@@ -160,7 +160,6 @@ public class RefLog {
 			return columns.values().stream()
 					.flatMap(column -> column.getBasedOn().stream())
 					.map(ColumnRef::getTable)
-					.distinct()
 					.collect(Collectors.toSet());
 		}
 
@@ -168,7 +167,6 @@ public class RefLog {
 			return columns.values().stream()
 					.flatMap(column -> column.getBasisFor().stream())
 					.map(ColumnRef::getTable)
-					.distinct()
 					.collect(Collectors.toSet());
 		}
 

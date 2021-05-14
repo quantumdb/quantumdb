@@ -47,9 +47,7 @@ public class Catalog implements Copyable<Catalog> {
 		checkArgument(!Strings.isNullOrEmpty(tableName), "You must specify a 'tableName'");
 
 		return tables.stream()
-				.filter(t -> t.getName().equals(tableName))
-				.findFirst()
-				.isPresent();
+				.anyMatch(t -> t.getName().equals(tableName));
 	}
 
 	public Table getTable(String tableName) {
@@ -87,9 +85,7 @@ public class Catalog implements Copyable<Catalog> {
 		checkArgument(!Strings.isNullOrEmpty(viewName), "You must specify a 'viewName'");
 
 		return views.stream()
-				.filter(v -> v.getName().equals(viewName))
-				.findFirst()
-				.isPresent();
+				.anyMatch(v -> v.getName().equals(viewName));
 	}
 
 	public View getView(String viewName) {
