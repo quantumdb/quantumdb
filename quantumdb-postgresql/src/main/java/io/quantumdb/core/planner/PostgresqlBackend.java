@@ -87,7 +87,7 @@ public class PostgresqlBackend implements io.quantumdb.core.backends.Backend {
 	@SneakyThrows(ClassNotFoundException.class)
 	public Connection connect() throws SQLException {
 		Class.forName(driver);
-		Connection connection = DriverManager.getConnection(jdbcUrl + "/" + jdbcCatalog, jdbcUser, jdbcPass);
+		Connection connection = DriverManager.getConnection(jdbcUrl + "/" + jdbcCatalog + "/targetServerType=primary", jdbcUser, jdbcPass);
 		try (Statement statement = connection.createStatement()) {
 			statement.execute("SET SCHEMA 'public';");
 		}

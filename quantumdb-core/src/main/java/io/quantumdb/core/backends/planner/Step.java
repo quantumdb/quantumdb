@@ -13,8 +13,8 @@ import io.quantumdb.core.backends.planner.Operation.Type;
 import io.quantumdb.core.schema.definitions.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
-import org.apache.commons.lang.builder.EqualsBuilder;
-import org.apache.commons.lang.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 @Getter(AccessLevel.NONE)
 public class Step {
