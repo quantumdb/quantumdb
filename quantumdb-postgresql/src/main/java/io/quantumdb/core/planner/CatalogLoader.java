@@ -144,7 +144,7 @@ class CatalogLoader {
 				.append("FROM pg_index, pg_class, pg_attribute, pg_namespace ")
 				.append("WHERE ")
 				.append("  nspname = 'public' AND ")
-				.append("  pg_class.oid = '" + tableName + "'::regclass AND ")
+				.append("  pg_class.oid = '\"" + tableName + "\"'::regclass AND ")
 				.append("  indrelid = pg_class.oid AND ")
 				.append("  pg_class.relnamespace = pg_namespace.oid AND ")
 				.append("  pg_attribute.attrelid = pg_class.oid AND ")
@@ -283,6 +283,7 @@ class CatalogLoader {
 				parser.expect("INDEX");
 				parser.present("CONCURRENTLY");
 				String indexName = parser.consume();
+				indexName = removeOuterQuotes(indexName);
 				if (indexName.startsWith("pk_")) {
 					continue;
 				}
@@ -292,6 +293,10 @@ class CatalogLoader {
 				if (indexTableName.startsWith("public.")) {
 					indexTableName = indexTableName.substring("public.".length());
 				}
+				else if (indexTableName.startsWith("\"public\".")) {
+					indexTableName = indexTableName.substring("\"public\".".length());
+				}
+				indexTableName = removeOuterQuotes(indexTableName);
 
 				if (parser.present("USING")) {
 					parser.consume();
@@ -305,4 +310,16 @@ class CatalogLoader {
 			}
 		}
 	}
+
+	private static String removeOuterQuotes(String input) {
+		if (input != null && input.length() >= 2) {
+			int head = 0;
+			int tail = input.length() - 1;
+			if (input.charAt(head) == '\"' && input.charAt(tail) == '\"') {
+				return input.substring(head + 1, tail);
+			}
+		}
+		return input;
+	}
+
 }
