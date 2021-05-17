@@ -8,8 +8,15 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -731,7 +738,7 @@ public class Backend {
 	}
 
 	private void persistSynchronizerColumns(Connection connection, Map<Long, SyncRef> syncRefs,
-			Map<Long, RawColumnMapping> columnMapping) throws SQLException {
+											Map<Long, RawColumnMapping> columnMapping) throws SQLException {
 
 		Table<String, String, Long> syncIndex = HashBasedTable.create();
 		syncRefs.forEach((id, ref) -> syncIndex.put(ref.getSource().getRefId(), ref.getTarget().getRefId(), id));

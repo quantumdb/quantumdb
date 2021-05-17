@@ -109,7 +109,7 @@ public class Config {
 				}
 			}
 			catch (ReflectiveOperationException e) {
-				throw new IllegalArgumentException("Something went wrong selecting backends.");
+				throw new IllegalArgumentException("Something went wrong selecting backends.", e);
 				// Skip this one.
 			}
 		}
