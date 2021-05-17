@@ -36,7 +36,7 @@ public class MultiStateTest extends PostgresqlDatabase {
 		super.before();
 
 		Config config = new Config();
-		config.setUrl(getJdbcUrl());
+		config.setUrl(getJdbcUrl() + "/" + getCatalogName());
 		config.setUser(getJdbcUser());
 		config.setPassword(getJdbcPass());
 		config.setCatalog(getCatalogName());
