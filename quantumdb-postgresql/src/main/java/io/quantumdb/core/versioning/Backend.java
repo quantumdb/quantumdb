@@ -111,23 +111,7 @@ public class Backend {
 				.registerTypeAdapter(ColumnType.class, (JsonDeserializer<ColumnType>) (element, type, context) -> {
 					String fullType = element.getAsString().toUpperCase();
 
-					String sqlType = fullType;
-					if (fullType.contains("(")) {
-						sqlType = fullType.substring(0, fullType.indexOf('('));
-					}
-
-					if (fullType.contains("(")) {
-						int beginIndex = fullType.indexOf("(") + 1;
-						int endIndex = fullType.lastIndexOf(")");
-						List<Integer> arguments = Arrays.stream(fullType.substring(beginIndex, endIndex)
-								.split(","))
-								.map(String::trim)
-								.map(Ints::tryParse)
-								.collect(Collectors.toList());
-
-						return PostgresTypes.from(sqlType, arguments.get(0));
-					}
-					return PostgresTypes.from(sqlType, null);
+					return PostgresTypes.fromString(fullType);
 				})
 				.registerTypeAdapter(ColumnType.class, (JsonSerializer<ColumnType>)
 						(element, type, context) -> new JsonPrimitive(element.getNotation()))

@@ -13,6 +13,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -28,6 +29,7 @@ import io.quantumdb.core.schema.definitions.PostgresTypes;
 import io.quantumdb.core.schema.definitions.Sequence;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.utils.QueryBuilder;
+import io.quantumdb.core.schema.definitions.ColumnType;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -67,7 +69,7 @@ class CatalogLoader {
 
 			table.getColumns().stream()
 					.map(Column::getSequence)
-					.filter(seq -> seq != null)
+					.filter(Objects::nonNull)
 					.forEach(catalog::addSequence);
 
 			addIndexes(connection, catalog, tableName);
@@ -103,6 +105,18 @@ class CatalogLoader {
 				if (resultSet.getObject("character_maximum_length") != null) {
 					characterMaximum = resultSet.getInt("character_maximum_length");
 				}
+				Integer numericPrecision = null;
+				if (resultSet.getObject("numeric_precision") != null) {
+					numericPrecision = resultSet.getInt("numeric_precision");
+				}
+				Integer numericScale = null;
+				if (resultSet.getObject("numeric_scale") != null) {
+					numericScale = resultSet.getInt("numeric_scale");
+				}
+				Integer datetimePrecision = null;
+				if (!type.equals("date") && resultSet.getObject("datetime_precision") != null) {
+					datetimePrecision = resultSet.getInt("datetime_precision");
+				}
 
 				Set<Column.Hint> hints = Sets.newHashSet();
 				if (!"yes".equalsIgnoreCase(resultSet.getString("is_nullable"))) {
@@ -121,14 +135,30 @@ class CatalogLoader {
 					}
 				}
 
-				Column.Hint[] hintArray = hints.stream().toArray(Column.Hint[]::new);
-
-				Column column;
-				if (sequence == null) {
-					column = new Column(columnName, PostgresTypes.from(type, characterMaximum), expression, hintArray);
+				ColumnType columnType = null;
+				if (numericScale != null && numericPrecision != null) {
+					columnType = PostgresTypes.from(type, numericPrecision, numericScale);
+				}
+				else if (characterMaximum != null) {
+					columnType = PostgresTypes.from(type, characterMaximum);
+				}
+				else if (numericPrecision != null) {
+					columnType = PostgresTypes.from(type, numericPrecision);
+				}
+				else if (datetimePrecision != null) {
+					columnType = PostgresTypes.from(type, datetimePrecision);
 				}
 				else {
-					column = new Column(columnName, PostgresTypes.from(type, characterMaximum), sequence, hintArray);
+					columnType = PostgresTypes.from(type);
+				}
+
+				Column.Hint[] hintArray = hints.toArray(new Column.Hint[0]);
+				Column column;
+				if (sequence == null) {
+					column = new Column(columnName, columnType, expression, hintArray);
+				}
+				else {
+					column = new Column(columnName, columnType, sequence, hintArray);
 				}
 				columns.add(column);
 			}

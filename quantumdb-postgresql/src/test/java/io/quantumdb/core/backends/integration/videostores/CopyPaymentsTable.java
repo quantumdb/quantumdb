@@ -1,5 +1,13 @@
 package io.quantumdb.core.backends.integration.videostores;
 
+import static io.quantumdb.core.backends.integration.videostores.PostgresqlBaseScenario.CUSTOMERS_ID;
+import static io.quantumdb.core.backends.integration.videostores.PostgresqlBaseScenario.FILMS_ID;
+import static io.quantumdb.core.backends.integration.videostores.PostgresqlBaseScenario.INVENTORY_ID;
+import static io.quantumdb.core.backends.integration.videostores.PostgresqlBaseScenario.PAYCHECKS_ID;
+import static io.quantumdb.core.backends.integration.videostores.PostgresqlBaseScenario.PAYMENTS_ID;
+import static io.quantumdb.core.backends.integration.videostores.PostgresqlBaseScenario.RENTALS_ID;
+import static io.quantumdb.core.backends.integration.videostores.PostgresqlBaseScenario.STAFF_ID;
+import static io.quantumdb.core.backends.integration.videostores.PostgresqlBaseScenario.STORES_ID;
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
 import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
@@ -10,6 +18,7 @@ import static io.quantumdb.core.schema.definitions.PostgresTypes.integer;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.numeric;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.varchar;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -23,13 +32,11 @@ import io.quantumdb.core.schema.operations.SchemaOperations;
 import io.quantumdb.core.versioning.RefLog;
 import io.quantumdb.core.versioning.State;
 import io.quantumdb.core.versioning.Version;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-// @Ignore - Seems to be working again
-public class MakeStoreFieldInStaffTableNullable {
+public class CopyPaymentsTable {
 
 	@ClassRule
 	public static PostgresqlBaseScenario setup = new PostgresqlBaseScenario();
@@ -44,10 +51,8 @@ public class MakeStoreFieldInStaffTableNullable {
 
 		origin = setup.getChangelog().getLastAdded();
 
-		setup.getChangelog().addChangeSet("test", "Michael de Jong",
-				SchemaOperations.alterColumn("staff", "store_id")
-						.modifyDefaultExpression("NULL")
-						.dropHint(NOT_NULL));
+		setup.getChangelog().addChangeSet("test", "Nick Richter",
+				SchemaOperations.copyTable("payments", "payments_backup"));
 
 		target = setup.getChangelog().getLastAdded();
 		setup.getBackend().persistState(setup.getState());
@@ -129,34 +134,7 @@ public class MakeStoreFieldInStaffTableNullable {
 
 		// New tables and foreign keys.
 
-		Table newStores = new Table(refLog.getTableRef(target, "stores").getRefId())
-				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
-				.addColumn(new Column("name", varchar(255), NOT_NULL))
-				.addColumn(new Column("manager_id", integer(), NOT_NULL));
-
-		Table newStaff = new Table(refLog.getTableRef(target, "staff").getRefId())
-				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
-				.addColumn(new Column("name", varchar(255), NOT_NULL))
-				.addColumn(new Column("store_id", integer()));
-
-		Table newCustomers = new Table(refLog.getTableRef(target, "customers").getRefId())
-				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
-				.addColumn(new Column("name", varchar(255), NOT_NULL))
-				.addColumn(new Column("store_id", integer(), NOT_NULL))
-				.addColumn(new Column("referred_by", integer()));
-
-		Table newInventory = new Table(refLog.getTableRef(target, "inventory").getRefId())
-				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
-				.addColumn(new Column("store_id", integer(), NOT_NULL))
-				.addColumn(new Column("film_id", integer(), NOT_NULL));
-
-		Table newPaychecks = new Table(refLog.getTableRef(target, "paychecks").getRefId())
-				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
-				.addColumn(new Column("staff_id", integer(), NOT_NULL))
-				.addColumn(new Column("date", date(), NOT_NULL))
-				.addColumn(new Column("amount", floats(), NOT_NULL));
-
-		Table newPayments = new Table(refLog.getTableRef(target, "payments").getRefId())
+		Table newPayments = new Table(refLog.getTableRef(target, "payments_backup").getRefId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("staff_id", integer()))
 				.addColumn(new Column("customer_id", integer(), NOT_NULL))
@@ -168,29 +146,12 @@ public class MakeStoreFieldInStaffTableNullable {
 				.addColumn(new Column("amount_numeric_precision_scale", numeric(10,2), NOT_NULL))
 				.addColumn(new Column("invoice_pdf", bytea(), NOT_NULL));
 
-		Table newRentals = new Table(refLog.getTableRef(target, "rentals").getRefId())
-				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
-				.addColumn(new Column("staff_id", integer()))
-				.addColumn(new Column("customer_id", integer(), NOT_NULL))
-				.addColumn(new Column("inventory_id", integer(), NOT_NULL))
-				.addColumn(new Column("date", date(), NOT_NULL));
-
-		newStores.addForeignKey("manager_id").referencing(newStaff, "id");
-		newStaff.addForeignKey("store_id").referencing(newStores, "id");
-		newCustomers.addForeignKey("referred_by").referencing(newCustomers, "id");
-		newCustomers.addForeignKey("store_id").referencing(newStores, "id");
-		newInventory.addForeignKey("store_id").referencing(newStores, "id");
-		newInventory.addForeignKey("film_id").referencing(films, "id");
-		newPaychecks.addForeignKey("staff_id").referencing(newStaff, "id");
-		newPayments.addForeignKey("staff_id").referencing(newStaff, "id");
-		newPayments.addForeignKey("customer_id").referencing(newCustomers, "id");
-		newPayments.addForeignKey("rental_id").referencing(newRentals, "id");
-		newRentals.addForeignKey("staff_id").referencing(newStaff, "id");
-		newRentals.addForeignKey("customer_id").referencing(newCustomers, "id");
-		newRentals.addForeignKey("inventory_id").referencing(newInventory, "id");
+		newPayments.addForeignKey("staff_id").referencing(staff, "id");
+		newPayments.addForeignKey("customer_id").referencing(customers, "id");
+		newPayments.addForeignKey("rental_id").referencing(rentals, "id");
 
 		List<Table> tables = Lists.newArrayList(stores, staff, customers, films, inventory, paychecks, payments, rentals,
-				newStores, newStaff, newCustomers, newInventory, newPaychecks, newPayments, newRentals);
+				newPayments);
 
 		Catalog expected = new Catalog(setup.getCatalog().getName());
 		tables.forEach(expected::addTable);
@@ -203,16 +164,17 @@ public class MakeStoreFieldInStaffTableNullable {
 		RefLog refLog = state.getRefLog();
 
 		// Unchanged tables
-		Assert.assertEquals(PostgresqlBaseScenario.FILMS_ID, refLog.getTableRef(target, "films").getRefId());
+		assertEquals(FILMS_ID, refLog.getTableRef(target, "films").getRefId());
+		assertEquals(CUSTOMERS_ID, refLog.getTableRef(target, "customers").getRefId());
+		assertEquals(PAYMENTS_ID, refLog.getTableRef(target, "payments").getRefId());
+		assertEquals(RENTALS_ID, refLog.getTableRef(target, "rentals").getRefId());
+		assertEquals(STORES_ID, refLog.getTableRef(target, "stores").getRefId());
+		assertEquals(STAFF_ID, refLog.getTableRef(target, "staff").getRefId());
+		assertEquals(INVENTORY_ID, refLog.getTableRef(target, "inventory").getRefId());
+		assertEquals(PAYCHECKS_ID, refLog.getTableRef(target, "paychecks").getRefId());
 
-		// Ghosted tables
-		Assert.assertNotEquals(PostgresqlBaseScenario.CUSTOMERS_ID, refLog.getTableRef(target, "customers").getRefId());
-		Assert.assertNotEquals(PostgresqlBaseScenario.PAYMENTS_ID, refLog.getTableRef(target, "payments").getRefId());
-		Assert.assertNotEquals(PostgresqlBaseScenario.RENTALS_ID, refLog.getTableRef(target, "rentals").getRefId());
-		Assert.assertNotEquals(PostgresqlBaseScenario.STORES_ID, refLog.getTableRef(target, "stores").getRefId());
-		Assert.assertNotEquals(PostgresqlBaseScenario.STAFF_ID, refLog.getTableRef(target, "staff").getRefId());
-		Assert.assertNotEquals(PostgresqlBaseScenario.INVENTORY_ID, refLog.getTableRef(target, "inventory").getRefId());
-		Assert.assertNotEquals(PostgresqlBaseScenario.PAYCHECKS_ID, refLog.getTableRef(target, "paychecks").getRefId());
+		// New tables
+		assertNotNull(refLog.getTableRef(target, "payments_backup").getRefId());
 	}
 
 }

@@ -16,12 +16,14 @@ public class ColumnType {
 		TEXT,
 		SMALLINT,
 		INTEGER,
+		NUMERIC,
 		BIGINT,
 		DOUBLE,
 		FLOAT,
 		BOOLEAN,
 		DATE,
-		TIMESTAMP
+		TIMESTAMP,
+		BYTEA
 	}
 
 	@FunctionalInterface

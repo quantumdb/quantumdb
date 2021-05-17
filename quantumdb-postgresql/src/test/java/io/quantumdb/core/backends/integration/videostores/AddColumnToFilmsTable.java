@@ -11,9 +11,11 @@ import static io.quantumdb.core.backends.integration.videostores.PostgresqlBaseS
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
 import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
+import static io.quantumdb.core.schema.definitions.PostgresTypes.bytea;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.date;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.floats;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.integer;
+import static io.quantumdb.core.schema.definitions.PostgresTypes.numeric;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.varchar;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -101,7 +103,11 @@ public class AddColumnToFilmsTable {
 				.addColumn(new Column("customer_id", integer(), NOT_NULL))
 				.addColumn(new Column("rental_id", integer(), NOT_NULL))
 				.addColumn(new Column("date", date(), NOT_NULL))
-				.addColumn(new Column("amount", floats(), NOT_NULL));
+				.addColumn(new Column("amount", floats(), NOT_NULL))
+				.addColumn(new Column("amount_numeric", numeric(), NOT_NULL))
+				.addColumn(new Column("amount_numeric_precision", numeric(10), NOT_NULL))
+				.addColumn(new Column("amount_numeric_precision_scale", numeric(10,2), NOT_NULL))
+				.addColumn(new Column("invoice_pdf", bytea(), NOT_NULL));
 
 		Table rentals = new Table(refLog.getTableRef(origin, "rentals").getRefId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
@@ -142,7 +148,11 @@ public class AddColumnToFilmsTable {
 				.addColumn(new Column("customer_id", integer(), NOT_NULL))
 				.addColumn(new Column("rental_id", integer(), NOT_NULL))
 				.addColumn(new Column("date", date(), NOT_NULL))
-				.addColumn(new Column("amount", floats(), NOT_NULL));
+				.addColumn(new Column("amount", floats(), NOT_NULL))
+				.addColumn(new Column("amount_numeric", numeric(), NOT_NULL))
+				.addColumn(new Column("amount_numeric_precision", numeric(10), NOT_NULL))
+				.addColumn(new Column("amount_numeric_precision_scale", numeric(10,2), NOT_NULL))
+				.addColumn(new Column("invoice_pdf", bytea(), NOT_NULL));
 
 		Table newRentals = new Table(refLog.getTableRef(target, "rentals").getRefId())
 				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))

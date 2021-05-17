@@ -37,7 +37,7 @@ public class XmlAddColumn implements XmlOperation<AddColumn> {
 
 	@Override
 	public AddColumn toOperation() {
-		ColumnType dataType = PostgresTypes.from(column.getType());
+		ColumnType dataType = PostgresTypes.fromString(column.getType());
 		String columnName = column.getName();
 		String defaultExpression = column.getDefaultExpression();
 

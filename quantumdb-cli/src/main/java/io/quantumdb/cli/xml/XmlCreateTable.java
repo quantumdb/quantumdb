@@ -41,7 +41,7 @@ public class XmlCreateTable implements XmlOperation<CreateTable> {
 	public CreateTable toOperation() {
 		CreateTable operation = SchemaOperations.createTable(tableName);
 		for (XmlColumn column : columns) {
-			ColumnType type = PostgresTypes.from(column.getType());
+			ColumnType type = PostgresTypes.fromString(column.getType());
 			String defaultExpression = column.getDefaultExpression();
 
 			List<Hint> hints = Lists.newArrayList();
