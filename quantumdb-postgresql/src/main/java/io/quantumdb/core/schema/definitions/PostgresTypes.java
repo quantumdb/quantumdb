@@ -31,12 +31,22 @@ public class PostgresTypes {
 				return PostgresTypes.oid();
 			case "uuid":
 				return PostgresTypes.uuid();
+			case "smallserial":
+			case "int2":
 			case "smallint":
 				return PostgresTypes.smallint();
+			case "bigserial":
+			case "int8":
 			case "bigint":
 				return PostgresTypes.bigint();
+			case "serial":
+			case "int":
+			case "int4":
 			case "integer":
 				return PostgresTypes.integer();
+			case "decimal":
+			case "numeric":
+				return PostgresTypes.numeric(length);
 			case "bool":
 			case "boolean":
 				return PostgresTypes.bool();
@@ -54,10 +64,15 @@ public class PostgresTypes {
 				return PostgresTypes.timestamp(false);
 			case "date":
 				return PostgresTypes.date();
+			case "float8":
 			case "double precision":
 				return PostgresTypes.floats();
+			case "float4":
 			case "real":
 				return PostgresTypes.doubles();
+			case "byte array":
+			case "bytea":
+				return PostgresTypes.bytea();
 			default:
 				String error = "Unsupported type: " + type;
 				if (length != null) {
@@ -73,7 +88,7 @@ public class PostgresTypes {
 	}
 
 	public static ColumnType uuid() {
-		return new ColumnType(ColumnType.Type.UUID, true, "uuid", () -> UUID.randomUUID(),
+		return new ColumnType(ColumnType.Type.UUID, true, "uuid", UUID::randomUUID,
 				(statement, position, value) -> statement.setObject(position, value));
 	}
 
@@ -106,6 +121,11 @@ public class PostgresTypes {
 		return new ColumnType(ColumnType.Type.INTEGER, false, "integer", () -> 0,
 				(statement, position, value) -> statement.setInt(position, ((Number) value).intValue()));
 	}
+
+	public static ColumnType numeric(Integer length) {
+		return new ColumnType(ColumnType.Type.NUMERIC, false, "numeric(" + length + ")", () -> 0.00d,
+				(statement, position, value) -> statement.setDouble(position, ((Double) value)));
+	}
 	
 	public static ColumnType bigint() {
 		return new ColumnType(ColumnType.Type.BIGINT, false, "bigint", () -> 0L,
@@ -131,6 +151,11 @@ public class PostgresTypes {
 	public static ColumnType floats() {
 		return new ColumnType(ColumnType.Type.FLOAT, false, "double precision", () -> 0.00f,
 				(statement, position, value) -> statement.setFloat(position, (Float) value));
+	}
+
+	public static ColumnType bytea() {
+		return new ColumnType(ColumnType.Type.BYTEA, false, "bytea", () -> new byte[0],
+				(statement, position, value) -> statement.setBytes(position, (byte[]) value));
 	}
 	
 }

@@ -55,7 +55,7 @@ public class XmlCreateTable implements XmlOperation<CreateTable> {
 				hints.add(Hint.NOT_NULL);
 			}
 
-			Hint[] hintArray = hints.toArray(new Hint[hints.size()]);
+			Hint[] hintArray = hints.toArray(new Hint[0]);
 			operation.with(column.getName(), type, defaultExpression, hintArray);
 		}
 		return operation;

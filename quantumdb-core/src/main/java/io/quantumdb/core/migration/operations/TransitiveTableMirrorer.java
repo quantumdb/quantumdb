@@ -45,7 +45,7 @@ class TransitiveTableMirrorer {
 			// Traverse incoming foreign keys
 			Set<String> referencingRefIds = catalog.getTablesReferencingTable(tableRef.getRefId());
 			tablesToMirror.addAll(referencingRefIds.stream()
-					.map(refId -> refLog.getTableRefById(refId))
+					.map(refLog::getTableRefById)
 					.collect(Collectors.toList()));
 		}
 

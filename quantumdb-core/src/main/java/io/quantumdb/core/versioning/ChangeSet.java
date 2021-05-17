@@ -13,7 +13,7 @@ import lombok.Setter;
 
 
 /**
- * This class describes a list of SchemaOperations which batched together form a logical set of changes to the database
+ * This class describes a list of SchemaOperations which, when batched together, form a logical set of changes to the database
  * schema. This batch can optionally be given a description, much like a commit message in version control systems.
  */
 @Data

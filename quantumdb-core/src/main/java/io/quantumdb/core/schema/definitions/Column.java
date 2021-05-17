@@ -126,7 +126,7 @@ public class Column implements Copyable<Column> {
 
 	@Override
 	public Column copy() {
-		return new Column(name, type, sequence, defaultValue, hints.stream().toArray(Hint[]::new));
+		return new Column(name, type, sequence, defaultValue, hints.toArray(new Hint[0]));
 	}
 
 	@Override

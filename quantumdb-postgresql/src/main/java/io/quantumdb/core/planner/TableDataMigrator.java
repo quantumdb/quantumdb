@@ -1,5 +1,6 @@
 package io.quantumdb.core.planner;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -45,10 +46,10 @@ class TableDataMigrator {
 
 		Map<String, Object> highestId = queryHighestId(source);
 		if (highestId == null) {
-			log.info("Table: {} is empty -> nothing target migrate...", source.getName());
+			log.info("Table: {} is empty -> nothing to migrate...", source.getName());
 			return;
 		}
-		log.info("Migrating data in table: {} target: {}", source.getName(), target.getName());
+		log.info("Migrating data in table: {} to target: {}", source.getName(), target.getName());
 
 		MigratorFunction initialMigrator = SelectiveMigratorFunction.createMigrator(nullRecords, refLog,
 				source, target, from, to, BATCH_SIZE, Stage.INITIAL, migratedColumns, columnsToMigrate);
@@ -172,6 +173,14 @@ class TableDataMigrator {
 				right = right.toString().toLowerCase();
 			}
 
+			if (left instanceof Long) {
+				left = new BigDecimal((Long) left);
+			}
+
+			if (right instanceof Long) {
+				right = new BigDecimal((Long) right);
+			}
+
 			Comparable leftComparable = (Comparable) left;
 			Comparable rightComparable = (Comparable) right;
 
@@ -233,11 +242,14 @@ class TableDataMigrator {
 				return Integer.parseInt(value);
 			case BIGINT:
 				return Long.parseLong(value);
+			case NUMERIC:
+				return Double.parseDouble(value);
 			case BOOLEAN:
 				return Boolean.parseBoolean(value);
 			case TEXT:
 			case CHAR:
 			case VARCHAR:
+			case OID:
 				return value;
 			case DATE:
 				return Date.parse(value);
@@ -245,8 +257,6 @@ class TableDataMigrator {
 				return Float.parseFloat(value);
 			case TIMESTAMP:
 				return Timestamp.parse(value);
-			case OID:
-				return value;
 			case UUID:
 			default:
 				return UUID.fromString(value);

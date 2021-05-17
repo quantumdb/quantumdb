@@ -254,9 +254,11 @@ changelog.addChangeSet("track_users", "Michael de Jong",
         .with("last_name", PostgresTypes.text(), Hint.NOT_NULL));</code></pre>
 
             <pre class="code"><code class="xml">&lt;createTable tableName="users"&gt;
-  &lt;column name="id" type="bigint" primaryKey="true" autoIncrement="true" /&gt;
-  &lt;column name="first_name" type="text" nullable="false" /&gt;
-  &lt;column name="last_name" type="text" nullable="false" /&gt;
+  &lt;columns&gt;
+    &lt;column name="id" type="bigint" primaryKey="true" autoIncrement="true" /&gt;
+    &lt;column name="first_name" type="text" nullable="false" /&gt;
+    &lt;column name="last_name" type="text" nullable="false" /&gt;
+  &lt;/columns&gt;
 &lt;/createTable&gt;</code></pre>
 
             <p>

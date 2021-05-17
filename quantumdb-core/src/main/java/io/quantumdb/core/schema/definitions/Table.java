@@ -6,6 +6,7 @@ import static com.google.common.base.Preconditions.checkState;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -115,9 +116,7 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 		checkArgument(!columns.isEmpty(), "You must specify at least one entry in 'columns'.");
 
 		return indexes.stream()
-				.filter(c -> c.getColumns().equals(Lists.newArrayList(columns)))
-				.findFirst()
-				.isPresent();
+				.anyMatch(c -> c.getColumns().equals(Lists.newArrayList(columns)));
 	}
 
 	public Index removeIndex(String... columns) {
@@ -185,9 +184,7 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 		checkArgument(!Strings.isNullOrEmpty(columnName), "You must specify a 'name'.");
 
 		return columns.stream()
-				.filter(c -> c.getName().equals(columnName))
-				.findFirst()
-				.isPresent();
+				.anyMatch(c -> c.getName().equals(columnName));
 	}
 
 	public Column removeColumn(String columnName) {
@@ -249,17 +246,15 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 
 	void dropOutgoingForeignKeys() {
 		columns.stream()
-				.filter(column -> column.getOutgoingForeignKey() != null)
-				.map(column -> column.getOutgoingForeignKey())
+				.map(Column::getOutgoingForeignKey)
+				.filter(Objects::nonNull)
 				.distinct()
 				.forEach(ForeignKey::drop);
 	}
 
 	public boolean referencesTable(String tableName) {
 		return foreignKeys.stream()
-				.filter(foreignKey -> foreignKey.getReferredTableName().equals(tableName))
-				.findAny()
-				.isPresent();
+				.anyMatch(foreignKey -> foreignKey.getReferredTableName().equals(tableName));
 	}
 
 	public Set<String> enumerateReferencedByTables() {
