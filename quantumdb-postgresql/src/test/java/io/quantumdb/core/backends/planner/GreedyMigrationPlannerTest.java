@@ -1,7 +1,7 @@
 package io.quantumdb.core.backends.planner;
 
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
-import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
+import static io.quantumdb.core.schema.definitions.Column.Hint.PRIMARY_KEY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.bigint;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.bool;
@@ -86,7 +86,7 @@ public class GreedyMigrationPlannerTest {
 			Catalog catalog = new Catalog("fullMagnet");
 
 			Table answeredQuestions = new Table("answered_questions")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("organization_id", bigint(), NOT_NULL))
 					.addColumn(new Column("jobseeker_id", bigint()))
 					.addColumn(new Column("is_positive", bool(), NOT_NULL))
@@ -95,10 +95,10 @@ public class GreedyMigrationPlannerTest {
 
 			Table applicationAttachments = new Table("application_attachments")
 					.addColumn(new Column("application_id", bigint(), NOT_NULL))
-					.addColumn(new Column("attachment_id", bigint(), NOT_NULL, IDENTITY));
+					.addColumn(new Column("attachment_id", bigint(), NOT_NULL, PRIMARY_KEY));
 
 			Table applications = new Table("applications")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("student_id", bigint(), NOT_NULL))
 					.addColumn(new Column("recruiter_id", bigint(), NOT_NULL))
 					.addColumn(new Column("opportunity_id", bigint(), NOT_NULL))
@@ -108,14 +108,14 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table applicationsResponses = new Table("applications__responses")
-					.addColumn(new Column("application_id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("application_id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("recruiter_id", bigint(), NOT_NULL))
 					.addColumn(new Column("created_at", timestamp(true), "'now()'", NOT_NULL))
 					.addColumn(new Column("message", text()))
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table cloudImages = new Table("cloud_images")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("bucket", varchar(255), NOT_NULL))
 					.addColumn(new Column("folder", varchar(255)))
 					.addColumn(new Column("name", varchar(255), NOT_NULL))
@@ -124,12 +124,12 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table companies = new Table("companies")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("employees", integer()));
 
 			Table conversationSubscribers = new Table("conversation_subscribers")
-					.addColumn(new Column("conversation_id", bigint(), NOT_NULL, IDENTITY))
-					.addColumn(new Column("subscriber_id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("conversation_id", bigint(), NOT_NULL, PRIMARY_KEY))
+					.addColumn(new Column("subscriber_id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("starred", bool(), "'false'", NOT_NULL))
 					.addColumn(new Column("archived", bool(), "'false'", NOT_NULL))
 					.addColumn(new Column("last_read_message_id", bigint()))
@@ -137,7 +137,7 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table conversations = new Table("conversations")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("title", varchar(255), NOT_NULL))
 					.addColumn(new Column("organization_id", bigint(), NOT_NULL))
 					.addColumn(new Column("sender_id", bigint(), NOT_NULL))
@@ -146,7 +146,7 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table databasechangelog = new Table("databasechangelog")
-					.addColumn(new Column("id", varchar(255), NOT_NULL, IDENTITY))
+					.addColumn(new Column("id", varchar(255), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("author", varchar(255), NOT_NULL))
 					.addColumn(new Column("filename", varchar(255), NOT_NULL))
 					.addColumn(new Column("dateexecuted", timestamp(true), NOT_NULL))
@@ -159,26 +159,26 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("liquibase", varchar(255)));
 
 			Table databasechangeloglock = new Table("databasechangeloglock")
-					.addColumn(new Column("id", integer(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("id", integer(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("locked", bool(), NOT_NULL))
 					.addColumn(new Column("lockgranted", timestamp(true)))
 					.addColumn(new Column("lockedby", varchar(255)));
 
 			Table deletedUsers = new Table("deleted_users")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("email", varchar(255), NOT_NULL))
 					.addColumn(new Column("deleted_at", timestamp(true), "'now()'", NOT_NULL))
 					.addColumn(new Column("found_job_via_magnet", bool()))
 					.addColumn(new Column("invalid_email", bool(), "'false'", NOT_NULL));
 
 			Table educationNames = new Table("education_names")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("name", varchar(255), NOT_NULL))
 					.addColumn(new Column("created_at", timestamp(true), "'now()'"))
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table educations = new Table("educations")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("institution_id", bigint(), NOT_NULL))
 					.addColumn(new Column("education_name_id", bigint(), NOT_NULL))
 					.addColumn(new Column("level", varchar(255), NOT_NULL))
@@ -188,12 +188,12 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table emailOptOut = new Table("email_opt_out")
-					.addColumn(new Column("email", varchar(255), NOT_NULL, IDENTITY))
+					.addColumn(new Column("email", varchar(255), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("created_at", timestamp(true), "'now()'", NOT_NULL))
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table employeesPerCountry = new Table("employees_per_country")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("country", varchar(255), NOT_NULL))
 					.addColumn(new Column("number_of_employees", integer(), NOT_NULL))
 					.addColumn(new Column("company_id", bigint(), NOT_NULL))
@@ -201,26 +201,26 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table eventOrganizers = new Table("event_organizers")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT));
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT));
 
 			Table experiences = new Table("experiences")
 					.addColumn(new Column("name", varchar(255), NOT_NULL))
 					.addColumn(new Column("hours_per_week_spent", integer()))
 					.addColumn(new Column("weeks_spent", integer(), NOT_NULL))
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("institute_name", varchar(255)))
 					.addColumn(new Column("country", varchar(255)))
 					.addColumn(new Column("city", varchar(255)));
 
 			Table extraCurricularExperiences = new Table("extra_curricular_experiences")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("volunteer", bool(), "'false'", NOT_NULL))
 					.addColumn(new Column("work_type", varchar(255)))
 					.addColumn(new Column("second_work_type", varchar(255)));
 
 			Table featureFlags = new Table("feature_flags")
-					.addColumn(new Column("user_id", bigint(), NOT_NULL, IDENTITY))
-					.addColumn(new Column("feature", varchar(255), NOT_NULL, IDENTITY))
+					.addColumn(new Column("user_id", bigint(), NOT_NULL, PRIMARY_KEY))
+					.addColumn(new Column("feature", varchar(255), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("created_at", timestamp(true), "'now()'"))
 					.addColumn(new Column("updated_at", timestamp(true)));
 
@@ -231,12 +231,12 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("created_by_user_id", bigint(), NOT_NULL))
 					.addColumn(new Column("created", timestamp(true), NOT_NULL))
 					.addColumn(new Column("name", varchar(255)))
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("created_at", timestamp(true), "'now()'"))
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table institutions = new Table("institutions")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("name", varchar(255), NOT_NULL))
 					.addColumn(new Column("url", varchar(255)))
 					.addColumn(new Column("verified", bool(), "'false'", NOT_NULL))
@@ -247,7 +247,7 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table invites = new Table("invites")
-					.addColumn(new Column("id", uuid(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("id", uuid(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("email", varchar(255), NOT_NULL))
 					.addColumn(new Column("created_at", timestamp(true), "'now()'", NOT_NULL))
 					.addColumn(new Column("invited_by", bigint()))
@@ -257,7 +257,7 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table jobSeekerEmailPreferences = new Table("job_seeker_email_preferences")
-					.addColumn(new Column("user_id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("user_id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("personal_messages", bool(), "'true'", NOT_NULL))
 					.addColumn(new Column("application_response", bool(), "'true'", NOT_NULL))
 					.addColumn(new Column("network_requests", varchar(255), "''IMMEDIATELY'::character varying'", NOT_NULL))
@@ -271,7 +271,7 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("last_profile_view_sent_at", timestamp(true)));
 
 			Table jobseekersSavedOpportunities = new Table("jobseekers__saved_opportunities")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("jobseeker_id", bigint()))
 					.addColumn(new Column("opportunity_id", bigint()))
 					.addColumn(new Column("saved_at", timestamp(true), "'now()'", NOT_NULL))
@@ -280,7 +280,7 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("opportunity_name", varchar(255)));
 
 			Table languageSkills = new Table("language_skills")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("student_id", bigint(), NOT_NULL))
 					.addColumn(new Column("level", varchar(255), NOT_NULL))
 					.addColumn(new Column("language", varchar(255), NOT_NULL))
@@ -288,7 +288,7 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table magnetTransactions = new Table("magnet_transactions")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("student_id", bigint(), NOT_NULL))
 					.addColumn(new Column("date", timestamp(true), NOT_NULL))
 					.addColumn(new Column("delta", integer(), NOT_NULL))
@@ -304,7 +304,7 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("invited_user_id", bigint()));
 
 			Table messages = new Table("messages")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("body", text(), NOT_NULL))
 					.addColumn(new Column("sender_id", bigint(), NOT_NULL))
 					.addColumn(new Column("created_at", timestamp(true), "'now()'", NOT_NULL))
@@ -312,11 +312,11 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table networkOpportunities = new Table("network_opportunities")
-					.addColumn(new Column("network_id", bigint(), NOT_NULL, IDENTITY))
-					.addColumn(new Column("opportunity_id", bigint(), NOT_NULL, IDENTITY));
+					.addColumn(new Column("network_id", bigint(), NOT_NULL, PRIMARY_KEY))
+					.addColumn(new Column("opportunity_id", bigint(), NOT_NULL, PRIMARY_KEY));
 
 			Table networks = new Table("networks")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("name", varchar(255), NOT_NULL))
 					.addColumn(new Column("organization_id", bigint(), NOT_NULL))
 					.addColumn(new Column("active", bool(), "'true'", NOT_NULL))
@@ -342,12 +342,12 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("master_edu_weight", varchar(255)));
 
 			Table networksRecruiters = new Table("networks__recruiters")
-					.addColumn(new Column("network_id", bigint(), NOT_NULL, IDENTITY))
-					.addColumn(new Column("recruiter_id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("network_id", bigint(), NOT_NULL, PRIMARY_KEY))
+					.addColumn(new Column("recruiter_id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("update_subscription", varchar(255), "''IMMEDIATELY'::character varying'", NOT_NULL));
 
 			Table newsPosts = new Table("news_posts")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("type", varchar(255), NOT_NULL))
 					.addColumn(new Column("body", text(), NOT_NULL))
 					.addColumn(new Column("poster_id", bigint(), NOT_NULL))
@@ -359,11 +359,11 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table newsPostsNetworks = new Table("news_posts__networks")
-					.addColumn(new Column("news_post_id", bigint(), NOT_NULL, IDENTITY))
-					.addColumn(new Column("network_id", bigint(), NOT_NULL, IDENTITY));
+					.addColumn(new Column("news_post_id", bigint(), NOT_NULL, PRIMARY_KEY))
+					.addColumn(new Column("network_id", bigint(), NOT_NULL, PRIMARY_KEY));
 
 			Table occupations = new Table("occupations")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("student_id", bigint(), NOT_NULL))
 					.addColumn(new Column("started", date(), NOT_NULL))
 					.addColumn(new Column("finished", date()))
@@ -374,7 +374,7 @@ public class GreedyMigrationPlannerTest {
 
 			Table opportunities = new Table("opportunities")
 					.addColumn(new Column("type", varchar(255), NOT_NULL))
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("organization_id", bigint(), NOT_NULL))
 					.addColumn(new Column("recruiter_id", bigint(), NOT_NULL))
 					.addColumn(new Column("name", varchar(255), NOT_NULL))
@@ -402,8 +402,8 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("end_time", timestamp(true)));
 
 			Table organizationPages = new Table("organization_pages")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
-					.addColumn(new Column("organization_id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
+					.addColumn(new Column("organization_id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("heading", varchar(255), NOT_NULL))
 					.addColumn(new Column("text", text()))
 					.addColumn(new Column("image_id", bigint()))
@@ -416,7 +416,7 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table organizationTags = new Table("organization_tags")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("name", varchar(255), NOT_NULL))
 					.addColumn(new Column("organization_id", bigint()))
 					.addColumn(new Column("color", chars(255)))
@@ -425,7 +425,7 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("last_used", timestamp(true), "'now()'", NOT_NULL));
 
 			Table organizations = new Table("organizations")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("active", bool(), "'false'", NOT_NULL))
 					.addColumn(new Column("name", varchar(255)))
 					.addColumn(new Column("phone_number", varchar(255)))
@@ -454,11 +454,11 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("questionnaire_priority", integer()));
 
 			Table pepCountries = new Table("pep_countries")
-					.addColumn(new Column("network_id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("network_id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("country", varchar(255), NOT_NULL));
 
 			Table pepExperienceIndustries = new Table("pep_experience_industries")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("experience_id", bigint(), NOT_NULL))
 					.addColumn(new Column("industry", varchar(255), NOT_NULL))
 					.addColumn(new Column("weight", varchar(255)))
@@ -466,21 +466,21 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table pepExperienceWorkTypes = new Table("pep_experience_work_types")
-					.addColumn(new Column("experience_id", bigint(), NOT_NULL, IDENTITY))
-					.addColumn(new Column("work_type", varchar(255), NOT_NULL, IDENTITY))
+					.addColumn(new Column("experience_id", bigint(), NOT_NULL, PRIMARY_KEY))
+					.addColumn(new Column("work_type", varchar(255), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("weight", varchar(255)))
 					.addColumn(new Column("created_at", timestamp(true), "'now()'"))
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table pepFilterAbroad = new Table("pep_filter_abroad")
-					.addColumn(new Column("experience_id", bigint(), NOT_NULL, IDENTITY))
-					.addColumn(new Column("type", varchar(255), NOT_NULL, IDENTITY))
+					.addColumn(new Column("experience_id", bigint(), NOT_NULL, PRIMARY_KEY))
+					.addColumn(new Column("type", varchar(255), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("weight", varchar(255)))
 					.addColumn(new Column("created_at", timestamp(true), "'now()'"))
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table pepFilterEducations = new Table("pep_filter_educations")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("weight", varchar(255), NOT_NULL))
 					.addColumn(new Column("reject_policy", varchar(255), NOT_NULL))
 					.addColumn(new Column("type", varchar(255), NOT_NULL))
@@ -500,21 +500,21 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table pepFilterEducationsHasSelectedDisciplines = new Table("pep_filter_educations__has_selected_disciplines")
-					.addColumn(new Column("pep_filter_education_id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("pep_filter_education_id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("selected_discipline", varchar(255)))
 					.addColumn(new Column("weight", varchar(255)))
 					.addColumn(new Column("created_at", timestamp(true), "'now()'"))
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table pepFilterEducationsHasSelectedSubdisciplines = new Table("pep_filter_educations__has_selected_subdisciplines")
-					.addColumn(new Column("pep_filter_education_id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("pep_filter_education_id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("selected_subdiscipline", varchar(255), NOT_NULL))
 					.addColumn(new Column("weight", varchar(255)))
 					.addColumn(new Column("created_at", timestamp(true), "'now()'"))
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table pepFilterEducationsSelectedEducationNames = new Table("pep_filter_educations__selected_education_names")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("pep_filter_education_id", bigint()))
 					.addColumn(new Column("included", bool(), NOT_NULL))
 					.addColumn(new Column("education_name_id", bigint()))
@@ -522,7 +522,7 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table pepFilterEducationsSelectedEducations = new Table("pep_filter_educations__selected_educations")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("pep_filter_education_id", bigint()))
 					.addColumn(new Column("included", bool(), NOT_NULL))
 					.addColumn(new Column("education_id", bigint()))
@@ -530,7 +530,7 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table pepFilterEducationsSelectedInstitutions = new Table("pep_filter_educations__selected_institutions")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("pep_filter_education_id", bigint()))
 					.addColumn(new Column("included", bool(), NOT_NULL))
 					.addColumn(new Column("institution_id", bigint()))
@@ -538,7 +538,7 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table pepFilterExperiences = new Table("pep_filter_experiences")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("weight", varchar(255), NOT_NULL))
 					.addColumn(new Column("reject_policy", varchar(255), NOT_NULL))
 					.addColumn(new Column("network_id", bigint()))
@@ -549,7 +549,7 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table pepFilterLanguages = new Table("pep_filter_languages")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("weight", varchar(255), NOT_NULL))
 					.addColumn(new Column("reject_policy", varchar(255), NOT_NULL))
 					.addColumn(new Column("network_id", bigint()))
@@ -559,7 +559,7 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table pepFilterTools = new Table("pep_filter_tools")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("weight", varchar(255), NOT_NULL))
 					.addColumn(new Column("reject_policy", varchar(255), NOT_NULL))
 					.addColumn(new Column("network_id", bigint()))
@@ -569,7 +569,7 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table pepFilterTravels = new Table("pep_filter_travels")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("network_id", bigint()))
 					.addColumn(new Column("minimum_months", integer(), NOT_NULL))
 					.addColumn(new Column("weight", varchar(255), NOT_NULL))
@@ -578,19 +578,19 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table pepJobLevels = new Table("pep_job_levels")
-					.addColumn(new Column("network_id", bigint(), NOT_NULL, IDENTITY))
-					.addColumn(new Column("job_level", varchar(255), NOT_NULL, IDENTITY));
+					.addColumn(new Column("network_id", bigint(), NOT_NULL, PRIMARY_KEY))
+					.addColumn(new Column("job_level", varchar(255), NOT_NULL, PRIMARY_KEY));
 
 			Table pepJobtypes = new Table("pep_jobtypes")
-					.addColumn(new Column("network_id", bigint(), NOT_NULL, IDENTITY))
-					.addColumn(new Column("jobtype", varchar(255), NOT_NULL, IDENTITY));
+					.addColumn(new Column("network_id", bigint(), NOT_NULL, PRIMARY_KEY))
+					.addColumn(new Column("jobtype", varchar(255), NOT_NULL, PRIMARY_KEY));
 
 			Table pepStudyPhases = new Table("pep_study_phases")
-					.addColumn(new Column("network_id", bigint(), NOT_NULL, IDENTITY))
-					.addColumn(new Column("study_phase", varchar(255), NOT_NULL, IDENTITY));
+					.addColumn(new Column("network_id", bigint(), NOT_NULL, PRIMARY_KEY))
+					.addColumn(new Column("study_phase", varchar(255), NOT_NULL, PRIMARY_KEY));
 
 			Table pepUpdateRequests = new Table("pep_update_requests")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("type", varchar(255), NOT_NULL))
 					.addColumn(new Column("work_started_at", timestamp(true)))
 					.addColumn(new Column("work_started_by", varchar(255)))
@@ -605,20 +605,20 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table pepWorkTypes = new Table("pep_work_types")
-					.addColumn(new Column("network_id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("network_id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("work_type", varchar(255), NOT_NULL))
 					.addColumn(new Column("created_at", timestamp(true), "'now()'"))
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table premiumRenewals = new Table("premium_renewals")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
-					.addColumn(new Column("student_id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
+					.addColumn(new Column("student_id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("start_date", timestamp(true), "'now()'", NOT_NULL))
 					.addColumn(new Column("invite_id", uuid()))
 					.addColumn(new Column("days", integer(), NOT_NULL));
 
 			Table profileViews = new Table("profile_views")
-					.addColumn(new Column("id", bigint(), "'nextval('profile_views_id_seq1'::regclass)'", NOT_NULL, IDENTITY))
+					.addColumn(new Column("id", bigint(), "'nextval('profile_views_id_seq1'::regclass)'", NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("student_id", bigint(), NOT_NULL))
 					.addColumn(new Column("recruiter_id", bigint()))
 					.addColumn(new Column("date", date(), "'now()'", NOT_NULL))
@@ -627,7 +627,7 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("mailed", bool(), "'false'", NOT_NULL));
 
 			Table purchases = new Table("purchases")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("organization_id", bigint(), NOT_NULL))
 					.addColumn(new Column("key", varchar(255), NOT_NULL))
 					.addColumn(new Column("permission_value", integer()))
@@ -635,11 +635,11 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table queuedMailTags = new Table("queued_mail_tags")
-					.addColumn(new Column("mail_id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("mail_id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("tag", varchar(255)));
 
 			Table queuedMails = new Table("queued_mails")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("created_at", timestamp(true), "'now()'", NOT_NULL))
 					.addColumn(new Column("delivery_time", timestamp(true), "'now()'", NOT_NULL))
 					.addColumn(new Column("to_name", varchar(255)))
@@ -656,7 +656,7 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("track_id", varchar(255)));
 
 			Table recruiterEmailPreferences = new Table("recruiter_email_preferences")
-					.addColumn(new Column("user_id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("user_id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("personal_messages", bool(), "'true'", NOT_NULL))
 					.addColumn(new Column("application", varchar(255), "''IMMEDIATELY'::character varying'", NOT_NULL))
 					.addColumn(new Column("bounce_problems", timestamp(true)))
@@ -665,80 +665,80 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table recruiters = new Table("recruiters")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("organization_id", bigint(), NOT_NULL))
 					.addColumn(new Column("role", text()))
 					.addColumn(new Column("visibility", varchar(255), "''NETWORK'::character varying'", NOT_NULL))
 					.addColumn(new Column("timeline_feed_intro_seen", bool(), "'false'"));
 
 			Table scheduledNetworkRequestEmails = new Table("scheduled_network_request_emails")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
-					.addColumn(new Column("student_id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
+					.addColumn(new Column("student_id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("scheduled", timestamp(true), NOT_NULL))
 					.addColumn(new Column("deliver_at", timestamp(true), NOT_NULL))
 					.addColumn(new Column("sent_at", timestamp(true)))
 					.addColumn(new Column("requests_sent", integer()));
 
 			Table scheduledNewInNetworkEmails = new Table("scheduled_new_in_network_emails")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
-					.addColumn(new Column("network_id", bigint(), NOT_NULL, IDENTITY))
-					.addColumn(new Column("recruiter_id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
+					.addColumn(new Column("network_id", bigint(), NOT_NULL, PRIMARY_KEY))
+					.addColumn(new Column("recruiter_id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("scheduled", timestamp(true), NOT_NULL))
 					.addColumn(new Column("deliver_at", timestamp(true), NOT_NULL))
 					.addColumn(new Column("sent_at", timestamp(true)))
 					.addColumn(new Column("job_seekers_sent", integer()));
 
 			Table scheduledOnboardingEmails = new Table("scheduled_onboarding_emails")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
-					.addColumn(new Column("jobseeker_id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
+					.addColumn(new Column("jobseeker_id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("scheduled", timestamp(true), NOT_NULL))
 					.addColumn(new Column("deliver_at", timestamp(true), NOT_NULL))
 					.addColumn(new Column("sent_at", timestamp(true)));
 
 			Table scheduledQuestions = new Table("scheduled_questions")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("jobseeker_id", bigint(), NOT_NULL))
 					.addColumn(new Column("organization_id", bigint(), NOT_NULL))
 					.addColumn(new Column("saved_at", timestamp(true), "'now()'", NOT_NULL))
 					.addColumn(new Column("is_positive", bool(), NOT_NULL));
 
 			Table sportExperiences = new Table("sport_experiences")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY));
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY));
 
 			Table studentCompanySizeInterests = new Table("student_company_size_interests")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("student_id", bigint(), NOT_NULL))
 					.addColumn(new Column("company_size", varchar(255)))
 					.addColumn(new Column("created_at", timestamp(true), "'now()'"))
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table studentHighSchools = new Table("student_high_schools")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("level", varchar(255)))
 					.addColumn(new Column("school_name", varchar(255)))
 					.addColumn(new Column("city", varchar(255), NOT_NULL))
 					.addColumn(new Column("country", varchar(255), NOT_NULL));
 
 			Table studentHigherEducations = new Table("student_higher_educations")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("aborted", bool(), "'false'"))
 					.addColumn(new Column("education_id", bigint()))
 					.addColumn(new Column("nominal_duration", integer(), NOT_NULL));
 
 			Table studentInterestedIndustries = new Table("student_interested_industries")
-					.addColumn(new Column("student_id", bigint(), IDENTITY))
+					.addColumn(new Column("student_id", bigint(), PRIMARY_KEY))
 					.addColumn(new Column("industries", varchar(255)))
 					.addColumn(new Column("created_at", timestamp(true), "'now()'"))
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table studentInterestedWorkTypes = new Table("student_interested_work_types")
-					.addColumn(new Column("student_id", bigint(), IDENTITY))
+					.addColumn(new Column("student_id", bigint(), PRIMARY_KEY))
 					.addColumn(new Column("types_of_work", varchar(255)))
 					.addColumn(new Column("created_at", timestamp(true), "'now()'"))
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table studentOtherEducations = new Table("student_other_educations")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("name", varchar(255), NOT_NULL))
 					.addColumn(new Column("institute", varchar(255)))
 					.addColumn(new Column("migrate_suggestion", varchar(255)))
@@ -748,7 +748,7 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table students = new Table("students")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("date_of_birth", date()))
 					.addColumn(new Column("invited_by", bigint()))
 					.addColumn(new Column("status", varchar(255)))
@@ -773,12 +773,12 @@ public class GreedyMigrationPlannerTest {
 
 			Table studentsEducations = new Table("students__educations")
 					.addColumn(new Column("gpa", floats()))
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("graduated", bool()));
 
 			Table studentsNetworks = new Table("students__networks")
-					.addColumn(new Column("student_id", bigint(), NOT_NULL, IDENTITY))
-					.addColumn(new Column("network_id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("student_id", bigint(), NOT_NULL, PRIMARY_KEY))
+					.addColumn(new Column("network_id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("status", varchar(255), NOT_NULL))
 					.addColumn(new Column("created_at", timestamp(true), "'now()'", NOT_NULL))
 					.addColumn(new Column("updated_at", timestamp(true), "'now()'", NOT_NULL))
@@ -788,30 +788,30 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("responded_at", timestamp(true)));
 
 			Table studentsOrganizationsTags = new Table("students__organizations__tags")
-					.addColumn(new Column("student_id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("student_id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("tag_id", bigint()));
 
 			Table studentsPhotos = new Table("students__photos")
-					.addColumn(new Column("student_id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("student_id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("cloud_image_id", bigint(), NOT_NULL))
 					.addColumn(new Column("created_at", timestamp(true), "'now()'"))
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table studentsUploads = new Table("students__uploads")
 					.addColumn(new Column("student_id", bigint(), NOT_NULL))
-					.addColumn(new Column("attachment_id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("attachment_id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("created_at", timestamp(true), "'now()'"))
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table subscriptionsPermissions = new Table("subscriptions__permissions")
-					.addColumn(new Column("subscription", varchar(255), NOT_NULL, IDENTITY))
-					.addColumn(new Column("key", varchar(255), NOT_NULL, IDENTITY))
+					.addColumn(new Column("subscription", varchar(255), NOT_NULL, PRIMARY_KEY))
+					.addColumn(new Column("key", varchar(255), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("permission_value", integer()))
 					.addColumn(new Column("created_at", timestamp(true), "'now()'"))
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table toolSkills = new Table("tool_skills")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("student_id", bigint(), NOT_NULL))
 					.addColumn(new Column("level", varchar(255), NOT_NULL))
 					.addColumn(new Column("tool_id", bigint()))
@@ -819,13 +819,13 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table tools = new Table("tools")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("name", varchar(255), NOT_NULL))
 					.addColumn(new Column("created_at", timestamp(true), "'now()'"))
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table travelExperiences = new Table("travel_experiences")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("student_id", bigint(), NOT_NULL))
 					.addColumn(new Column("summary", varchar(255), NOT_NULL))
 					.addColumn(new Column("location", varchar(255), NOT_NULL))
@@ -836,7 +836,7 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table users = new Table("users")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("email", varchar(255), NOT_NULL))
 					.addColumn(new Column("first_name", varchar(255), NOT_NULL))
 					.addColumn(new Column("last_name", varchar(255), NOT_NULL))
@@ -870,7 +870,7 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table workExperiences = new Table("work_experiences")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("role", varchar(255)))
 					.addColumn(new Column("industry", varchar(255), "''OTHER'::character varying'"))
 					.addColumn(new Column("internship", bool(), "'false'", NOT_NULL))
@@ -879,7 +879,7 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("second_work_type", varchar(255)));
 
 			Table youtubeVideos = new Table("youtube_videos")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY, AUTO_INCREMENT))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY, AUTO_INCREMENT))
 					.addColumn(new Column("video_id", varchar(255)))
 					.addColumn(new Column("title", varchar(255)))
 					.addColumn(new Column("created_at", timestamp(true), "'now()'"))
@@ -1113,13 +1113,13 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("name", varchar(255), NOT_NULL))
 					.addColumn(new Column("hours_per_week_spent", integer()))
 					.addColumn(new Column("weeks_spent", integer(), NOT_NULL))
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("institute_name", varchar(255)))
 					.addColumn(new Column("country", varchar(255)))
 					.addColumn(new Column("city", varchar(255)));
 
 			Table occupations = new Table("occupations")
-					.addColumn(new Column("id", bigint(), AUTO_INCREMENT, NOT_NULL, IDENTITY))
+					.addColumn(new Column("id", bigint(), AUTO_INCREMENT, NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("student_id", bigint(), NOT_NULL))
 					.addColumn(new Column("started", date(), NOT_NULL))
 					.addColumn(new Column("abroad", bool(), "'false'", NOT_NULL))
@@ -1127,26 +1127,26 @@ public class GreedyMigrationPlannerTest {
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table studentHighSchools = new Table("student_high_schools")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("level", varchar(255)))
 					.addColumn(new Column("school_name", varchar(255)))
 					.addColumn(new Column("city", varchar(255), NOT_NULL))
 					.addColumn(new Column("country", varchar(255), NOT_NULL));
 
 			Table studentHigherEducations = new Table("student_higher_educations")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("aborted", bool(), "'false'"))
 					.addColumn(new Column("education_id", bigint()))
 					.addColumn(new Column("nominal_duration", integer(), NOT_NULL));
 
 			Table studentInterestedIndustries = new Table("student_interested_industries")
-					.addColumn(new Column("student_id", bigint(), IDENTITY))
+					.addColumn(new Column("student_id", bigint(), PRIMARY_KEY))
 					.addColumn(new Column("industries", varchar(255)))
 					.addColumn(new Column("created_at", timestamp(true), "'now()'"))
 					.addColumn(new Column("updated_at", timestamp(true)));
 
 			Table students = new Table("students")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("invited_by", bigint()))
 					.addColumn(new Column("magnets", integer(), "'0'", NOT_NULL))
 					.addColumn(new Column("main_experience_id", bigint()))
@@ -1156,11 +1156,11 @@ public class GreedyMigrationPlannerTest {
 
 			Table studentsEducations = new Table("students__educations")
 					.addColumn(new Column("gpa", floats()))
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("graduated", bool()));
 
 			Table users = new Table("users")
-					.addColumn(new Column("id", bigint(), NOT_NULL, IDENTITY))
+					.addColumn(new Column("id", bigint(), NOT_NULL, PRIMARY_KEY))
 					.addColumn(new Column("email", varchar(255), NOT_NULL))
 					.addColumn(new Column("first_name", varchar(255), NOT_NULL))
 					.addColumn(new Column("last_name", varchar(255), NOT_NULL))
@@ -1197,50 +1197,50 @@ public class GreedyMigrationPlannerTest {
 			Catalog catalog = new Catalog("test-db");
 
 			Table stores = new Table("stores")
-					.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+					.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 					.addColumn(new Column("name", varchar(255), NOT_NULL))
 					.addColumn(new Column("manager_id", integer(), NOT_NULL));
 
 			Table staff = new Table("staff")
-					.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+					.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 					.addColumn(new Column("name", varchar(255), NOT_NULL))
 					.addColumn(new Column("store_id", integer(), NOT_NULL));
 
 			Table customers = new Table("customers")
-					.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+					.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 					.addColumn(new Column("name", varchar(255), NOT_NULL))
 					.addColumn(new Column("store_id", integer(), NOT_NULL))
 					.addColumn(new Column("referred_by", integer()));
 
 			Table films = new Table("films")
-					.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+					.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 					.addColumn(new Column("name", varchar(255), NOT_NULL));
 
 			Table inventory = new Table("inventory")
-					.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+					.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 					.addColumn(new Column("store_id", integer(), NOT_NULL))
 					.addColumn(new Column("film_id", integer(), NOT_NULL));
 
 			Table paychecks = new Table("paychecks")
-					.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+					.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 					.addColumn(new Column("staff_id", integer(), NOT_NULL))
-					.addColumn(new Column("date", date(), IDENTITY, NOT_NULL))
+					.addColumn(new Column("date", date(), PRIMARY_KEY, NOT_NULL))
 					.addColumn(new Column("amount", floats(), NOT_NULL));
 
 			Table payments = new Table("payments")
-					.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+					.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 					.addColumn(new Column("staff_id", integer()))
 					.addColumn(new Column("customer_id", integer(), NOT_NULL))
 					.addColumn(new Column("rental_id", integer(), NOT_NULL))
-					.addColumn(new Column("date", date(), IDENTITY, NOT_NULL))
+					.addColumn(new Column("date", date(), PRIMARY_KEY, NOT_NULL))
 					.addColumn(new Column("amount", floats(), NOT_NULL));
 
 			Table rentals = new Table("rentals")
-					.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+					.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 					.addColumn(new Column("staff_id", integer()))
 					.addColumn(new Column("customer_id", integer(), NOT_NULL))
 					.addColumn(new Column("inventory_id", integer(), NOT_NULL))
-					.addColumn(new Column("date", date(), IDENTITY, NOT_NULL));
+					.addColumn(new Column("date", date(), PRIMARY_KEY, NOT_NULL));
 
 			stores.addForeignKey("manager_id").referencing(staff, "id");
 
@@ -1280,29 +1280,29 @@ public class GreedyMigrationPlannerTest {
 			Catalog catalog = new Catalog("test-db");
 
 			Table users = new Table("users")
-					.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+					.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 					.addColumn(new Column("name", varchar(255), NOT_NULL));
 
 			Table students = new Table("students")
-					.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+					.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 					.addColumn(new Column("referred_by", integer()))
 					.addColumn(new Column("main_student_higher_education", integer()))
 					.addColumn(new Column("main_experience", integer()));
 
 			Table studentHigherEducations = new Table("student_higher_educations")
-					.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+					.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 					.addColumn(new Column("student_education_id", integer(), NOT_NULL));
 
 			Table studentEducations = new Table("student_educations")
-					.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+					.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 					.addColumn(new Column("resume_id", integer(), NOT_NULL));
 
 			Table experiences = new Table("experiences")
-					.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+					.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 					.addColumn(new Column("resume_id", integer(), NOT_NULL));
 
 			Table resumes = new Table("resumes")
-					.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+					.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 					.addColumn(new Column("student_id", integer(), NOT_NULL));
 
 			students.addForeignKey("id").referencing(users, "id");
@@ -1434,7 +1434,7 @@ public class GreedyMigrationPlannerTest {
 	}
 
 	@Test
-	public void testThatIdentityColumnsAreMigratedFirst() {
+	public void testThatPrimaryKeyColumnsAreMigratedFirst() {
 		for (Step step : plan.getSteps()) {
 			Operation operation = step.getOperation();
 			if (operation.getType() != Type.COPY) {
@@ -1443,15 +1443,15 @@ public class GreedyMigrationPlannerTest {
 
 			Table table = operation.getTables().iterator().next();
 
-			List<Column> identityColumns = table.getIdentityColumns();
+			List<Column> primaryKeyColumns = table.getPrimaryKeyColumns();
 			Set<Column> columns = operation.getColumns().stream()
 					.map(table::getColumn)
 					.collect(Collectors.toSet());
 
-			if (!columns.containsAll(identityColumns)) {
+			if (!columns.containsAll(primaryKeyColumns)) {
 				Set<Step> dependencies = step.getTransitiveDependencies();
 
-				boolean migratesIdentities = false;
+				boolean migratesPrimaryKeys = false;
 				for (Step dependency : dependencies) {
 					Operation dependencyOperation = dependency.getOperation();
 					if (dependencyOperation.getType() != Type.COPY) {
@@ -1463,13 +1463,13 @@ public class GreedyMigrationPlannerTest {
 							.map(other::getColumn)
 							.collect(Collectors.toSet());
 
-					if (other.equals(table) && dependencyColumns.containsAll(identityColumns)) {
-						migratesIdentities = true;
+					if (other.equals(table) && dependencyColumns.containsAll(primaryKeyColumns)) {
+						migratesPrimaryKeys = true;
 						break;
 					}
 				}
 
-				collector.checkThat("Identities are not migrated first: " + table.getName(), migratesIdentities, is(true));
+				collector.checkThat("Primary keys are not migrated first: " + table.getName(), migratesPrimaryKeys, is(true));
 			}
 		}
 	}
@@ -1495,7 +1495,7 @@ public class GreedyMigrationPlannerTest {
 					continue;
 				}
 
-				Set<String> requiredIdentityColumns = table.getForeignKeys().stream()
+				Set<String> requiredPrimaryKeyColumns = table.getForeignKeys().stream()
 						.filter(ForeignKey::isNotNullable)
 						.filter(fk -> fk.getReferredTable().equals(requiresTable))
 						.flatMap(fk -> fk.getReferredColumns().stream())
@@ -1520,14 +1520,14 @@ public class GreedyMigrationPlannerTest {
 								.map(Column::getName)
 								.collect(Collectors.toSet());
 
-						if (dependencyColumns.containsAll(requiredIdentityColumns)) {
+						if (dependencyColumns.containsAll(requiredPrimaryKeyColumns)) {
 							satisfied = true;
 							break;
 						}
 					}
 				}
 
-				collector.checkThat("Identities of parent table: " + requiresTable.getName()
+				collector.checkThat("Primary keys of parent table: " + requiresTable.getName()
 						+ " should be migrated before copying records of: " + table.getName(), satisfied, is(true));
 			}
 		}

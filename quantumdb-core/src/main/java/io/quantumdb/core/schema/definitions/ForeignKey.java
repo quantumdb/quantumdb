@@ -102,12 +102,12 @@ public class ForeignKey {
 	}
 
 	public boolean isInheritanceRelation() {
-		Set<String> identityColumns = getReferencingTable().getIdentityColumns().stream()
+		Set<String> primaryKeyColumns = getReferencingTable().getPrimaryKeyColumns().stream()
 				.map(Column::getName)
 				.collect(Collectors.toSet());
 
 		return referencingColumns.stream()
-				.anyMatch(identityColumns::contains);
+				.anyMatch(primaryKeyColumns::contains);
 	}
 
 	public void drop() {

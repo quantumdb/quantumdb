@@ -36,7 +36,7 @@ public class Catalog implements Copyable<Catalog> {
 		checkArgument(!containsTable(table.getName()), "Catalog: '" + name + "' already contains a table: '" + table.getName() + "'.");
 		checkArgument(!containsView(table.getName()), "Catalog: '" + name + "' already contains a view: '" + table.getName() + "'.");
 		checkArgument(!table.getColumns().isEmpty(), "Table: '" + table.getName() + "' doesn't contain any columns.");
-		checkArgument(!table.getIdentityColumns().isEmpty(), "Table: '" + table.getName() + "' has no identity columns.");
+		checkArgument(!table.getPrimaryKeyColumns().isEmpty(), "Table: '" + table.getName() + "' has no primary key columns.");
 
 		tables.add(table);
 		table.setParent(this);

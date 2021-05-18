@@ -1,7 +1,7 @@
 package io.quantumdb.core.migration.operations;
 
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
-import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
+import static io.quantumdb.core.schema.definitions.Column.Hint.PRIMARY_KEY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
 import static io.quantumdb.core.schema.definitions.TestTypes.bigint;
 import static io.quantumdb.core.schema.operations.SchemaOperations.createTable;
@@ -36,7 +36,7 @@ public class SchemaOperationMigratorTest {
 	public void testAddingNewTable() {
 		changelog.addChangeSet("test", "Michael de Jong",
 				createTable("users")
-						.with("id", bigint(), NOT_NULL, AUTO_INCREMENT, IDENTITY));
+						.with("id", bigint(), NOT_NULL, AUTO_INCREMENT, PRIMARY_KEY));
 
 		Version current = changelog.getLastAdded();
 		migrator.migrate(current, (SchemaOperation) current.getOperation());
@@ -44,7 +44,7 @@ public class SchemaOperationMigratorTest {
 		String refId = refLog.getTableRef(current, "users").getRefId();
 
 		Table expected = new Table(refId)
-				.addColumn(new Column("id", bigint(), NOT_NULL, AUTO_INCREMENT, IDENTITY));
+				.addColumn(new Column("id", bigint(), NOT_NULL, AUTO_INCREMENT, PRIMARY_KEY));
 
 		assertEquals(expected, catalog.getTable(refId));
 	}

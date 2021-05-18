@@ -1,7 +1,7 @@
 package io.quantumdb.core.migration.operations;
 
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
-import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
+import static io.quantumdb.core.schema.definitions.Column.Hint.PRIMARY_KEY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
 import static io.quantumdb.core.schema.definitions.TestTypes.bool;
 import static io.quantumdb.core.schema.definitions.TestTypes.date;
@@ -31,7 +31,7 @@ public class AddColumnMigratorTest {
 	public void setUp() {
 		this.catalog = new Catalog("test-db")
 				.addTable(new Table("users")
-						.addColumn(new Column("id", integer(), IDENTITY, NOT_NULL, AUTO_INCREMENT))
+						.addColumn(new Column("id", integer(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT))
 						.addColumn(new Column("name", varchar(255), NOT_NULL)));
 
 		this.changelog = new Changelog();
@@ -50,7 +50,7 @@ public class AddColumnMigratorTest {
 		Table ghostTable = getGhostTable(originalTable);
 
 		Table expectedGhostTable = new Table(ghostTable.getName())
-				.addColumn(new Column("id", integer(), IDENTITY, NOT_NULL, AUTO_INCREMENT))
+				.addColumn(new Column("id", integer(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT))
 				.addColumn(new Column("name", varchar(255), NOT_NULL))
 				.addColumn(new Column("date_of_birth", date(), "NULL"));
 
@@ -71,7 +71,7 @@ public class AddColumnMigratorTest {
 		Table ghostTable = getGhostTable(originalTable);
 
 		Table expectedGhostTable = new Table(ghostTable.getName())
-				.addColumn(new Column("id", integer(), IDENTITY, NOT_NULL, AUTO_INCREMENT))
+				.addColumn(new Column("id", integer(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT))
 				.addColumn(new Column("name", varchar(255), NOT_NULL))
 				.addColumn(new Column("date_of_birth", date(), "NULL"))
 				.addColumn(new Column("activated", bool(), "TRUE"));

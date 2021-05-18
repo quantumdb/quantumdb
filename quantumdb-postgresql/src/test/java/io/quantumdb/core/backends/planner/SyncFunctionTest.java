@@ -1,7 +1,7 @@
 package io.quantumdb.core.backends.planner;
 
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
-import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
+import static io.quantumdb.core.schema.definitions.Column.Hint.PRIMARY_KEY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.bigint;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.varchar;
@@ -35,11 +35,11 @@ public class SyncFunctionTest {
 	@Test
 	public void testSimpleDataMapping() {
 		Table original = new Table("users")
-				.addColumn(new Column("id", bigint(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL));
 
 		Table ghost = new Table("users2")
-				.addColumn(new Column("id", bigint(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL))
 				.addColumn(new Column("email", varchar(255)));
 
@@ -76,11 +76,11 @@ public class SyncFunctionTest {
 	@Test
 	public void testDataMappingWithColumnRename() {
 		Table original = new Table("users")
-				.addColumn(new Column("id", bigint(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL));
 
 		Table ghost = new Table("users2")
-				.addColumn(new Column("id", bigint(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("full_name", varchar(255), NOT_NULL));
 
 		Catalog catalog = new Catalog("public");
@@ -114,13 +114,13 @@ public class SyncFunctionTest {
 	}
 
 	@Test
-	public void testDataMappingWithColumnIdentityRename() {
+	public void testDataMappingWithColumnPrimaryKeyRename() {
 		Table original = new Table("users")
-				.addColumn(new Column("id", bigint(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL));
 
 		Table ghost = new Table("users2")
-				.addColumn(new Column("user_id", bigint(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("user_id", bigint(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL));
 
 		Catalog catalog = new Catalog("public");
@@ -156,11 +156,11 @@ public class SyncFunctionTest {
 	@Test
 	public void testDataMappingWhereColumnIsMadeNonNullable() {
 		Table original = new Table("users")
-				.addColumn(new Column("id", bigint(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255)));
 
 		Table ghost = new Table("users2")
-				.addColumn(new Column("id", bigint(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL));
 
 		Catalog catalog = new Catalog("public");
@@ -194,16 +194,16 @@ public class SyncFunctionTest {
 	@Test
 	public void testDataMappingWithNonNullableForeignKey() {
 		Table original = new Table("users")
-				.addColumn(new Column("id", bigint(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("other_id", bigint(), NOT_NULL))
 				.addColumn(new Column("name", varchar(255)));
 
 		Table other = new Table("other")
-				.addColumn(new Column("id", bigint(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255)));
 
 		Table ghost = new Table("users2")
-				.addColumn(new Column("id", bigint(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("other_id", bigint(), NOT_NULL))
 				.addColumn(new Column("full_name", varchar(255), NOT_NULL));
 

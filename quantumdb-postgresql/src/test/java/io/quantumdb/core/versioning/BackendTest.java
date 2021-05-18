@@ -1,7 +1,7 @@
 package io.quantumdb.core.versioning;
 
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
-import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
+import static io.quantumdb.core.schema.definitions.Column.Hint.PRIMARY_KEY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.bigint;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.bool;
@@ -46,10 +46,10 @@ public class BackendTest {
 		Catalog catalog = new Catalog("public")
 				.addSequence(sequence)
 				.addTable(new Table("table_1")
-						.addColumn(new Column("id", bigint(), sequence, AUTO_INCREMENT, IDENTITY))
+						.addColumn(new Column("id", bigint(), sequence, AUTO_INCREMENT, PRIMARY_KEY))
 						.addColumn(new Column("name", text(), NOT_NULL)))
 				.addTable(new Table("table_2")
-						.addColumn(new Column("id", bigint(), sequence, AUTO_INCREMENT, IDENTITY))
+						.addColumn(new Column("id", bigint(), sequence, AUTO_INCREMENT, PRIMARY_KEY))
 						.addColumn(new Column("name", text(), NOT_NULL))
 						.addColumn(new Column("admin", bool(), "false", NOT_NULL)));
 

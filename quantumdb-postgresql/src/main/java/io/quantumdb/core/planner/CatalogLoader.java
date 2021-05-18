@@ -110,7 +110,7 @@ class CatalogLoader {
 					hints.add(Column.Hint.NOT_NULL);
 				}
 				if (primaryKeys.contains(columnName) || (primaryKeys.isEmpty() && columns.isEmpty())) {
-					hints.add(Column.Hint.IDENTITY);
+					hints.add(Column.Hint.PRIMARY_KEY);
 				}
 
 				Sequence sequence = null;

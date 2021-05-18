@@ -1,6 +1,6 @@
 package io.quantumdb.core.state;
 
-import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
+import static io.quantumdb.core.schema.definitions.Column.Hint.PRIMARY_KEY;
 import static io.quantumdb.core.schema.definitions.TestTypes.bigint;
 import static io.quantumdb.core.schema.definitions.TestTypes.varchar;
 import static io.quantumdb.core.utils.RandomHasher.generateHash;
@@ -38,7 +38,7 @@ public class RefLogTest {
 	public void setUp() {
 		this.catalog = new Catalog("test-db");
 		catalog.addTable(new Table("users")
-				.addColumn(new Column("id", bigint(), IDENTITY))
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY))
 				.addColumn(new Column("name", varchar(255))));
 
 		this.version = new Version(generateHash(), null);

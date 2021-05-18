@@ -174,9 +174,9 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 						"Table: " + name + " does not contain column: " + columnName));
 	}
 
-	public List<Column> getIdentityColumns() {
+	public List<Column> getPrimaryKeyColumns() {
 		return getColumns().stream()
-				.filter(Column::isIdentity)
+				.filter(Column::isPrimaryKey)
 				.collect(Collectors.toList());
 	}
 
@@ -195,9 +195,9 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 		checkState(column.getIncomingForeignKeys().isEmpty(),
 				"You cannot remove a column that is still referenced by foreign keys.");
 
-		List<Column> identityColumns = getIdentityColumns();
-		identityColumns.remove(column);
-		checkState(!identityColumns.isEmpty(), "You drop the last remaining identity column of a table.");
+		List<Column> primaryKeyColumns = getPrimaryKeyColumns();
+		primaryKeyColumns.remove(column);
+		checkState(!primaryKeyColumns.isEmpty(), "You drop the last remaining primary key column of a table.");
 
 		if (column.getOutgoingForeignKey() != null) {
 			column.getOutgoingForeignKey().drop();
