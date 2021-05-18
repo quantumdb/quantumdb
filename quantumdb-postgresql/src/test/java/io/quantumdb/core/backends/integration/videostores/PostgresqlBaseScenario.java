@@ -134,7 +134,7 @@ public class PostgresqlBaseScenario extends PostgresqlDatabase {
 		tableCreator.create(getConnection(), tables);
 
 		Config config = new Config();
-		config.setUrl(getJdbcUrl());
+		config.setUrl(getJdbcUrl() + "/" + getCatalogName());
 		config.setUser(getJdbcUser());
 		config.setPassword(getJdbcPass());
 		config.setCatalog(getCatalogName());
