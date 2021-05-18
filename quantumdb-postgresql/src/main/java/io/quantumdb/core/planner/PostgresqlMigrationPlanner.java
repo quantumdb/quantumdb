@@ -201,15 +201,15 @@ public class PostgresqlMigrationPlanner implements MigrationPlanner {
 						.map(Column::getName)
 						.collect(Collectors.toCollection(Sets::newLinkedHashSet));
 
-				Set<String> identityColumns = table.getIdentityColumns().stream()
+				Set<String> primaryKeyColumns = table.getPrimaryKeyColumns().stream()
 						.map(Column::getName)
 						.collect(Collectors.toSet());
 
-				SetView<String> missingIdentityColumns = Sets.difference(identityColumns, columns);
-				if (!missingIdentityColumns.isEmpty()) {
+				SetView<String> missingPrimaryKeyColumns = Sets.difference(primaryKeyColumns, columns);
+				if (!missingPrimaryKeyColumns.isEmpty()) {
 					toMigrate.add(0, refId);
 
-					List<Table> parentTables = table.getIdentityColumns().stream()
+					List<Table> parentTables = table.getPrimaryKeyColumns().stream()
 							.map(Column::getOutgoingForeignKey)
 							.map(ForeignKey::getReferredTable)
 							.distinct()
@@ -287,15 +287,15 @@ public class PostgresqlMigrationPlanner implements MigrationPlanner {
 						.map(Column::getName)
 						.collect(Collectors.toCollection(Sets::newLinkedHashSet));
 
-				Set<String> identityColumns = table.getIdentityColumns().stream()
+				Set<String> primaryKeyColumns = table.getPrimaryKeyColumns().stream()
 						.map(Column::getName)
 						.collect(Collectors.toSet());
 
-				SetView<String> missingIdentityColumns = Sets.difference(identityColumns, columns);
-				if (!missingIdentityColumns.isEmpty()) {
+				SetView<String> missingPrimaryKeyColumns = Sets.difference(primaryKeyColumns, columns);
+				if (!missingPrimaryKeyColumns.isEmpty()) {
 					toMigrate.add(0, refId);
 
-					List<Table> parentTables = table.getIdentityColumns().stream()
+					List<Table> parentTables = table.getPrimaryKeyColumns().stream()
 							.map(Column::getOutgoingForeignKey)
 							.map(ForeignKey::getReferredTable)
 							.distinct()

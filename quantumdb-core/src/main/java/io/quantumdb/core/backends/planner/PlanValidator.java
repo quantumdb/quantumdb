@@ -21,7 +21,7 @@ public class PlanValidator {
 		verifyThatAllNullRecordsAreBothAddedAndDropped(plan);
 		verifyThatRemoveNullStepIsLastStepIfAddNullStepsArePresent(plan);
 		verifyThatAllColumnsAreMigrated(plan);
-		verifyThatIdentityColumnsAreMigratedFirst(plan);
+		verifyThatPrimaryKeyColumnsAreMigratedFirst(plan);
 		verifyThatNotNullableForeignKeysAreSatisfiedBeforeInitialCopy(plan);
 	}
 
@@ -94,7 +94,7 @@ public class PlanValidator {
 		});
 	}
 
-	private static void verifyThatIdentityColumnsAreMigratedFirst(Plan plan) {
+	private static void verifyThatPrimaryKeyColumnsAreMigratedFirst(Plan plan) {
 		for (Step step : plan.getSteps()) {
 			Operation operation = step.getOperation();
 			if (operation.getType() != Type.COPY) {
@@ -103,12 +103,12 @@ public class PlanValidator {
 
 			Table table = operation.getTables().iterator().next();
 
-			List<Column> identityColumns = table.getIdentityColumns();
+			List<Column> primaryKeyColumns = table.getPrimaryKeyColumns();
 			Set<Column> columns = operation.getColumns().stream()
 					.map(table::getColumn)
 					.collect(Collectors.toSet());
 
-			if (!columns.containsAll(identityColumns)) {
+			if (!columns.containsAll(primaryKeyColumns)) {
 				Set<Step> dependencies = step.getTransitiveDependencies();
 
 				boolean migratesIdentities = false;
@@ -123,7 +123,7 @@ public class PlanValidator {
 							.map(other::getColumn)
 							.collect(Collectors.toSet());
 
-					if (other.equals(table) && dependencyColumns.containsAll(identityColumns)) {
+					if (other.equals(table) && dependencyColumns.containsAll(primaryKeyColumns)) {
 						migratesIdentities = true;
 						break;
 					}
@@ -154,7 +154,7 @@ public class PlanValidator {
 					continue;
 				}
 
-				Set<String> requiredIdentityColumns = table.getForeignKeys().stream()
+				Set<String> requiredPrimaryKeyColumns = table.getForeignKeys().stream()
 						.filter(ForeignKey::isNotNullable)
 						.filter(fk -> fk.getReferredTable().equals(requiresTable))
 						.flatMap(fk -> fk.getReferredColumns().stream())
@@ -179,7 +179,7 @@ public class PlanValidator {
 								.map(Column::getName)
 								.collect(Collectors.toSet());
 
-						if (dependencyColumns.containsAll(requiredIdentityColumns)) {
+						if (dependencyColumns.containsAll(requiredPrimaryKeyColumns)) {
 							satisfied = true;
 							break;
 						}

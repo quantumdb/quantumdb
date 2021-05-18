@@ -121,25 +121,25 @@ class TableDataMigrator {
 	}
 
 	private Map<String, Object> queryHighestId(Table from) throws SQLException {
-		List<String> identityColumns = from.getIdentityColumns().stream()
+		List<String> primaryKeyColumns = from.getPrimaryKeyColumns().stream()
 				.map(Column::getName)
 				.collect(Collectors.toList());
 
 		try (Connection connection = backend.connect()) {
 			try (Statement statement = connection.createStatement()) {
 				String query = new QueryBuilder()
-						.append("SELECT " + Joiner.on(", ").join(identityColumns))
+						.append("SELECT " + Joiner.on(", ").join(primaryKeyColumns))
 						.append("FROM " + from.getName())
-						.append("ORDER BY " + Joiner.on(" DESC, ").join(identityColumns) + " DESC")
+						.append("ORDER BY " + Joiner.on(" DESC, ").join(primaryKeyColumns) + " DESC")
 						.append("LIMIT 1")
 						.toString();
 
 				ResultSet resultSet = statement.executeQuery(query);
 				if (resultSet.next()) {
 					Map<String, Object> id = Maps.newHashMap();
-					for (String identityColumn : identityColumns) {
-						Object value = resultSet.getObject(identityColumn);
-						id.put(identityColumn, value);
+					for (String primaryKeyColumn : primaryKeyColumns) {
+						Object value = resultSet.getObject(primaryKeyColumn);
+						id.put(primaryKeyColumn, value);
 					}
 					return id;
 				}
@@ -154,7 +154,7 @@ class TableDataMigrator {
 			Object right = limit.get(key);
 
 			if (left == null || right == null) {
-				throw new IllegalStateException("NULL values in identity columns are currently not supported.");
+				throw new IllegalStateException("NULL values in primary key columns are currently not supported.");
 			}
 
 			if (!(left instanceof Comparable)) {
@@ -221,9 +221,9 @@ class TableDataMigrator {
 		}
 
 		Map<String, Object> identity = Maps.newHashMap();
-		List<Column> identityColumns = from.getIdentityColumns();
-		for (int i = 0; i < identityColumns.size(); i++) {
-			Column column = identityColumns.get(i);
+		List<Column> primaryKeyColumns = from.getPrimaryKeyColumns();
+		for (int i = 0; i < primaryKeyColumns.size(); i++) {
+			Column column = primaryKeyColumns.get(i);
 			String columnName = column.getName();
 			Object value = parseValue(column.getType().getType(), parts.get(i));
 			identity.put(columnName, value);

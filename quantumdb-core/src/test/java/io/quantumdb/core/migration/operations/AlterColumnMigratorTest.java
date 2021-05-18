@@ -1,7 +1,7 @@
 package io.quantumdb.core.migration.operations;
 
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
-import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
+import static io.quantumdb.core.schema.definitions.Column.Hint.PRIMARY_KEY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
 import static io.quantumdb.core.schema.definitions.TestTypes.integer;
 import static io.quantumdb.core.schema.definitions.TestTypes.text;
@@ -31,10 +31,10 @@ public class AlterColumnMigratorTest {
 	public void setUp() {
 		this.catalog = new Catalog("test-db")
 				.addTable(new Table("users")
-						.addColumn(new Column("id", integer(), IDENTITY, NOT_NULL, AUTO_INCREMENT))
+						.addColumn(new Column("id", integer(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT))
 						.addColumn(new Column("name", varchar(255), NOT_NULL)))
 				.addTable(new Table("referrals")
-						.addColumn(new Column("invitee_id", integer(), IDENTITY, NOT_NULL, AUTO_INCREMENT))
+						.addColumn(new Column("invitee_id", integer(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT))
 						.addColumn(new Column("invited_by_id", integer())));
 
 		this.changelog = new Changelog();
@@ -53,7 +53,7 @@ public class AlterColumnMigratorTest {
 		Table ghostTable = getGhostTable(originalTable);
 
 		Table expectedGhostTable = new Table(ghostTable.getName())
-				.addColumn(new Column("id", integer(), IDENTITY, NOT_NULL, AUTO_INCREMENT))
+				.addColumn(new Column("id", integer(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT))
 				.addColumn(new Column("full_name", varchar(255), NOT_NULL));
 
 		assertEquals(expectedGhostTable, ghostTable);
@@ -69,7 +69,7 @@ public class AlterColumnMigratorTest {
 		Table ghostTable = getGhostTable(originalTable);
 
 		Table expectedGhostTable = new Table(ghostTable.getName())
-				.addColumn(new Column("id", integer(), IDENTITY, NOT_NULL, AUTO_INCREMENT))
+				.addColumn(new Column("id", integer(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT))
 				.addColumn(new Column("name", text(), NOT_NULL));
 
 		assertEquals(expectedGhostTable, ghostTable);
@@ -85,7 +85,7 @@ public class AlterColumnMigratorTest {
 		Table ghostTable = getGhostTable(originalTable);
 
 		Table expectedGhostTable = new Table(ghostTable.getName())
-				.addColumn(new Column("id", integer(), IDENTITY, NOT_NULL, AUTO_INCREMENT))
+				.addColumn(new Column("id", integer(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT))
 				.addColumn(new Column("name", varchar(255), "'Unknown'", NOT_NULL));
 
 		assertEquals(expectedGhostTable, ghostTable);
@@ -103,7 +103,7 @@ public class AlterColumnMigratorTest {
 		Table ghostTable = getGhostTable(originalTable);
 
 		Table expectedGhostTable = new Table(ghostTable.getName())
-				.addColumn(new Column("id", integer(), IDENTITY, NOT_NULL, AUTO_INCREMENT))
+				.addColumn(new Column("id", integer(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT))
 				.addColumn(new Column("name", varchar(255), "'John Smith'", NOT_NULL));
 
 		assertEquals(expectedGhostTable, ghostTable);
@@ -121,7 +121,7 @@ public class AlterColumnMigratorTest {
 		Table ghostTable = getGhostTable(originalTable);
 
 		Table expectedGhostTable = new Table(ghostTable.getName())
-				.addColumn(new Column("id", integer(), IDENTITY, NOT_NULL, AUTO_INCREMENT))
+				.addColumn(new Column("id", integer(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT))
 				.addColumn(new Column("name", varchar(255), NOT_NULL));
 
 		assertEquals(expectedGhostTable, ghostTable);
@@ -137,7 +137,7 @@ public class AlterColumnMigratorTest {
 		Table ghostTable = getGhostTable(originalTable);
 
 		Table expectedGhostTable = new Table(ghostTable.getName())
-				.addColumn(new Column("invitee_id", integer(), IDENTITY, NOT_NULL, AUTO_INCREMENT))
+				.addColumn(new Column("invitee_id", integer(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT))
 				.addColumn(new Column("invited_by_id", integer(), NOT_NULL));
 
 		assertEquals(expectedGhostTable, ghostTable);
@@ -153,7 +153,7 @@ public class AlterColumnMigratorTest {
 		Table ghostTable = getGhostTable(originalTable);
 
 		Table expectedGhostTable = new Table(ghostTable.getName())
-				.addColumn(new Column("invitee_id", integer(), IDENTITY, AUTO_INCREMENT))
+				.addColumn(new Column("invitee_id", integer(), PRIMARY_KEY, AUTO_INCREMENT))
 				.addColumn(new Column("invited_by_id", integer()));
 
 		assertEquals(expectedGhostTable, ghostTable);
@@ -169,7 +169,7 @@ public class AlterColumnMigratorTest {
 		Table ghostTable = getGhostTable(originalTable);
 
 		Table expectedGhostTable = new Table(ghostTable.getName())
-				.addColumn(new Column("invitee_id", integer(), IDENTITY, NOT_NULL, AUTO_INCREMENT))
+				.addColumn(new Column("invitee_id", integer(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT))
 				.addColumn(new Column("invited_by_id", integer(), AUTO_INCREMENT));
 
 		assertEquals(expectedGhostTable, ghostTable);
@@ -185,34 +185,34 @@ public class AlterColumnMigratorTest {
 		Table ghostTable = getGhostTable(originalTable);
 
 		Table expectedGhostTable = new Table(ghostTable.getName())
-				.addColumn(new Column("invitee_id", integer(), IDENTITY, NOT_NULL))
+				.addColumn(new Column("invitee_id", integer(), PRIMARY_KEY, NOT_NULL))
 				.addColumn(new Column("invited_by_id", integer()));
 
 		assertEquals(expectedGhostTable, ghostTable);
 	}
 
 	@Test
-	public void testExpandForAddingIdentityHint() {
-		AlterColumn operation = SchemaOperations.alterColumn("referrals", "invited_by_id").addHint(IDENTITY);
-		changelog.addChangeSet("Michael de Jong", "Added IDENTITY constraint to 'invited_by_id' column.", operation);
+	public void testExpandForAddingPrimaryKeyHint() {
+		AlterColumn operation = SchemaOperations.alterColumn("referrals", "invited_by_id").addHint(PRIMARY_KEY);
+		changelog.addChangeSet("Michael de Jong", "Added PRIMARY_KEY constraint to 'invited_by_id' column.", operation);
 		migrator.migrate(catalog, refLog, changelog.getLastAdded(), operation);
 
 		Table originalTable = catalog.getTable("referrals");
 		Table ghostTable = getGhostTable(originalTable);
 
 		Table expectedGhostTable = new Table(ghostTable.getName())
-				.addColumn(new Column("invitee_id", integer(), IDENTITY, NOT_NULL, AUTO_INCREMENT))
-				.addColumn(new Column("invited_by_id", integer(), IDENTITY));
+				.addColumn(new Column("invitee_id", integer(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT))
+				.addColumn(new Column("invited_by_id", integer(), PRIMARY_KEY));
 
 		assertEquals(expectedGhostTable, ghostTable);
 	}
 
 	@Test
-	public void testExpandForRemovingIdentityHint() {
-		testExpandForAddingIdentityHint();
+	public void testExpandForRemovingPrimaryKeyHint() {
+		testExpandForAddingPrimaryKeyHint();
 
-		AlterColumn operation = SchemaOperations.alterColumn("referrals", "invitee_id").dropHint(IDENTITY);
-		changelog.addChangeSet("Michael de Jong", "Dropped IDENTITY constraint of 'invitee_id' column.", operation);
+		AlterColumn operation = SchemaOperations.alterColumn("referrals", "invitee_id").dropHint(PRIMARY_KEY);
+		changelog.addChangeSet("Michael de Jong", "Dropped PRIMARY_KEY constraint of 'invitee_id' column.", operation);
 		migrator.migrate(catalog, refLog, changelog.getLastAdded(), operation);
 
 		Table originalTable = catalog.getTable("referrals");
@@ -220,7 +220,7 @@ public class AlterColumnMigratorTest {
 
 		Table expectedGhostTable = new Table(ghostTable.getName())
 				.addColumn(new Column("invitee_id", integer(), AUTO_INCREMENT, NOT_NULL))
-				.addColumn(new Column("invited_by_id", integer(), IDENTITY));
+				.addColumn(new Column("invited_by_id", integer(), PRIMARY_KEY));
 
 		assertEquals(expectedGhostTable, ghostTable);
 	}

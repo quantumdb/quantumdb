@@ -104,7 +104,7 @@ public class NullRecords {
 
 	private Identity insertNullObject(Connection connection, Table table, Map<String, Identity> generatedIdentities) throws SQLException {
 		List<Column> columnsToSet = table.getColumns().stream()
-				.filter(column -> column.isIdentity() || column.isNotNull())
+				.filter(column -> column.isPrimaryKey() || column.isNotNull())
 				.collect(Collectors.toList());
 
 		List<String> columnNames = columnsToSet.stream()
@@ -139,7 +139,7 @@ public class NullRecords {
 				String columnName = column.getName();
 				ForeignKey outgoingForeignKey = column.getOutgoingForeignKey();
 
-				if (column.isIdentity()) {
+				if (column.isPrimaryKey()) {
 					Object value = identity.getValue(columnName);
 					valueSetter.setValue(statement, i, value);
 					values.put(column.getName(), value);
@@ -178,29 +178,29 @@ public class NullRecords {
 		Identity identity = new Identity();
 		generatedIdentities.put(table.getName(), identity);
 
-		for (Column identityColumn : table.getIdentityColumns()) {
-			ForeignKey outgoingForeignKey = identityColumn.getOutgoingForeignKey();
-			if (identityColumn.isAutoIncrement()) {
-				Sequence sequence = identityColumn.getSequence();
+		for (Column primaryKeyColumn : table.getPrimaryKeyColumns()) {
+			ForeignKey outgoingForeignKey = primaryKeyColumn.getOutgoingForeignKey();
+			if (primaryKeyColumn.isAutoIncrement()) {
+				Sequence sequence = primaryKeyColumn.getSequence();
 
 				try (Statement statement = connection.createStatement()) {
 					ResultSet resultSet = statement.executeQuery("SELECT NEXTVAL('" + sequence.getName() + "') AS val");
 					if (resultSet.next()) {
 						Object value = resultSet.getLong("val");
-						identity.add(identityColumn.getName(), value);
+						identity.add(primaryKeyColumn.getName(), value);
 					}
 				}
 			}
 			else if (outgoingForeignKey != null) {
 				Map<String, String> columns = outgoingForeignKey.getColumns();
-				String mappedColumnName = columns.get(identityColumn.getName());
+				String mappedColumnName = columns.get(primaryKeyColumn.getName());
 				Identity referredIdentity = generateIdentity(connection, outgoingForeignKey.getReferredTable(), generatedIdentities);
-				identity.add(identityColumn.getName(), referredIdentity.getValue(mappedColumnName));
+				identity.add(primaryKeyColumn.getName(), referredIdentity.getValue(mappedColumnName));
 			}
 			else {
-				ColumnType.ValueGenerator valueGenerator = identityColumn.getType().getValueGenerator();
+				ColumnType.ValueGenerator valueGenerator = primaryKeyColumn.getType().getValueGenerator();
 				Object value = valueGenerator.generateValue();
-				identity.add(identityColumn.getName(), value);
+				identity.add(primaryKeyColumn.getName(), value);
 			}
 		}
 

@@ -42,8 +42,8 @@ public class ColumnDefinition {
 		this.hints = hints;
 	}
 
-	public boolean isIdentity() {
-		return containsHint(Column.Hint.IDENTITY);
+	public boolean isPrimaryKey() {
+		return containsHint(Column.Hint.PRIMARY_KEY);
 	}
 
 	public boolean isAutoIncrement() {

@@ -46,7 +46,7 @@ public class XmlCreateTable implements XmlOperation<CreateTable> {
 
 			List<Hint> hints = Lists.newArrayList();
 			if (column.isPrimaryKey()) {
-				hints.add(Hint.IDENTITY);
+				hints.add(Hint.PRIMARY_KEY);
 			}
 			if (column.isAutoIncrement()) {
 				hints.add(Hint.AUTO_INCREMENT);

@@ -1,7 +1,7 @@
 package io.quantumdb.core.migration.operations;
 
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
-import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
+import static io.quantumdb.core.schema.definitions.Column.Hint.PRIMARY_KEY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
 import static io.quantumdb.core.schema.definitions.TestTypes.integer;
 import static io.quantumdb.core.schema.definitions.TestTypes.varchar;
@@ -37,7 +37,7 @@ public class CreateTableMigratorTest {
 	@Test
 	public void testExpandForCopyingTable() {
 		CreateTable operation = SchemaOperations.createTable("users")
-				.with("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL)
+				.with("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL)
 				.with("name", varchar(255), NOT_NULL);
 
 		changelog.addChangeSet("Michael de Jong", "Creating 'users' table.", operation);
@@ -47,7 +47,7 @@ public class CreateTableMigratorTest {
 		String refId = tableRef.getRefId();
 		Table ghostTable = catalog.getTable(refId);
 		Table expectedGhostTable = new Table(refId)
-				.addColumn(new Column("id", integer(), IDENTITY, NOT_NULL, AUTO_INCREMENT))
+				.addColumn(new Column("id", integer(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT))
 				.addColumn(new Column("name", varchar(255), NOT_NULL));
 
 		assertEquals(expectedGhostTable, ghostTable);

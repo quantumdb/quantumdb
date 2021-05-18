@@ -87,12 +87,12 @@ public class TableCreator {
 			columnAdded = true;
 		}
 
-		List<String> identityColumns = table.getIdentityColumns().stream()
+		List<String> primaryKeyColumns = table.getPrimaryKeyColumns().stream()
 				.map(Column::getName)
 				.collect(Collectors.toList());
 
-		if (!identityColumns.isEmpty()) {
-			queryBuilder.append(", PRIMARY KEY(" + Joiner.on(", ").join(identityColumns) + ")");
+		if (!primaryKeyColumns.isEmpty()) {
+			queryBuilder.append(", PRIMARY KEY(" + Joiner.on(", ").join(primaryKeyColumns) + ")");
 		}
 
 		queryBuilder.append(")");
