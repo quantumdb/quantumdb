@@ -33,7 +33,7 @@ public class Init extends Command {
 				String user = getArgument(arguments, "username", String.class);
 				String pass = getArgument(arguments, "password", String.class, null);
 
-				config.setUrl("jdbc:postgresql://" + hosts + "/" + catalogName + "?targetServerType=master\"");
+				config.setUrl("jdbc:postgresql://" + hosts + "/" + catalogName + "?targetServerType=primary");
 				config.setCatalog(catalogName);
 				config.setUser(user);
 				config.setPassword(pass);

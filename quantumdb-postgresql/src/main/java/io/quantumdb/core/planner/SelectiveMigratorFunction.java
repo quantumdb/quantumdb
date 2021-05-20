@@ -41,17 +41,17 @@ public class SelectiveMigratorFunction {
 	private static MigratorFunction createUpdateMigrator(RefLog refLog, Table source, Table target, Version from,
 			Version to, long batchSize, Stage stage, Set<String> columnsToBeMigrated) {
 
-		List<Column> identityColumns = source.getIdentityColumns();
+		List<Column> primaryKeyColumns = source.getPrimaryKeyColumns();
 		Map<String, String> functionParameterMapping = Maps.newHashMap();
-		for (int i = 0; i < identityColumns.size(); i++) {
-			functionParameterMapping.put(identityColumns.get(i).getName(), "q" + i);
+		for (int i = 0; i < primaryKeyColumns.size(); i++) {
+			functionParameterMapping.put(primaryKeyColumns.get(i).getName(), "q" + i);
 		}
 
-		List<String> identityColumnNames = identityColumns.stream()
+		List<String> primaryKeyColumnNames = primaryKeyColumns.stream()
 				.map(column -> "\"" + column.getName() + "\"")
 				.collect(Collectors.toList());
 
-		List<String> functionParameters = identityColumns.stream()
+		List<String> functionParameters = primaryKeyColumns.stream()
 				.map(column -> functionParameterMapping.get(column.getName()) + " " + column.getType().toString())
 				.collect(Collectors.toList());
 
@@ -77,7 +77,7 @@ public class SelectiveMigratorFunction {
 
 		if (stage != Stage.INITIAL) {
 			createStatement.append("		WHERE");
-			for (int i = 0; i < identityColumns.size(); i++) {
+			for (int i = 0; i < primaryKeyColumns.size(); i++) {
 				if (i > 0) {
 					createStatement.append("OR");
 				}
@@ -85,15 +85,15 @@ public class SelectiveMigratorFunction {
 				createStatement.append("(");
 
 				for (int j = 0; j < i; j++) {
-					String identityColumnName = identityColumns.get(j).getName();
-					String value = functionParameterMapping.get(identityColumnName);
-					createStatement.append(identityColumnName + " = " + value);
+					String primaryKeyColumnName = primaryKeyColumns.get(j).getName();
+					String value = functionParameterMapping.get(primaryKeyColumnName);
+					createStatement.append(primaryKeyColumnName + " = " + value);
 					createStatement.append("AND");
 				}
 
-				String identityColumnName = identityColumns.get(i).getName();
-				String value = functionParameterMapping.get(identityColumnName);
-				createStatement.append(identityColumnName + " > " + value);
+				String primaryKeyColumnName = primaryKeyColumns.get(i).getName();
+				String value = functionParameterMapping.get(primaryKeyColumnName);
+				createStatement.append(primaryKeyColumnName + " > " + value);
 				createStatement.append(")");
 			}
 		}
@@ -123,7 +123,7 @@ public class SelectiveMigratorFunction {
 				})
 				.collect(Collectors.joining(", "));
 
-		String identityCondition = source.getIdentityColumns().stream()
+		String primaryKeyCondition = source.getPrimaryKeyColumns().stream()
 				.map(column -> {
 					String mappedColumnName = columnMapping.entrySet().stream()
 							.filter(entry -> entry.getKey().getName().equals(column.getName()))
@@ -134,16 +134,16 @@ public class SelectiveMigratorFunction {
 				})
 				.collect(Collectors.joining(" AND "));
 
-		createStatement.append("		ORDER BY " + Joiner.on(" ASC, ").join(identityColumnNames) + " ASC");
+		createStatement.append("		ORDER BY " + Joiner.on(" ASC, ").join(primaryKeyColumnNames) + " ASC");
 		createStatement.append("		LIMIT " + batchSize);
 		createStatement.append("	LOOP");
 		createStatement.append("	  BEGIN");
 		createStatement.append("		UPDATE " + target.getName());
 		createStatement.append("		  SET " + updates);
-		createStatement.append("		  WHERE  " + identityCondition + ";");
+		createStatement.append("		  WHERE  " + primaryKeyCondition + ";");
 		createStatement.append("	  EXCEPTION WHEN unique_violation THEN END;");
 		createStatement.append("	END LOOP;");
-		createStatement.append("  RETURN CONCAT('(', r." + Joiner.on(", ',', r.").join(identityColumnNames) + ", ')');");
+		createStatement.append("  RETURN CONCAT('(', r." + Joiner.on(", ',', r.").join(primaryKeyColumnNames) + ", ')');");
 		createStatement.append("END; $$ LANGUAGE 'plpgsql';");
 
 		QueryBuilder dropStatement = new QueryBuilder();
@@ -152,7 +152,7 @@ public class SelectiveMigratorFunction {
 				dropStatement.append("DROP FUNCTION " + functionName + "();");
 				break;
 			case CONSECUTIVE:
-				List<String> parameterTypes = identityColumns.stream()
+				List<String> parameterTypes = primaryKeyColumns.stream()
 						.map(column -> column.getType().toString())
 						.collect(Collectors.toList());
 
@@ -160,23 +160,23 @@ public class SelectiveMigratorFunction {
 				break;
 		}
 
-		return new MigratorFunction(functionName, identityColumnNames, createStatement.toString(), dropStatement.toString());
+		return new MigratorFunction(functionName, primaryKeyColumnNames, createStatement.toString(), dropStatement.toString());
 	}
 
 	private static MigratorFunction createInsertMigrator(NullRecords nullRecords, RefLog refLog, Table source,
 			Table target, Version from, Version to, long batchSize, Stage stage, Set<String> columns) {
 
-		List<Column> identityColumns = source.getIdentityColumns();
+		List<Column> primaryKeyColumns = source.getPrimaryKeyColumns();
 		Map<String, String> functionParameterMapping = Maps.newHashMap();
-		for (int i = 0; i < identityColumns.size(); i++) {
-			functionParameterMapping.put(identityColumns.get(i).getName(), "q" + i);
+		for (int i = 0; i < primaryKeyColumns.size(); i++) {
+			functionParameterMapping.put(primaryKeyColumns.get(i).getName(), "q" + i);
 		}
 
-		List<String> identityColumnNames = identityColumns.stream()
+		List<String> primaryKeyColumnNames = primaryKeyColumns.stream()
 				.map(column -> "\"" + column.getName() + "\"")
 				.collect(Collectors.toList());
 
-		List<String> functionParameters = identityColumns.stream()
+		List<String> functionParameters = primaryKeyColumns.stream()
 				.map(column -> functionParameterMapping.get(column.getName()) + " " + column.getType().toString())
 				.collect(Collectors.toList());
 
@@ -237,7 +237,7 @@ public class SelectiveMigratorFunction {
 
 		if (stage != Stage.INITIAL) {
 			createStatement.append("		WHERE");
-			for (int i = 0; i < identityColumns.size(); i++) {
+			for (int i = 0; i < primaryKeyColumns.size(); i++) {
 				if (i > 0) {
 					createStatement.append("OR");
 				}
@@ -245,20 +245,20 @@ public class SelectiveMigratorFunction {
 				createStatement.append("(");
 
 				for (int j = 0; j < i; j++) {
-					String identityColumnName = identityColumns.get(j).getName();
-					String value = functionParameterMapping.get(identityColumnName);
-					createStatement.append(identityColumnName + " = " + value);
+					String primaryKeyColumnName = primaryKeyColumns.get(j).getName();
+					String value = functionParameterMapping.get(primaryKeyColumnName);
+					createStatement.append(primaryKeyColumnName + " = " + value);
 					createStatement.append("AND");
 				}
 
-				String identityColumnName = identityColumns.get(i).getName();
-				String value = functionParameterMapping.get(identityColumnName);
-				createStatement.append(identityColumnName + " > " + value);
+				String primaryKeyColumnName = primaryKeyColumns.get(i).getName();
+				String value = functionParameterMapping.get(primaryKeyColumnName);
+				createStatement.append(primaryKeyColumnName + " > " + value);
 				createStatement.append(")");
 			}
 		}
 
-		createStatement.append("		ORDER BY " + Joiner.on(" ASC, ").join(identityColumnNames) + " ASC");
+		createStatement.append("		ORDER BY " + Joiner.on(" ASC, ").join(primaryKeyColumnNames) + " ASC");
 		createStatement.append("		LIMIT " + batchSize);
 		createStatement.append("	LOOP");
 		createStatement.append("	  BEGIN");
@@ -267,7 +267,7 @@ public class SelectiveMigratorFunction {
 		createStatement.append("		  VALUES (" + Joiner.on(", ").join(values.values()) + ");");
 		createStatement.append("	  EXCEPTION WHEN unique_violation THEN END;");
 		createStatement.append("	END LOOP;");
-		createStatement.append("  RETURN CONCAT('(', r." + Joiner.on(", ',', r.").join(identityColumnNames) + ", ')');");
+		createStatement.append("  RETURN CONCAT('(', r." + Joiner.on(", ',', r.").join(primaryKeyColumnNames) + ", ')');");
 		createStatement.append("END; $$ LANGUAGE 'plpgsql';");
 
 
@@ -278,7 +278,7 @@ public class SelectiveMigratorFunction {
 				dropStatement.append("DROP FUNCTION " + functionName + "();");
 				break;
 			case CONSECUTIVE:
-				List<String> parameterTypes = identityColumns.stream()
+				List<String> parameterTypes = primaryKeyColumns.stream()
 						.map(column -> column.getType().toString())
 						.collect(Collectors.toList());
 
@@ -286,7 +286,7 @@ public class SelectiveMigratorFunction {
 				break;
 		}
 
-		return new MigratorFunction(functionName, identityColumnNames, createStatement.toString(), dropStatement.toString());
+		return new MigratorFunction(functionName, primaryKeyColumnNames, createStatement.toString(), dropStatement.toString());
 	}
 
 }

@@ -9,7 +9,7 @@ import static io.quantumdb.core.backends.integration.videostores.PostgresqlBaseS
 import static io.quantumdb.core.backends.integration.videostores.PostgresqlBaseScenario.STAFF_ID;
 import static io.quantumdb.core.backends.integration.videostores.PostgresqlBaseScenario.STORES_ID;
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
-import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
+import static io.quantumdb.core.schema.definitions.Column.Hint.PRIMARY_KEY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.bool;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.bytea;
@@ -68,38 +68,38 @@ public class AddColumnToPaymentsTable {
 		// Original tables and foreign keys.
 
 		Table stores = new Table(refLog.getTableRef(origin, "stores").getRefId())
-				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL))
 				.addColumn(new Column("manager_id", integer(), NOT_NULL));
 
 		Table staff = new Table(refLog.getTableRef(origin, "staff").getRefId())
-				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL))
 				.addColumn(new Column("store_id", integer(), NOT_NULL));
 
 		Table customers = new Table(refLog.getTableRef(origin, "customers").getRefId())
-				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL))
 				.addColumn(new Column("store_id", integer(), NOT_NULL))
 				.addColumn(new Column("referred_by", integer()));
 
 		Table films = new Table(refLog.getTableRef(origin, "films").getRefId())
-				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("name", varchar(255), NOT_NULL));
 
 		Table inventory = new Table(refLog.getTableRef(origin, "inventory").getRefId())
-				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("store_id", integer(), NOT_NULL))
 				.addColumn(new Column("film_id", integer(), NOT_NULL));
 
 		Table paychecks = new Table(refLog.getTableRef(origin, "paychecks").getRefId())
-				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("staff_id", integer(), NOT_NULL))
 				.addColumn(new Column("date", date(), NOT_NULL))
 				.addColumn(new Column("amount", floats(), NOT_NULL));
 
 		Table payments = new Table(refLog.getTableRef(origin, "payments").getRefId())
-				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("staff_id", integer()))
 				.addColumn(new Column("customer_id", integer(), NOT_NULL))
 				.addColumn(new Column("rental_id", integer(), NOT_NULL))
@@ -112,7 +112,7 @@ public class AddColumnToPaymentsTable {
 
 
 		Table rentals = new Table(refLog.getTableRef(origin, "rentals").getRefId())
-				.addColumn(new Column("id", integer(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("staff_id", integer()))
 				.addColumn(new Column("customer_id", integer(), NOT_NULL))
 				.addColumn(new Column("inventory_id", integer(), NOT_NULL))
@@ -135,7 +135,7 @@ public class AddColumnToPaymentsTable {
 		// New tables and foreign keys.
 
 		Table newPayments = new Table(refLog.getTableRef(target, "payments").getRefId())
-				.addColumn(new Column("id", integer(), payments.getColumn("id").getSequence(), IDENTITY, AUTO_INCREMENT, NOT_NULL))
+				.addColumn(new Column("id", integer(), payments.getColumn("id").getSequence(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
 				.addColumn(new Column("staff_id", integer()))
 				.addColumn(new Column("customer_id", integer(), NOT_NULL))
 				.addColumn(new Column("rental_id", integer(), NOT_NULL))

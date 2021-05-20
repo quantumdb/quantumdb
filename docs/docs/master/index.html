@@ -176,7 +176,7 @@ changelog.addChangeSet("track_users", "Michael de Jong",
                 This code will create a new <code>admin</code> column in the <code>users</code> table, of type
                 <code>boolean</code>, which defaults to the <code>false</code> value, and cannot hold <code>NULL</code>
                 values. It's not required to set a default value. You can specify zero, one, or multiple hints of the
-                following types <code>AUTO_INCREMENT</code>, <code>NOT_NULL</code>, <code>IDENTITY</code>.
+                following types <code>AUTO_INCREMENT</code>, <code>NOT_NULL</code>, <code>PRIMARY_KEY</code>.
             </p>
 
             <h3>ADD FOREIGN KEY</h3>
@@ -249,14 +249,16 @@ changelog.addChangeSet("track_users", "Michael de Jong",
             <h3>CREATE TABLE</h3>
 
             <pre class="code"><code class="java">SchemaOperations.createTable("users")
-        .with("id", PostgresTypes.bigint(), Hint.IDENTITY, Hint.AUTO_INCREMENT)
+        .with("id", PostgresTypes.bigint(), Hint.PRIMARY_KEY, Hint.AUTO_INCREMENT)
         .with("first_name", PostgresTypes.text(), Hint.NOT_NULL)
         .with("last_name", PostgresTypes.text(), Hint.NOT_NULL));</code></pre>
 
             <pre class="code"><code class="xml">&lt;createTable tableName="users"&gt;
-  &lt;column name="id" type="bigint" primaryKey="true" autoIncrement="true" /&gt;
-  &lt;column name="first_name" type="text" nullable="false" /&gt;
-  &lt;column name="last_name" type="text" nullable="false" /&gt;
+  &lt;columns&gt;
+    &lt;column name="id" type="bigint" primaryKey="true" autoIncrement="true" /&gt;
+    &lt;column name="first_name" type="text" nullable="false" /&gt;
+    &lt;column name="last_name" type="text" nullable="false" /&gt;
+  &lt;/columns&gt;
 &lt;/createTable&gt;</code></pre>
 
             <p>

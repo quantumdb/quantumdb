@@ -1,7 +1,7 @@
 package io.quantumdb.core.migration.operations;
 
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
-import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
+import static io.quantumdb.core.schema.definitions.Column.Hint.PRIMARY_KEY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
 import static io.quantumdb.core.schema.definitions.TestTypes.integer;
 import static io.quantumdb.core.schema.definitions.TestTypes.varchar;
@@ -29,7 +29,7 @@ public class DropColumnMigratorTest {
 	public void setUp() {
 		this.catalog = new Catalog("test-db")
 				.addTable(new Table("users")
-						.addColumn(new Column("id", integer(), IDENTITY, NOT_NULL, AUTO_INCREMENT))
+						.addColumn(new Column("id", integer(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT))
 						.addColumn(new Column("name", varchar(255), NOT_NULL)));
 
 		this.changelog = new Changelog();
@@ -48,13 +48,13 @@ public class DropColumnMigratorTest {
 		Table ghostTable = getGhostTable(originalTable);
 
 		Table expectedGhostTable = new Table(ghostTable.getName())
-				.addColumn(new Column("id", integer(), IDENTITY, NOT_NULL, AUTO_INCREMENT));
+				.addColumn(new Column("id", integer(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT));
 
 		assertEquals(expectedGhostTable, ghostTable);
 	}
 
 	@Test(expected = IllegalStateException.class)
-	public void testExpandForDroppingIdentityColumn() {
+	public void testExpandForDroppingPrimaryKeyColumn() {
 		DropColumn operation = SchemaOperations.dropColumn("users", "id");
 		changelog.addChangeSet("Michael de Jong", "Dropped 'id' column from 'users' table.", operation);
 		migrator.migrate(catalog, refLog, changelog.getLastAdded(), operation);

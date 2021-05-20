@@ -10,6 +10,8 @@ import java.util.Properties;
 import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 @Slf4j
 public class Config {
 
@@ -96,6 +98,7 @@ public class Config {
 
 	public Backend getBackend() {
 		String jdbcUrl = getUrl();
+		checkArgument(jdbcUrl != null, "You have not specified a backend URL.");
 
 		for (String backendName : SUPPORTED_BACKENDS) {
 			try {
@@ -106,6 +109,7 @@ public class Config {
 				}
 			}
 			catch (ReflectiveOperationException e) {
+				throw new IllegalArgumentException("Something went wrong selecting backends.", e);
 				// Skip this one.
 			}
 		}

@@ -29,7 +29,6 @@ import io.quantumdb.core.schema.definitions.PostgresTypes;
 import io.quantumdb.core.schema.definitions.Sequence;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.utils.QueryBuilder;
-import io.quantumdb.core.schema.definitions.ColumnType;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -123,7 +122,7 @@ class CatalogLoader {
 					hints.add(Column.Hint.NOT_NULL);
 				}
 				if (primaryKeys.contains(columnName) || (primaryKeys.isEmpty() && columns.isEmpty())) {
-					hints.add(Column.Hint.IDENTITY);
+					hints.add(Column.Hint.PRIMARY_KEY);
 				}
 
 				Sequence sequence = null;
@@ -313,6 +312,7 @@ class CatalogLoader {
 				parser.expect("INDEX");
 				parser.present("CONCURRENTLY");
 				String indexName = parser.consume();
+				indexName = removeOuterQuotes(indexName);
 				if (indexName.startsWith("pk_")) {
 					continue;
 				}
@@ -322,6 +322,10 @@ class CatalogLoader {
 				if (indexTableName.startsWith("public.")) {
 					indexTableName = indexTableName.substring("public.".length());
 				}
+				else if (indexTableName.startsWith("\"public\".")) {
+					indexTableName = indexTableName.substring("\"public\".".length());
+				}
+				indexTableName = removeOuterQuotes(indexTableName);
 
 				if (parser.present("USING")) {
 					parser.consume();
@@ -335,4 +339,16 @@ class CatalogLoader {
 			}
 		}
 	}
+
+	private static String removeOuterQuotes(String input) {
+		if (input != null && input.length() >= 2) {
+			int head = 0;
+			int tail = input.length() - 1;
+			if (input.charAt(head) == '\"' && input.charAt(tail) == '\"') {
+				return input.substring(head + 1, tail);
+			}
+		}
+		return input;
+	}
+
 }

@@ -6,6 +6,7 @@ import static com.google.common.base.Preconditions.checkState;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -115,9 +116,7 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 		checkArgument(!columns.isEmpty(), "You must specify at least one entry in 'columns'.");
 
 		return indexes.stream()
-				.filter(c -> c.getColumns().equals(Lists.newArrayList(columns)))
-				.findFirst()
-				.isPresent();
+				.anyMatch(c -> c.getColumns().equals(Lists.newArrayList(columns)));
 	}
 
 	public Index removeIndex(String... columns) {
@@ -175,9 +174,9 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 						"Table: " + name + " does not contain column: " + columnName));
 	}
 
-	public List<Column> getIdentityColumns() {
+	public List<Column> getPrimaryKeyColumns() {
 		return getColumns().stream()
-				.filter(Column::isIdentity)
+				.filter(Column::isPrimaryKey)
 				.collect(Collectors.toList());
 	}
 
@@ -185,9 +184,7 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 		checkArgument(!Strings.isNullOrEmpty(columnName), "You must specify a 'name'.");
 
 		return columns.stream()
-				.filter(c -> c.getName().equals(columnName))
-				.findFirst()
-				.isPresent();
+				.anyMatch(c -> c.getName().equals(columnName));
 	}
 
 	public Column removeColumn(String columnName) {
@@ -198,9 +195,9 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 		checkState(column.getIncomingForeignKeys().isEmpty(),
 				"You cannot remove a column that is still referenced by foreign keys.");
 
-		List<Column> identityColumns = getIdentityColumns();
-		identityColumns.remove(column);
-		checkState(!identityColumns.isEmpty(), "You drop the last remaining identity column of a table.");
+		List<Column> primaryKeyColumns = getPrimaryKeyColumns();
+		primaryKeyColumns.remove(column);
+		checkState(!primaryKeyColumns.isEmpty(), "You drop the last remaining primary key column of a table.");
 
 		if (column.getOutgoingForeignKey() != null) {
 			column.getOutgoingForeignKey().drop();
@@ -249,17 +246,15 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 
 	void dropOutgoingForeignKeys() {
 		columns.stream()
-				.filter(column -> column.getOutgoingForeignKey() != null)
-				.map(column -> column.getOutgoingForeignKey())
+				.map(Column::getOutgoingForeignKey)
+				.filter(Objects::nonNull)
 				.distinct()
 				.forEach(ForeignKey::drop);
 	}
 
 	public boolean referencesTable(String tableName) {
 		return foreignKeys.stream()
-				.filter(foreignKey -> foreignKey.getReferredTableName().equals(tableName))
-				.findAny()
-				.isPresent();
+				.anyMatch(foreignKey -> foreignKey.getReferredTableName().equals(tableName));
 	}
 
 	public Set<String> enumerateReferencedByTables() {

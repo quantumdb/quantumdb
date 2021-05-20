@@ -1,7 +1,7 @@
 package io.quantumdb.core.schema.definitions;
 
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
-import static io.quantumdb.core.schema.definitions.Column.Hint.IDENTITY;
+import static io.quantumdb.core.schema.definitions.Column.Hint.PRIMARY_KEY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
 import static io.quantumdb.core.schema.definitions.TestTypes.bigint;
 import static org.junit.Assert.assertEquals;
@@ -39,7 +39,7 @@ public class CatalogTest {
 	@Test
 	public void testAddingTableToCatalog() {
 		Table table = new Table("users")
-				.addColumn(new Column("id", bigint(), IDENTITY, AUTO_INCREMENT));
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, AUTO_INCREMENT));
 
 		Catalog catalog = new Catalog("test-db")
 				.addTable(table);
@@ -50,7 +50,7 @@ public class CatalogTest {
 	@Test
 	public void testThatContainsTableMethodReturnsTrueWhenTableExists() {
 		Table table = new Table("users")
-				.addColumn(new Column("id", bigint(), IDENTITY, AUTO_INCREMENT));
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, AUTO_INCREMENT));
 
 		Catalog catalog = new Catalog("test-db")
 				.addTable(table);
@@ -80,7 +80,7 @@ public class CatalogTest {
 	@Test
 	public void testThatGetTableMethodReturnsTableWhenItExists() {
 		Table table = new Table("users")
-				.addColumn(new Column("id", bigint(), IDENTITY, AUTO_INCREMENT));
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, AUTO_INCREMENT));
 
 		Catalog catalog = new Catalog("test-db")
 				.addTable(table);
@@ -109,7 +109,7 @@ public class CatalogTest {
 	@Test
 	public void testThatRemoveTableMethodRemovesTableWhenItExists() {
 		Table table = new Table("users")
-				.addColumn(new Column("id", bigint(), IDENTITY, AUTO_INCREMENT));
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, AUTO_INCREMENT));
 
 		Catalog catalog = new Catalog("test-db")
 				.addTable(table);
@@ -141,11 +141,11 @@ public class CatalogTest {
 	public void testRemovingTableDropsOutgoingForeignKeys() {
 		Catalog catalog = new Catalog("test-db");
 		Table users = new Table("users")
-				.addColumn(new Column("id", bigint(), IDENTITY, NOT_NULL, AUTO_INCREMENT))
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT))
 				.addColumn(new Column("address_id", bigint(), NOT_NULL));
 
 		Table addresses = new Table("addresses")
-				.addColumn(new Column("id", bigint(), IDENTITY, NOT_NULL, AUTO_INCREMENT));
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT));
 
 		catalog.addTable(users);
 		catalog.addTable(addresses);
@@ -163,11 +163,11 @@ public class CatalogTest {
 	public void testRemovingTableThrowsExceptionWhenIncomingForeignKeysExist() {
 		Catalog catalog = new Catalog("test-db");
 		Table users = new Table("users")
-				.addColumn(new Column("id", bigint(), IDENTITY, NOT_NULL, AUTO_INCREMENT))
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT))
 				.addColumn(new Column("address_id", bigint(), NOT_NULL));
 
 		Table addresses = new Table("addresses")
-				.addColumn(new Column("id", bigint(), IDENTITY, NOT_NULL, AUTO_INCREMENT));
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT));
 
 		catalog.addTable(users);
 		catalog.addTable(addresses);
@@ -181,7 +181,7 @@ public class CatalogTest {
 	@Test
 	public void testThatRenamingTableIsReflectedInCatalog() {
 		Table table = new Table("users")
-				.addColumn(new Column("id", bigint(), IDENTITY, AUTO_INCREMENT));
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, AUTO_INCREMENT));
 
 		Catalog catalog = new Catalog("test-db")
 				.addTable(table);
@@ -196,10 +196,10 @@ public class CatalogTest {
 	@Test(expected = IllegalStateException.class)
 	public void testThatRenamingTableThrowsExceptionWhenNameIsAlreadyTaken() {
 		Table usersTable = new Table("users")
-				.addColumn(new Column("id", bigint(), IDENTITY, AUTO_INCREMENT));
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, AUTO_INCREMENT));
 
 		Table playersTable = new Table("players")
-				.addColumn(new Column("id", bigint(), IDENTITY, AUTO_INCREMENT));
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, AUTO_INCREMENT));
 
 		new Catalog("test-db")
 				.addTable(usersTable)
@@ -211,7 +211,7 @@ public class CatalogTest {
 	@Test
 	public void testThatCopyMethodReturnsCopy() {
 		Table table = new Table("users")
-				.addColumn(new Column("id", bigint(), IDENTITY, AUTO_INCREMENT));
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, AUTO_INCREMENT));
 
 		Catalog catalog = new Catalog("test-db")
 				.addTable(table);
@@ -225,7 +225,7 @@ public class CatalogTest {
 	@Test
 	public void toStringReturnsSomething() {
 		Table table = new Table("users")
-				.addColumn(new Column("id", bigint(), IDENTITY, AUTO_INCREMENT));
+				.addColumn(new Column("id", bigint(), PRIMARY_KEY, AUTO_INCREMENT));
 
 		Catalog catalog = new Catalog("test-db")
 				.addTable(table);

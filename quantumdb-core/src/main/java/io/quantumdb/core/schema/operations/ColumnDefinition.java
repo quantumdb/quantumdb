@@ -42,8 +42,8 @@ public class ColumnDefinition {
 		this.hints = hints;
 	}
 
-	public boolean isIdentity() {
-		return containsHint(Column.Hint.IDENTITY);
+	public boolean isPrimaryKey() {
+		return containsHint(Column.Hint.PRIMARY_KEY);
 	}
 
 	public boolean isAutoIncrement() {
@@ -56,9 +56,7 @@ public class ColumnDefinition {
 
 	private boolean containsHint(Column.Hint needle) {
 		return Arrays.stream(hints)
-				.filter(hint -> hint == needle)
-				.findFirst()
-				.isPresent();
+				.anyMatch(hint -> hint == needle);
 	}
 
 	public Column createColumn() {

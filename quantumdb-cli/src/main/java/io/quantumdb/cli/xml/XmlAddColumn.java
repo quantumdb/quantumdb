@@ -42,17 +42,17 @@ public class XmlAddColumn implements XmlOperation<AddColumn> {
 		String defaultExpression = column.getDefaultExpression();
 
 		List<Hint> hints = Lists.newArrayList();
-		if (column.isNullable()) {
+		if (!column.isNullable()) {
 			hints.add(Hint.NOT_NULL);
 		}
 		if (column.isAutoIncrement()) {
 			hints.add(Hint.AUTO_INCREMENT);
 		}
 		if (column.isPrimaryKey()) {
-			hints.add(Hint.IDENTITY);
+			hints.add(Hint.PRIMARY_KEY);
 		}
 
-		Hint[] hintArray = hints.toArray(new Hint[hints.size()]);
+		Hint[] hintArray = hints.toArray(new Hint[0]);
 		return SchemaOperations.addColumn(tableName, columnName, dataType, defaultExpression, hintArray);
 	}
 

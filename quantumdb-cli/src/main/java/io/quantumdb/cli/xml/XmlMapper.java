@@ -65,7 +65,7 @@ public class XmlMapper {
 				}
 
 				@SneakyThrows
-				public void characters(char ch[], int start, int length) {
+				public void characters(char[] ch, int start, int length) {
 					String body = new String(ch, start, length);
 					if (body.trim().isEmpty()) {
 						return;

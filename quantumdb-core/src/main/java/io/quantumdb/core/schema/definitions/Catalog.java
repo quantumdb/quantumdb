@@ -36,7 +36,7 @@ public class Catalog implements Copyable<Catalog> {
 		checkArgument(!containsTable(table.getName()), "Catalog: '" + name + "' already contains a table: '" + table.getName() + "'.");
 		checkArgument(!containsView(table.getName()), "Catalog: '" + name + "' already contains a view: '" + table.getName() + "'.");
 		checkArgument(!table.getColumns().isEmpty(), "Table: '" + table.getName() + "' doesn't contain any columns.");
-		checkArgument(!table.getIdentityColumns().isEmpty(), "Table: '" + table.getName() + "' has no identity columns.");
+		checkArgument(!table.getPrimaryKeyColumns().isEmpty(), "Table: '" + table.getName() + "' has no primary key columns.");
 
 		tables.add(table);
 		table.setParent(this);
@@ -47,9 +47,7 @@ public class Catalog implements Copyable<Catalog> {
 		checkArgument(!Strings.isNullOrEmpty(tableName), "You must specify a 'tableName'");
 
 		return tables.stream()
-				.filter(t -> t.getName().equals(tableName))
-				.findFirst()
-				.isPresent();
+				.anyMatch(t -> t.getName().equals(tableName));
 	}
 
 	public Table getTable(String tableName) {
@@ -87,9 +85,7 @@ public class Catalog implements Copyable<Catalog> {
 		checkArgument(!Strings.isNullOrEmpty(viewName), "You must specify a 'viewName'");
 
 		return views.stream()
-				.filter(v -> v.getName().equals(viewName))
-				.findFirst()
-				.isPresent();
+				.anyMatch(v -> v.getName().equals(viewName));
 	}
 
 	public View getView(String viewName) {
