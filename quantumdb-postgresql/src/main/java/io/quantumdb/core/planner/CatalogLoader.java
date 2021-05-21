@@ -174,7 +174,7 @@ class CatalogLoader {
 				.append("FROM pg_index, pg_class, pg_attribute, pg_namespace ")
 				.append("WHERE ")
 				.append("  nspname = 'public' AND ")
-				.append("  pg_class.oid = '" + tableName + "'::regclass AND ")
+				.append("  pg_class.oid = '\"" + tableName + "\"'::regclass AND ")
 				.append("  indrelid = pg_class.oid AND ")
 				.append("  pg_class.relnamespace = pg_namespace.oid AND ")
 				.append("  pg_attribute.attrelid = pg_class.oid AND ")

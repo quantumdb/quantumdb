@@ -152,7 +152,7 @@ public class PostgresTypes {
 
 	public static ColumnType oid() {
 		return new ColumnType(ColumnType.Type.OID, false, "oid", () -> 0,
-				(statement, position, value) -> statement.setLong(position, ((Number) value).intValue()));
+				(statement, position, value) -> statement.setInt(position, ((Number) value).intValue()));
 	}
 
 	public static ColumnType uuid() {
