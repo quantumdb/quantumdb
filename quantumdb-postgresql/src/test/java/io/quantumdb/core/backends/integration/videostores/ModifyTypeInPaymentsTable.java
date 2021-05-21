@@ -9,8 +9,8 @@ import static io.quantumdb.core.backends.integration.videostores.PostgresqlBaseS
 import static io.quantumdb.core.backends.integration.videostores.PostgresqlBaseScenario.STAFF_ID;
 import static io.quantumdb.core.backends.integration.videostores.PostgresqlBaseScenario.STORES_ID;
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
-import static io.quantumdb.core.schema.definitions.Column.Hint.PRIMARY_KEY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
+import static io.quantumdb.core.schema.definitions.Column.Hint.PRIMARY_KEY;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.date;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.doubles;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.floats;

@@ -8,7 +8,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -29,7 +28,6 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 import com.google.common.collect.Table.Cell;
-import com.google.common.primitives.Ints;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializer;
@@ -112,23 +110,7 @@ public class Backend {
 				.registerTypeAdapter(ColumnType.class, (JsonDeserializer<ColumnType>) (element, type, context) -> {
 					String fullType = element.getAsString().toUpperCase();
 
-					String sqlType = fullType;
-					if (fullType.contains("(")) {
-						sqlType = fullType.substring(0, fullType.indexOf('('));
-					}
-
-					if (fullType.contains("(")) {
-						int beginIndex = fullType.indexOf("(") + 1;
-						int endIndex = fullType.lastIndexOf(")");
-						List<Integer> arguments = Arrays.stream(fullType.substring(beginIndex, endIndex)
-								.split(","))
-								.map(String::trim)
-								.map(Ints::tryParse)
-								.collect(Collectors.toList());
-
-						return PostgresTypes.from(sqlType, arguments.get(0));
-					}
-					return PostgresTypes.from(sqlType, null);
+					return PostgresTypes.from(fullType);
 				})
 				.registerTypeAdapter(ColumnType.class, (JsonSerializer<ColumnType>)
 						(element, type, context) -> new JsonPrimitive(element.getNotation()))
