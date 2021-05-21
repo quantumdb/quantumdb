@@ -48,7 +48,7 @@ public class XmlAlterColumn implements XmlOperation<AlterColumn> {
 	public AlterColumn toOperation() {
 		AlterColumn operation = SchemaOperations.alterColumn(tableName, columnName);
 		Optional.ofNullable(newColumnName).ifPresent(operation::rename);
-		Optional.ofNullable(newType).map(PostgresTypes::fromString).ifPresent(operation::modifyDataType);
+		Optional.ofNullable(newType).map(PostgresTypes::from).ifPresent(operation::modifyDataType);
 
 		Optional.ofNullable(nullable).ifPresent(newNullable -> {
 			if (newNullable) {

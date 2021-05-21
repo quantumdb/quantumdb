@@ -23,6 +23,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
+import io.quantumdb.core.schema.definitions.ColumnType;
 import io.quantumdb.core.schema.definitions.ForeignKey.Action;
 import io.quantumdb.core.schema.definitions.Index;
 import io.quantumdb.core.schema.definitions.PostgresTypes;

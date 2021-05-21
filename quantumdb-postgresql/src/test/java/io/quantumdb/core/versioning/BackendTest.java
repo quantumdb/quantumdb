@@ -1,8 +1,8 @@
 package io.quantumdb.core.versioning;
 
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
-import static io.quantumdb.core.schema.definitions.Column.Hint.PRIMARY_KEY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
+import static io.quantumdb.core.schema.definitions.Column.Hint.PRIMARY_KEY;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.bigint;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.bool;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.text;

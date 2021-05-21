@@ -1,13 +1,11 @@
 package io.quantumdb.core.backends.integration.videostores;
 
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
-import static io.quantumdb.core.schema.definitions.Column.Hint.PRIMARY_KEY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
-import static io.quantumdb.core.schema.definitions.PostgresTypes.bytea;
+import static io.quantumdb.core.schema.definitions.Column.Hint.PRIMARY_KEY;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.date;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.floats;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.integer;
-import static io.quantumdb.core.schema.definitions.PostgresTypes.numeric;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.varchar;
 
 import java.sql.Date;
@@ -97,11 +95,7 @@ public class PostgresqlBaseScenario extends PostgresqlDatabase {
 				.addColumn(new Column("customer_id", integer(), NOT_NULL))
 				.addColumn(new Column("rental_id", integer(), NOT_NULL))
 				.addColumn(new Column("date", date(), NOT_NULL))
-				.addColumn(new Column("amount", floats(), NOT_NULL))
-				.addColumn(new Column("amount_numeric", numeric(), NOT_NULL))
-				.addColumn(new Column("amount_numeric_precision", numeric(10), NOT_NULL))
-				.addColumn(new Column("amount_numeric_precision_scale", numeric(10,2), NOT_NULL))
-				.addColumn(new Column("invoice_pdf", bytea(), NOT_NULL));
+				.addColumn(new Column("amount", floats(), NOT_NULL));
 
 		Table rentals = new Table(RENTALS_ID)
 				.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
@@ -234,11 +228,11 @@ public class PostgresqlBaseScenario extends PostgresqlDatabase {
 				.values(null, 4, 6, new Date(System.currentTimeMillis()))
 				.insert();
 
-		BatchInserter.insertInto(getConnection(), PAYMENTS_ID, "staff_id", "customer_id", "rental_id", "date", "amount", "amount_numeric", "amount_numeric_precision", "amount_numeric_precision_scale", "invoice_pdf")
-				.values(1, 1, 1, new Date(System.currentTimeMillis()), 5f, 5f, 5f, 5f, "test byte array".getBytes())
-				.values(2, 2, 2, new Date(System.currentTimeMillis()), 5f, 5d, 5d, 5d, "test byte array".getBytes())
-				.values(3, 3, 3, new Date(System.currentTimeMillis()), 5f, 5L, 5L, 5L, "test byte array".getBytes())
-				.values(null, 4, 4, new Date(System.currentTimeMillis()), 5f, 5, 5, 5, "test byte array".getBytes())
+		BatchInserter.insertInto(getConnection(), PAYMENTS_ID, "staff_id", "customer_id", "rental_id", "date", "amount")
+				.values(1, 1, 1, new Date(System.currentTimeMillis()), 5f)
+				.values(2, 2, 2, new Date(System.currentTimeMillis()), 5f)
+				.values(3, 3, 3, new Date(System.currentTimeMillis()), 5f)
+				.values(null, 4, 4, new Date(System.currentTimeMillis()), 5f)
 				.insert();
 
 		getConnection().setAutoCommit(true);

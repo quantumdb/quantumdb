@@ -13,14 +13,15 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class PostgresTypes {
 
-	public static ColumnType fromString(String input) {
+	public static ColumnType from(String input) {
 		Matcher match = Pattern.compile("^(.+)\\(([0-9]+),([0-9]+)\\)$").matcher(input);
 		if (match.find()) {
 			String type = match.group(1);
 			int precision = Integer.parseInt(match.group(2));
 			int scale = Integer.parseInt(match.group(3));
 			return from(type.trim(), precision, scale);
-		} else {
+		}
+		else {
 			match = Pattern.compile("^(.+)\\(([0-9]+)\\)$").matcher(input);
 			if (match.find()) {
 				String type = match.group(1);
@@ -28,28 +29,42 @@ public class PostgresTypes {
 				return from(type.trim(), length);
 			}
 		}
-		return from(input.trim());
+		return valueOf(input.trim());
 	}
 
-	public static ColumnType from(String type) {
+	private static ColumnType valueOf(String type) {
 		switch (type.toLowerCase()) {
 			case "oid":
 				return PostgresTypes.oid();
 			case "uuid":
 				return PostgresTypes.uuid();
+			// Serial data types can only be defined when creating or changing a row's data type.
+			// A sequence is automatically created, after that they are just integers.
+			case "serial2":
 			case "smallserial":
+				return PostgresTypes.smallserial();
+			case "serial4":
+			case "serial":
+				return PostgresTypes.serial();
+			case "serial8":
+			case "bigserial":
+				return PostgresTypes.bigserial();
 			case "int2":
 			case "smallint":
 				return PostgresTypes.smallint();
-			case "bigserial":
-			case "int8":
-			case "bigint":
-				return PostgresTypes.bigint();
-			case "serial":
 			case "int":
 			case "int4":
 			case "integer":
 				return PostgresTypes.integer();
+			case "int8":
+			case "bigint":
+				return PostgresTypes.bigint();
+			case "float8":
+			case "double precision":
+				return PostgresTypes.doubles();
+			case "float4":
+			case "real":
+				return PostgresTypes.floats();
 			case "decimal":
 			case "numeric":
 				return PostgresTypes.numeric();
@@ -64,6 +79,7 @@ public class PostgresTypes {
 				return PostgresTypes.chars(1);
 			case "text":
 				return PostgresTypes.text();
+			case "timestamptz":
 			case "timestamp with time zone":
 				return PostgresTypes.timestamp(true);
 			case "timestamp":
@@ -71,12 +87,6 @@ public class PostgresTypes {
 				return PostgresTypes.timestamp(false);
 			case "date":
 				return PostgresTypes.date();
-			case "float8":
-			case "double precision":
-				return PostgresTypes.floats();
-			case "float4":
-			case "real":
-				return PostgresTypes.doubles();
 			case "byte array":
 			case "bytea":
 				return PostgresTypes.bytea();
@@ -87,38 +97,24 @@ public class PostgresTypes {
 	}
 
 	public static ColumnType from(String type, Integer length) {
-		if (length == 0) {
-			return from(type);
-		}
 		switch (type.toLowerCase()) {
-			case "smallserial":
-			case "int2":
-			case "smallint":
-				return PostgresTypes.smallint();
-			case "bigserial":
-			case "int8":
-			case "bigint":
-				return PostgresTypes.bigint();
-			case "serial":
-			case "int":
-			case "int4":
-			case "integer":
-				return PostgresTypes.integer();
+			// Floating point types have a special case of having a precision parameter that cannot be defined, but no scale parameter.
 			case "float8":
 			case "double precision":
-				return PostgresTypes.floats();
+				return PostgresTypes.doubles();
 			case "float4":
 			case "real":
-				return PostgresTypes.doubles();
+				return PostgresTypes.floats();
 			case "decimal":
 			case "numeric":
-				return PostgresTypes.numeric(length);
+				return PostgresTypes.numeric(length, 0);
 			case "varchar":
 			case "character varying":
 				return PostgresTypes.varchar(length);
 			case "char":
 			case "character":
 				return PostgresTypes.chars(length);
+			case "timestamptz":
 			case "timestamp with time zone":
 				return PostgresTypes.timestamp(true, length);
 			case "timestamp":
@@ -132,10 +128,18 @@ public class PostgresTypes {
 	}
 
 	public static ColumnType from(String type, Integer precision, Integer scale) {
-		if (scale == 0) {
-			return from(type, precision);
-		}
 		switch (type.toLowerCase()) {
+			// Integer types have a special case of having precision (16,32,64) and scale (0) parameters that cannot be defined.
+			case "int2":
+			case "smallint":
+				return PostgresTypes.smallint();
+			case "int":
+			case "int4":
+			case "integer":
+				return PostgresTypes.integer();
+			case "int8":
+			case "bigint":
+				return PostgresTypes.bigint();
 			case "decimal":
 			case "numeric":
 				return PostgresTypes.numeric(precision, scale);
@@ -147,8 +151,8 @@ public class PostgresTypes {
 	}
 
 	public static ColumnType oid() {
-		return new ColumnType(ColumnType.Type.OID, false, "oid", () -> 0L,
-				(statement, position, value) -> statement.setLong(position, ((Number) value).longValue()));
+		return new ColumnType(ColumnType.Type.OID, false, "oid", () -> 0,
+				(statement, position, value) -> statement.setLong(position, ((Number) value).intValue()));
 	}
 
 	public static ColumnType uuid() {
@@ -175,26 +179,57 @@ public class PostgresTypes {
 		return new ColumnType(ColumnType.Type.TEXT, true, "text", () -> "",
 				(statement, position, value) -> statement.setString(position, value.toString()));
 	}
-	
+
 	public static ColumnType bool() {
 		return new ColumnType(ColumnType.Type.BOOLEAN, false, "boolean", () -> false,
 				(statement, position, value) -> statement.setBoolean(position, (Boolean) value));
 	}
-	
+
+	public static ColumnType smallserial() {
+		return new ColumnType(ColumnType.Type.SMALLINT, false, "smallserial", () -> 0,
+				(statement, position, value) -> statement.setInt(position, ((Number) value).intValue()));
+	}
+
+	public static ColumnType serial() {
+		return new ColumnType(ColumnType.Type.INTEGER, false, "serial", () -> 0,
+				(statement, position, value) -> statement.setInt(position, ((Number) value).intValue()));
+	}
+
+	public static ColumnType bigserial() {
+		return new ColumnType(ColumnType.Type.BIGINT, false, "bigserial", () -> 0L,
+				(statement, position, value) -> statement.setLong(position, ((Number) value).longValue()));
+	}
+
 	public static ColumnType smallint() {
 		return new ColumnType(ColumnType.Type.SMALLINT, false, "smallint", () -> 0,
 				(statement, position, value) -> statement.setInt(position, ((Number) value).intValue()));
 	}
-	
+
 	public static ColumnType integer() {
 		return new ColumnType(ColumnType.Type.INTEGER, false, "integer", () -> 0,
 				(statement, position, value) -> statement.setInt(position, ((Number) value).intValue()));
+	}
+
+	public static ColumnType bigint() {
+		return new ColumnType(ColumnType.Type.BIGINT, false, "bigint", () -> 0L,
+				(statement, position, value) -> statement.setLong(position, ((Number) value).longValue()));
+	}
+
+	public static ColumnType doubles() {
+		return new ColumnType(ColumnType.Type.DOUBLE, false, "double precision", () -> 0.00d,
+				(statement, position, value) -> statement.setDouble(position, (Double) value));
+	}
+
+	public static ColumnType floats() {
+		return new ColumnType(ColumnType.Type.FLOAT, false, "real", () -> 0.00f,
+				(statement, position, value) -> statement.setFloat(position, (Float) value));
 	}
 
 	public static ColumnType numeric(Integer precision, Integer scale) {
 		return new ColumnType(ColumnType.Type.NUMERIC, false, "numeric(" + precision + "," + scale + ")", () -> BigDecimal.valueOf(0.00d),
 				(statement, position, value) -> statement.setBigDecimal(position, new BigDecimal(value.toString())));
 	}
+
 	public static ColumnType numeric(Integer precision) {
 		return new ColumnType(ColumnType.Type.NUMERIC, false, "numeric(" + precision + ")", () -> BigDecimal.valueOf(0.00d),
 				(statement, position, value) -> statement.setBigDecimal(position, new BigDecimal(value.toString())));
@@ -203,11 +238,6 @@ public class PostgresTypes {
 	public static ColumnType numeric() {
 		return new ColumnType(ColumnType.Type.NUMERIC, false, "numeric", () -> BigDecimal.valueOf(0.00d),
 				(statement, position, value) -> statement.setBigDecimal(position, new BigDecimal(value.toString())));
-	}
-
-	public static ColumnType bigint() {
-		return new ColumnType(ColumnType.Type.BIGINT, false, "bigint", () -> 0L,
-				(statement, position, value) -> statement.setLong(position, ((Number) value).longValue()));
 	}
 
 	public static ColumnType timestamp(boolean withTimezone) {
@@ -225,16 +255,6 @@ public class PostgresTypes {
 	public static ColumnType date() {
 		return new ColumnType(ColumnType.Type.DATE, true, "date", () -> new java.sql.Date(new Date().getTime()),
 				(statement, position, value) -> statement.setDate(position, (java.sql.Date) value));
-	}
-
-	public static ColumnType doubles() {
-		return new ColumnType(ColumnType.Type.DOUBLE, false, "real", () -> 0.00d,
-				(statement, position, value) -> statement.setDouble(position, (Double) value));
-	}
-
-	public static ColumnType floats() {
-		return new ColumnType(ColumnType.Type.FLOAT, false, "double precision", () -> 0.00f,
-				(statement, position, value) -> statement.setFloat(position, (Float) value));
 	}
 
 	public static ColumnType bytea() {

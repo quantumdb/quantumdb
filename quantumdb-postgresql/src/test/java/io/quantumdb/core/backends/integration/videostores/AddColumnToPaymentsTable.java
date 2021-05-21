@@ -9,14 +9,12 @@ import static io.quantumdb.core.backends.integration.videostores.PostgresqlBaseS
 import static io.quantumdb.core.backends.integration.videostores.PostgresqlBaseScenario.STAFF_ID;
 import static io.quantumdb.core.backends.integration.videostores.PostgresqlBaseScenario.STORES_ID;
 import static io.quantumdb.core.schema.definitions.Column.Hint.AUTO_INCREMENT;
-import static io.quantumdb.core.schema.definitions.Column.Hint.PRIMARY_KEY;
 import static io.quantumdb.core.schema.definitions.Column.Hint.NOT_NULL;
+import static io.quantumdb.core.schema.definitions.Column.Hint.PRIMARY_KEY;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.bool;
-import static io.quantumdb.core.schema.definitions.PostgresTypes.bytea;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.date;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.floats;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.integer;
-import static io.quantumdb.core.schema.definitions.PostgresTypes.numeric;
 import static io.quantumdb.core.schema.definitions.PostgresTypes.varchar;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -104,11 +102,7 @@ public class AddColumnToPaymentsTable {
 				.addColumn(new Column("customer_id", integer(), NOT_NULL))
 				.addColumn(new Column("rental_id", integer(), NOT_NULL))
 				.addColumn(new Column("date", date(), NOT_NULL))
-				.addColumn(new Column("amount", floats(), NOT_NULL))
-				.addColumn(new Column("amount_numeric", numeric(), NOT_NULL))
-				.addColumn(new Column("amount_numeric_precision", numeric(10), NOT_NULL))
-				.addColumn(new Column("amount_numeric_precision_scale", numeric(10,2), NOT_NULL))
-				.addColumn(new Column("invoice_pdf", bytea(), NOT_NULL));
+				.addColumn(new Column("amount", floats(), NOT_NULL));
 
 
 		Table rentals = new Table(refLog.getTableRef(origin, "rentals").getRefId())
@@ -141,10 +135,6 @@ public class AddColumnToPaymentsTable {
 				.addColumn(new Column("rental_id", integer(), NOT_NULL))
 				.addColumn(new Column("date", date(), NOT_NULL))
 				.addColumn(new Column("amount", floats(), NOT_NULL))
-				.addColumn(new Column("amount_numeric", numeric(), NOT_NULL))
-				.addColumn(new Column("amount_numeric_precision", numeric(10), NOT_NULL))
-				.addColumn(new Column("amount_numeric_precision_scale", numeric(10,2), NOT_NULL))
-				.addColumn(new Column("invoice_pdf", bytea(), NOT_NULL))
 				.addColumn(new Column("verified", bool(), "false", NOT_NULL));
 
 		newPayments.addForeignKey("staff_id").referencing(staff, "id");
