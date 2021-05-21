@@ -1,5 +1,8 @@
 package io.quantumdb.core.planner;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -18,6 +21,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.quantumdb.core.backends.Backend;
+import io.quantumdb.core.backends.Config;
 import io.quantumdb.core.planner.MigratorFunction.Stage;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.ColumnType.Type;
@@ -67,7 +71,7 @@ class TableDataMigrator {
 			long start = System.currentTimeMillis();
 			Map<String, Object> lastProcessedId = Maps.newHashMap();
 
-			while (true) {
+			while (!Config.dry_run) {
 				long innerStart = System.currentTimeMillis();
 
 				QueryBuilder migrator = new QueryBuilder();
@@ -264,9 +268,23 @@ class TableDataMigrator {
 	}
 
 	private void execute(Connection connection, String query) throws SQLException {
-		try (Statement statement = connection.createStatement()) {
-			log.debug("Executing: " + query);
-			statement.execute(query);
+		if (Config.dry_run) {
+			try {
+				FileWriter myWriter = new FileWriter("dry-run.sql", true);
+				BufferedWriter writer = new BufferedWriter(myWriter);
+				writer.write(query);
+				writer.newLine();
+				writer.flush();
+			}
+			catch (IOException e) {
+				throw new SQLException(e);
+			}
+		}
+		else {
+			try (Statement statement = connection.createStatement()) {
+				log.debug("Executing: " + query);
+				statement.execute(query);
+			}
 		}
 	}
 

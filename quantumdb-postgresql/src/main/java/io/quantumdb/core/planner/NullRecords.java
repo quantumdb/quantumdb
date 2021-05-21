@@ -1,5 +1,8 @@
 package io.quantumdb.core.planner;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -14,6 +17,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import io.quantumdb.core.backends.Backend;
+import io.quantumdb.core.backends.Config;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.ColumnType;
 import io.quantumdb.core.schema.definitions.ForeignKey;
@@ -98,6 +102,25 @@ public class NullRecords {
 				ColumnType type = column.getType();
 				type.getValueSetter().setValue(statement, i, value);
 			}
+			execute(statement);
+		}
+	}
+
+	private void execute(PreparedStatement statement) throws SQLException {
+		if (Config.dry_run) {
+			String query = statement.toString();
+			try {
+				FileWriter myWriter = new FileWriter("dry-run.sql", true);
+				BufferedWriter writer = new BufferedWriter(myWriter);
+				writer.write(query);
+				writer.newLine();
+				writer.flush();
+			}
+			catch (IOException e) {
+				throw new SQLException(e);
+			}
+		}
+		else {
 			statement.execute();
 		}
 	}
@@ -161,7 +184,7 @@ public class NullRecords {
 
 			log.debug("Inserted " + table.getName() + " - " + values);
 
-			statement.execute();
+			execute(statement);
 		}
 		catch (SQLException e) {
 			log.error("Error while executing query: " + builder.toString() + " - " + e.getMessage(), e);
@@ -208,9 +231,23 @@ public class NullRecords {
 	}
 
 	private void ensureDeferredConstraints(Connection connection) throws SQLException {
-		connection.setAutoCommit(false);
-		try (Statement statement = connection.createStatement()) {
-			statement.execute("SET CONSTRAINTS ALL DEFERRED;");
+		if (Config.dry_run) {
+			try {
+				FileWriter myWriter = new FileWriter("dry-run.sql", true);
+				BufferedWriter writer = new BufferedWriter(myWriter);
+				writer.write("SET CONSTRAINTS ALL DEFERRED;");
+				writer.newLine();
+				writer.flush();
+			}
+			catch (IOException e) {
+				throw new SQLException(e);
+			}
+		}
+		else {
+			connection.setAutoCommit(false);
+			try (Statement statement = connection.createStatement()) {
+				statement.execute("SET CONSTRAINTS ALL DEFERRED;");
+			}
 		}
 	}
 

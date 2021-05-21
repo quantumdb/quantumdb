@@ -2,12 +2,16 @@ package io.quantumdb.core.planner;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -17,6 +21,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+import io.quantumdb.core.backends.Config;
 import io.quantumdb.core.backends.DatabaseMigrator;
 import io.quantumdb.core.backends.planner.Operation;
 import io.quantumdb.core.backends.planner.Plan;
@@ -46,9 +51,23 @@ class PostgresqlMigrator implements DatabaseMigrator {
 
 	private static void execute(Connection connection, QueryBuilder queryBuilder) throws SQLException {
 		String query = queryBuilder.toString();
-		try (Statement statement = connection.createStatement()) {
-			log.debug("Executing: " + query);
-			statement.execute(query);
+		if (Config.dry_run) {
+			try {
+				FileWriter myWriter = new FileWriter("dry-run.sql", true);
+				BufferedWriter writer = new BufferedWriter(myWriter);
+				writer.write(query);
+				writer.newLine();
+				writer.flush();
+			}
+			catch (IOException e) {
+				throw new SQLException(e);
+			}
+		}
+		else {
+			try (Statement statement = connection.createStatement()) {
+				log.debug("Executing: " + query);
+				statement.execute(query);
+			}
 		}
 	}
 
@@ -100,7 +119,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 					DataOperation dataOperation = entry.getValue();
 					String query = dataOperation.getQuery();
 					String rewrittenQuery = rewriter.rewrite(query);
-					statement.executeUpdate(rewrittenQuery);
+					execute(connection, new QueryBuilder(rewrittenQuery));
 					refLog.fork(entry.getKey());
 				}
 				catch (SQLException e) {
@@ -217,8 +236,8 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		String targetRefId = sync.getTarget().getRefId();
 
 		try (Statement statement = connection.createStatement()) {
-			statement.execute("DROP TRIGGER " + triggerName + " ON " + sourceRefId + ";");
-			statement.execute("DROP FUNCTION " + functionName + "();");
+			execute(connection, new QueryBuilder("DROP TRIGGER " + triggerName + " ON " + sourceRefId + ";"));
+			execute(connection, new QueryBuilder("DROP FUNCTION " + functionName + "();"));
 			sync.drop();
 			log.info("Dropped synchronizer: {}/{} for: {} -> {}", triggerName, functionName, sourceRefId, targetRefId);
 		}
@@ -238,8 +257,8 @@ class PostgresqlMigrator implements DatabaseMigrator {
 			Table table = catalog.getTable(refId);
 
 			Set<Sequence> usedSequences = table.getColumns().stream()
-					.filter(column -> column.getSequence() != null)
 					.map(Column::getSequence)
+					.filter(Objects::nonNull)
 					.collect(Collectors.toSet());
 
 			Set<Table> tablesNotToBeDeleted = catalog.getTables().stream()
@@ -251,15 +270,13 @@ class PostgresqlMigrator implements DatabaseMigrator {
 				for (Column column : otherTable.getColumns()) {
 					Sequence sequence = column.getSequence();
 					if (sequence != null && usedSequences.contains(sequence)) {
-						try (Statement statement = connection.createStatement()) {
-							String sequenceName = sequence.getName();
-							String target = otherTable.getName() + "." + column.getName();
-							log.info("Reassigning sequence: {} to: {}", sequenceName, target);
-							statement.execute("ALTER SEQUENCE " + sequenceName + " OWNED BY " + target + ";");
-							usedSequences.remove(sequence);
-							reassigned = true;
-							break;
-						}
+						String sequenceName = sequence.getName();
+						String target = otherTable.getName() + "." + column.getName();
+						log.info("Reassigning sequence: {} to: {}", sequenceName, target);
+						execute(connection, new QueryBuilder("ALTER SEQUENCE " + sequenceName + " OWNED BY " + target + ";"));
+						usedSequences.remove(sequence);
+						reassigned = true;
+						break;
 					}
 				}
 
@@ -268,9 +285,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 				}
 			}
 
-			try (Statement statement = connection.createStatement()) {
-				statement.execute("DROP TABLE " + refId + " CASCADE;");
-			}
+			execute(connection, new QueryBuilder("DROP TABLE " + refId + " CASCADE;"));
 		}
 
 		connection.commit();

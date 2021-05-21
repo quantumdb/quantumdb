@@ -26,6 +26,8 @@ public class Config {
 
 	private static final String FILE = ".quantumdb";
 
+	public static boolean dry_run = false;
+
 	public static Config load() throws IOException {
 		Properties properties = new Properties();
 		File file = new File(FILE);

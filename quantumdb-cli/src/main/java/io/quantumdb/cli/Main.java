@@ -15,6 +15,7 @@ import io.quantumdb.cli.commands.Changelog;
 import io.quantumdb.cli.commands.Command;
 import io.quantumdb.cli.commands.Command.Identifier;
 import io.quantumdb.cli.commands.Drop;
+import io.quantumdb.cli.commands.DryRun;
 import io.quantumdb.cli.commands.Fork;
 import io.quantumdb.cli.commands.Init;
 import io.quantumdb.cli.commands.Nuke;
@@ -27,7 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 public class Main {
 
 	public static void main(String[] args) throws IOException, SQLException {
-		log.info("Parsing command: {}", Stream.of(args).collect(Collectors.joining(" ")));
+		log.info("Parsing command: {}", String.join(" ", args));
 
 		CliWriter writer = new CliWriter();
 		List<String> arguments = normalize(args);
@@ -66,6 +67,7 @@ public class Main {
 				new Changelog(),
 				new Status(),
 				new Fork(),
+				new DryRun(),
 				new Nuke(),
 				new Drop(),
 				new Query()
