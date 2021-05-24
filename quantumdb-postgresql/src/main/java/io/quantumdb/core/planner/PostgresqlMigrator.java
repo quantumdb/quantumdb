@@ -1,6 +1,7 @@
 package io.quantumdb.core.planner;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static io.quantumdb.core.planner.QueryUtils.quoted;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -217,8 +218,8 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		String targetRefId = sync.getTarget().getRefId();
 
 		try (Statement statement = connection.createStatement()) {
-			statement.execute("DROP TRIGGER " + triggerName + " ON " + sourceRefId + ";");
-			statement.execute("DROP FUNCTION " + functionName + "();");
+			statement.execute("DROP TRIGGER " + quoted(triggerName) + " ON " + quoted(sourceRefId) + ";");
+			statement.execute("DROP FUNCTION " + quoted(functionName) + "();");
 			sync.drop();
 			log.info("Dropped synchronizer: {}/{} for: {} -> {}", triggerName, functionName, sourceRefId, targetRefId);
 		}
@@ -253,9 +254,9 @@ class PostgresqlMigrator implements DatabaseMigrator {
 					if (sequence != null && usedSequences.contains(sequence)) {
 						try (Statement statement = connection.createStatement()) {
 							String sequenceName = sequence.getName();
-							String target = otherTable.getName() + "." + column.getName();
+							String target = quoted(otherTable.getName()) + "." + quoted(column.getName());
 							log.info("Reassigning sequence: {} to: {}", sequenceName, target);
-							statement.execute("ALTER SEQUENCE " + sequenceName + " OWNED BY " + target + ";");
+							statement.execute("ALTER SEQUENCE " + quoted(sequenceName) + " OWNED BY " + target + ";");
 							usedSequences.remove(sequence);
 							reassigned = true;
 							break;
@@ -269,7 +270,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 			}
 
 			try (Statement statement = connection.createStatement()) {
-				statement.execute("DROP TABLE " + refId + " CASCADE;");
+				statement.execute("DROP TABLE " + quoted(refId) + " CASCADE;");
 			}
 		}
 
@@ -385,7 +386,8 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		private void createGhostTables() throws MigrationException {
 			try (Connection connection = backend.connect()) {
 				TableCreator creator = new TableCreator();
-				creator.create(connection, plan.getGhostTables());
+				creator.createTables(connection, plan.getGhostTables());
+				creator.createForeignKeys(connection, plan.getGhostTables());
 			}
 			catch (SQLException e) {
 				throw new MigrationException(e);
