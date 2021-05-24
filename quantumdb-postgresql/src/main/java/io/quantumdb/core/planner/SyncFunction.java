@@ -1,5 +1,6 @@
 package io.quantumdb.core.planner;
 
+import static io.quantumdb.core.planner.QueryUtils.quoted;
 import static io.quantumdb.core.utils.RandomHasher.generateHash;
 
 import java.util.LinkedHashMap;
@@ -80,8 +81,8 @@ public class SyncFunction {
 				.collect(Collectors.toMap(entry -> entry.getKey().getName(), entry -> entry.getValue().getName()));
 
 		Map<String, String> expressions = mapping.entrySet().stream()
-				.collect(Collectors.toMap(entry -> "\"" + entry.getValue() + "\"",
-						entry -> "NEW.\"" + entry.getKey() + "\"",
+				.collect(Collectors.toMap(entry -> quoted(entry.getValue()),
+						entry -> "NEW." + quoted(entry.getKey()),
 						(u, v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
 						Maps::newLinkedHashMap));
 
@@ -104,7 +105,7 @@ public class SyncFunction {
 						}
 					}
 
-					expressions.put("\"" + columnName + "\"", value);
+					expressions.put(quoted(columnName), value);
 				}
 			}
 		}
@@ -113,14 +114,14 @@ public class SyncFunction {
 		this.updateExpressions = ImmutableMap.copyOf(insertExpressions);
 
 		this.updateIdentitiesForInserts = ImmutableMap.copyOf((Map<? extends String, ? extends String>)targetTable.getPrimaryKeyColumns().stream()
-				.collect(Collectors.toMap(column -> "\"" + column.getName() + "\"",
-						column -> "NEW.\"" + reverseLookup(mapping, column.getName()) + "\"",
+				.collect(Collectors.toMap(column -> quoted(column.getName()),
+						column -> "NEW." + quoted(reverseLookup(mapping, column.getName())) + "",
 						(u, v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
 						Maps::newLinkedHashMap)));
 
 		this.updateIdentities = ImmutableMap.copyOf((Map<? extends String, ? extends String>)targetTable.getPrimaryKeyColumns().stream()
-				.collect(Collectors.toMap(column -> "\"" + column.getName() + "\"",
-						column -> "OLD.\"" + reverseLookup(mapping, column.getName()) + "\"",
+				.collect(Collectors.toMap(column -> quoted(column.getName()),
+						column -> "OLD." + quoted(reverseLookup(mapping, column.getName())),
 						(u, v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
 						Maps::newLinkedHashMap)));
 	}
@@ -135,28 +136,28 @@ public class SyncFunction {
 
 	public QueryBuilder createFunctionStatement() {
 		return new QueryBuilder()
-				.append("CREATE OR REPLACE FUNCTION " + functionName + "()")
+				.append("CREATE OR REPLACE FUNCTION " + quoted(functionName) + "()")
 				.append("RETURNS TRIGGER AS $$")
 				.append("BEGIN")
 				.append("  IF TG_OP = 'INSERT' THEN")
-				.append("    INSERT INTO " + target.getRefId())
-				.append("      (" + represent(insertExpressions, Entry::getKey, ", ") + ") VALUES")
+				.append("    INSERT INTO " + quoted(target.getRefId()))
+				.append("      (" + represent(insertExpressions, entry -> quoted(entry.getKey()), ", ") + ") VALUES")
 				.append("      (" + represent(insertExpressions, Entry::getValue, ", ") + ");")
 				.append("  ELSIF TG_OP = 'UPDATE' THEN")
 				.append("    LOOP")
-				.append("      UPDATE " + target.getRefId())
+				.append("      UPDATE " + quoted(target.getRefId()))
 				.append("        SET " + represent(updateIdentitiesForInserts, " = ", ", "))
 				.append("        WHERE " + represent(updateIdentities, " = ", " AND ") + ";")
 				.append("      IF found THEN EXIT; END IF;")
 				.append("      BEGIN")
-				.append("        INSERT INTO " + target.getRefId())
-				.append("          (" + represent(insertExpressions, Entry::getKey, ", ") + ") VALUES")
+				.append("        INSERT INTO " + quoted(target.getRefId()))
+				.append("          (" + represent(insertExpressions, entry -> quoted(entry.getKey()), ", ") + ") VALUES")
 				.append("          (" + represent(insertExpressions, Entry::getValue, ", ") + ");")
 				.append("      EXIT;")
 				.append("      EXCEPTION WHEN unique_violation THEN END;")
 				.append("	END LOOP;")
 				.append("  ELSIF TG_OP = 'DELETE' THEN")
-				.append("    DELETE FROM " + target.getRefId())
+				.append("    DELETE FROM " + quoted(target.getRefId()))
 				.append("      WHERE " + represent(updateIdentities, " = ", " AND ") + ";")
 				.append("  END IF;")
 				.append("  RETURN NEW;")
@@ -166,7 +167,7 @@ public class SyncFunction {
 
 	private String represent(Map<String, String> inputs, String innerJoin, String entryJoin) {
 		return inputs.entrySet().stream()
-				.map(entry -> entry.getKey() + innerJoin + entry.getValue())
+				.map(entry -> quoted(entry.getKey()) + innerJoin + entry.getValue())
 				.collect(Collectors.joining(entryJoin));
 	}
 
@@ -178,12 +179,12 @@ public class SyncFunction {
 
 	public QueryBuilder createTriggerStatement() {
 		return new QueryBuilder()
-				.append("CREATE TRIGGER " + triggerName)
+				.append("CREATE TRIGGER " + quoted(triggerName))
 				.append("AFTER INSERT OR UPDATE OR DELETE")
-				.append("ON " + source.getRefId())
+				.append("ON " + quoted(source.getRefId()))
 				.append("FOR EACH ROW")
 				.append("WHEN (pg_trigger_depth() = 0)")
-				.append("EXECUTE PROCEDURE " + functionName + "();");
+				.append("EXECUTE PROCEDURE " + quoted(functionName) + "();");
 	}
 
 }
