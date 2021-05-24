@@ -1,5 +1,7 @@
 package io.quantumdb.core.planner;
 
+import static io.quantumdb.core.planner.QueryUtils.quoted;
+
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -8,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
 import io.quantumdb.core.schema.definitions.Column;
@@ -26,6 +27,7 @@ public class TableCreator {
 	public void create(Connection connection, Collection<Table> tables) throws SQLException {
 		createTables(connection, tables);
 		createForeignKeys(connection, tables);
+		createIndexes(connection, tables);
 	}
 
 	public void createTables(Connection connection, Collection<Table> tables) throws SQLException {
@@ -51,7 +53,7 @@ public class TableCreator {
 		Map<String, String> sequences = Maps.newHashMap();
 
 		QueryBuilder queryBuilder = new QueryBuilder();
-		queryBuilder.append("CREATE TABLE " + table.getName() + " (");
+		queryBuilder.append("CREATE TABLE " + quoted(table.getName()) + " (");
 
 		boolean shouldOwnSequence = false;
 		boolean columnAdded = false;
@@ -60,7 +62,7 @@ public class TableCreator {
 				queryBuilder.append(", ");
 			}
 
-			queryBuilder.append(column.getName() + " " + column.getType());
+			queryBuilder.append("\"" + column.getName() + "\" " + column.getType());
 			if (column.isNotNull()) {
 				queryBuilder.append("NOT NULL");
 			}
@@ -74,11 +76,11 @@ public class TableCreator {
 					column.modifyDefaultValue(sequence);
 
 					shouldOwnSequence = true;
-					execute(connection, new QueryBuilder("CREATE SEQUENCE " + sequenceName + ";"));
+					execute(connection, new QueryBuilder("CREATE SEQUENCE " + quoted(sequenceName) + ";"));
 				}
 
 				sequences.put(sequence.getName(), column.getName());
-				queryBuilder.append("DEFAULT NEXTVAL('" + sequence.getName() + "')");
+				queryBuilder.append("DEFAULT NEXTVAL('" + quoted(sequence.getName()) + "')");
 			}
 			else if (!Strings.isNullOrEmpty(column.getDefaultValue())) {
 				queryBuilder.append("DEFAULT " + column.getDefaultValue());
@@ -92,7 +94,7 @@ public class TableCreator {
 				.collect(Collectors.toList());
 
 		if (!primaryKeyColumns.isEmpty()) {
-			queryBuilder.append(", PRIMARY KEY(" + Joiner.on(", ").join(primaryKeyColumns) + ")");
+			queryBuilder.append(", PRIMARY KEY(" + primaryKeyColumns.stream().map(QueryUtils::quoted).collect(Collectors.joining(", ")) + ")");
 		}
 
 		queryBuilder.append(")");
@@ -102,8 +104,8 @@ public class TableCreator {
 		if (shouldOwnSequence) {
 			for (Map.Entry<String, String> sequence : sequences.entrySet()) {
 				execute(connection, new QueryBuilder()
-						.append("ALTER SEQUENCE " + sequence.getKey())
-						.append("OWNED BY " + table.getName() + "." + sequence.getValue()));
+						.append("ALTER SEQUENCE " + quoted(sequence.getKey()))
+						.append("OWNED BY " + quoted(table.getName()) + "." + quoted(sequence.getValue())));
 			}
 		}
 	}
@@ -111,11 +113,11 @@ public class TableCreator {
 	private void createForeignKeys(Connection connection, Table table) throws SQLException {
 		for (ForeignKey foreignKey : table.getForeignKeys()) {
 			QueryBuilder queryBuilder = new QueryBuilder();
-			queryBuilder.append("ALTER TABLE " + table.getName());
-			queryBuilder.append("ADD CONSTRAINT " + foreignKey.getForeignKeyName());
-			queryBuilder.append("FOREIGN KEY (" + Joiner.on(", ").join(foreignKey.getReferencingColumns()) + ")");
-			queryBuilder.append("REFERENCES " + foreignKey.getReferredTableName());
-			queryBuilder.append("(" + Joiner.on(", ").join(foreignKey.getReferredColumns()) + ")");
+			queryBuilder.append("ALTER TABLE " + quoted(table.getName()));
+			queryBuilder.append("ADD CONSTRAINT " + quoted(foreignKey.getForeignKeyName()));
+			queryBuilder.append("FOREIGN KEY (" + foreignKey.getReferencingColumns().stream().map(QueryUtils::quoted).collect(Collectors.joining(", ")) + ")");
+			queryBuilder.append("REFERENCES " + quoted(foreignKey.getReferredTableName()));
+			queryBuilder.append("(" + foreignKey.getReferredColumns().stream().map(QueryUtils::quoted).collect(Collectors.joining(", ")) + ")");
 			queryBuilder.append("ON UPDATE " + valueOf(foreignKey.getOnUpdate()));
 			queryBuilder.append("ON DELETE " + valueOf(foreignKey.getOnDelete()));
 			queryBuilder.append("DEFERRABLE");
@@ -132,11 +134,11 @@ public class TableCreator {
 			if (index.isUnique()) {
 				queryBuilder.append("UNIQUE");
 			}
-			queryBuilder.append("INDEX " + index.getIndexName());
-			queryBuilder.append("ON " + index.getParent().getName());
-			queryBuilder.append("(" + Joiner.on(", ").join(index.getColumns()) + ");");
+			queryBuilder.append("INDEX " + quoted(index.getIndexName()));
+			queryBuilder.append("ON " + quoted(index.getParent().getName()));
+			queryBuilder.append("(" + index.getColumns().stream().map(QueryUtils::quoted).collect(Collectors.joining(", ")) + ");");
 
-			log.info("Creating index key: {}", index.getIndexName());
+			log.info("Creating index key: {} ({})", index.getIndexName(), index.getColumns());
 			execute(connection, queryBuilder);
 		}
 	}
