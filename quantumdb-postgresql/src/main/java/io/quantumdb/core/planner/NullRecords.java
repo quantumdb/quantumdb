@@ -1,5 +1,7 @@
 package io.quantumdb.core.planner;
 
+import static io.quantumdb.core.planner.QueryUtils.quoted;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -86,8 +88,8 @@ public class NullRecords {
 	private void dropNullObject(Connection connection, Table table) throws SQLException {
 		Identity identity = identities.get(table);
 
-		QueryBuilder queryBuilder = new QueryBuilder("DELETE FROM " + table.getName() + " WHERE");
-		queryBuilder.append(Joiner.on(" = ?, ").join(identity.keys()) + " = ?");
+		QueryBuilder queryBuilder = new QueryBuilder("DELETE FROM " + quoted(table.getName()) + " WHERE");
+		queryBuilder.append(identity.keys().stream().map(value -> quoted(value) + " = ?").collect(Collectors.joining(" AND ")));
 
 		try (PreparedStatement statement = connection.prepareStatement(queryBuilder.toString())) {
 			int i = 0;
@@ -120,13 +122,13 @@ public class NullRecords {
 		Identity identity = generateIdentity(connection, table, generatedIdentities);
 		if (columnNames.isEmpty()) {
 			builder.append("INSERT INTO")
-					.append(table.getName())
+					.append(quoted(table.getName()))
 					.append("DEFAULT VALUES;");
 		}
 		else {
 			builder.append("INSERT INTO")
-					.append(table.getName())
-					.append("(" + Joiner.on(", ").join(columnNames) + ")")
+					.append(quoted(table.getName()))
+					.append("(" + columnNames.stream().map(QueryUtils::quoted).collect(Collectors.joining(", ")) + ")")
 					.append("VALUES")
 					.append("(" + Joiner.on(", ").join(columnValues) + ");");
 		}
@@ -184,7 +186,7 @@ public class NullRecords {
 				Sequence sequence = primaryKeyColumn.getSequence();
 
 				try (Statement statement = connection.createStatement()) {
-					ResultSet resultSet = statement.executeQuery("SELECT NEXTVAL('" + sequence.getName() + "') AS val");
+					ResultSet resultSet = statement.executeQuery("SELECT NEXTVAL('" + quoted(sequence.getName()) + "') AS val");
 					if (resultSet.next()) {
 						Object value = resultSet.getLong("val");
 						identity.add(primaryKeyColumn.getName(), value);

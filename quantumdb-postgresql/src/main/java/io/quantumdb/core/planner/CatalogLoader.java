@@ -1,5 +1,6 @@
 package io.quantumdb.core.planner;
 
+import static io.quantumdb.core.planner.QueryUtils.quoted;
 import static io.quantumdb.core.schema.definitions.ForeignKey.Action.CASCADE;
 import static io.quantumdb.core.schema.definitions.ForeignKey.Action.NO_ACTION;
 import static io.quantumdb.core.schema.definitions.ForeignKey.Action.RESTRICT;
@@ -36,7 +37,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 class CatalogLoader {
 
-	private static final Pattern SEQUENCE_EXPRESSION = Pattern.compile("nextval\\(\\'(\\w+_id_seq)\\'::regclass\\)", Pattern.CASE_INSENSITIVE);
+	private static final Pattern SEQUENCE_EXPRESSION = Pattern.compile("nextval\\(\\'\"?(\\w+_id_seq)\"?\\'::regclass\\)", Pattern.CASE_INSENSITIVE);
 
 	static Catalog load(Connection connection, String catalogName) throws SQLException {
 		Catalog catalog = new Catalog(catalogName);
@@ -174,7 +175,7 @@ class CatalogLoader {
 				.append("FROM pg_index, pg_class, pg_attribute, pg_namespace ")
 				.append("WHERE ")
 				.append("  nspname = 'public' AND ")
-				.append("  pg_class.oid = '\"" + tableName + "\"'::regclass AND ")
+				.append("  pg_class.oid = '" + quoted(tableName) + "'::regclass AND ")
 				.append("  indrelid = pg_class.oid AND ")
 				.append("  pg_class.relnamespace = pg_namespace.oid AND ")
 				.append("  pg_attribute.attrelid = pg_class.oid AND ")
