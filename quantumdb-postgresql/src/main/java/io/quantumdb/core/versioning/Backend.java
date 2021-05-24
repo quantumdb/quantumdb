@@ -383,21 +383,6 @@ public class Backend {
 			while (resultSet.next()) {
 				String refId = resultSet.getString("ref_id");
 				if (!refIds.remove(refId)) {
-					try (Statement stmt = connection.createStatement()) {
-						ResultSet r = stmt.executeQuery("SELECT * FROM quantumdb.column_mappings");
-						printResults(r);
-					}
-
-					try (Statement stmt = connection.createStatement()) {
-						ResultSet r = stmt.executeQuery("SELECT * FROM quantumdb.table_columns");
-						printResults(r);
-					}
-
-					try (Statement stmt = connection.createStatement()) {
-						ResultSet r = stmt.executeQuery("SELECT * FROM quantumdb.refs");
-						printResults(r);
-					}
-
 					try (PreparedStatement delete = connection.prepareStatement(deleteQuery)) {
 						delete.setString(1, refId);
 						delete.execute();
