@@ -1,10 +1,10 @@
 package io.quantumdb.core.planner;
 
+import static io.quantumdb.core.planner.QueryUtils.quoted;
+
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import static io.quantumdb.core.planner.QueryUtils.quoted;
-
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
