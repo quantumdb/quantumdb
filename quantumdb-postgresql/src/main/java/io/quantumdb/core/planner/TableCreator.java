@@ -2,6 +2,9 @@ package io.quantumdb.core.planner;
 
 import static io.quantumdb.core.planner.QueryUtils.quoted;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -12,6 +15,7 @@ import java.util.stream.Collectors;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
+import io.quantumdb.core.backends.Config;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.ForeignKey;
 import io.quantumdb.core.schema.definitions.ForeignKey.Action;
@@ -156,12 +160,25 @@ public class TableCreator {
 
 	private void execute(Connection connection, QueryBuilder queryBuilder) throws SQLException {
 		String query = queryBuilder.toString();
-		try (Statement statement = connection.createStatement()) {
-			log.debug("Executing: " + query);
-			statement.execute(query);
+		if (Config.dry_run) {
+			try {
+				FileWriter myWriter = new FileWriter("dry-run.sql", true);
+				BufferedWriter writer = new BufferedWriter(myWriter);
+				writer.write(query);
+				writer.newLine();
+				writer.flush();
+			}catch (IOException e) {
+				throw new SQLException(e);
+			}
 		}
-		catch (SQLException e) {
-			throw new SQLException(query, e);
+		else {
+			try (Statement statement = connection.createStatement()) {
+				log.debug("Executing: " + query);
+				statement.execute(query);
+			}
+			catch (SQLException e) {
+				throw new SQLException(query, e);
+			}
 		}
 	}
 

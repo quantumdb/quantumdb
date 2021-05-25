@@ -49,6 +49,8 @@ public class PostgresqlBackend implements io.quantumdb.core.backends.Backend {
 
 	@Override
 	public void persistState(State state) throws SQLException {
+		if (Config.dry_run) { return; };
+
 		log.info("Persisting state to database...");
 
 		try (Connection connection = connect()) {
