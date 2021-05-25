@@ -3,6 +3,8 @@ package io.quantumdb.core.planner;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import static io.quantumdb.core.planner.QueryUtils.quoted;
+
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -76,14 +78,14 @@ class TableDataMigrator {
 
 				QueryBuilder migrator = new QueryBuilder();
 				if (lastProcessedId.isEmpty()) {
-					migrator.append("SELECT * FROM " + initialMigrator.getName() + "();");
+					migrator.append("SELECT * FROM " + quoted(initialMigrator.getName()) + "();");
 				}
 				else {
 					List<String> values = successiveMigrator.getParameters().stream()
 							.map(parameterName -> asExpression(lastProcessedId.get(stripEscaping(parameterName))))
 							.collect(Collectors.toList());
 
-					migrator.append("SELECT * FROM " + successiveMigrator.getName() + "(")
+					migrator.append("SELECT * FROM " + quoted(successiveMigrator.getName()) + "(")
 							.append(Joiner.on(", ").join(values) + ");");
 				}
 
@@ -132,9 +134,9 @@ class TableDataMigrator {
 		try (Connection connection = backend.connect()) {
 			try (Statement statement = connection.createStatement()) {
 				String query = new QueryBuilder()
-						.append("SELECT " + Joiner.on(", ").join(primaryKeyColumns))
-						.append("FROM " + from.getName())
-						.append("ORDER BY " + Joiner.on(" DESC, ").join(primaryKeyColumns) + " DESC")
+						.append("SELECT " + primaryKeyColumns.stream().map(QueryUtils::quoted).collect(Collectors.joining(", ")))
+						.append("FROM " + quoted(from.getName()))
+						.append("ORDER BY " + primaryKeyColumns.stream().map(value -> quoted(value) + " DESC").collect(Collectors.joining(", ")))
 						.append("LIMIT 1")
 						.toString();
 

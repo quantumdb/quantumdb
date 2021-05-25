@@ -1,6 +1,7 @@
 package io.quantumdb.core.planner;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static io.quantumdb.core.planner.QueryUtils.quoted;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -236,8 +237,8 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		String targetRefId = sync.getTarget().getRefId();
 
 		try (Statement statement = connection.createStatement()) {
-			execute(connection, new QueryBuilder("DROP TRIGGER " + triggerName + " ON " + sourceRefId + ";"));
-			execute(connection, new QueryBuilder("DROP FUNCTION " + functionName + "();"));
+			execute(connection, new QueryBuilder("DROP TRIGGER " + quoted(triggerName) + " ON " + quoted(sourceRefId) + ";"));
+			execute(connection, new QueryBuilder("DROP FUNCTION " + quoted(functionName) + "();"));
 			sync.drop();
 			log.info("Dropped synchronizer: {}/{} for: {} -> {}", triggerName, functionName, sourceRefId, targetRefId);
 		}
@@ -271,9 +272,9 @@ class PostgresqlMigrator implements DatabaseMigrator {
 					Sequence sequence = column.getSequence();
 					if (sequence != null && usedSequences.contains(sequence)) {
 						String sequenceName = sequence.getName();
-						String target = otherTable.getName() + "." + column.getName();
+						String target = quoted(otherTable.getName()) + "." + quoted(column.getName());
 						log.info("Reassigning sequence: {} to: {}", sequenceName, target);
-						execute(connection, new QueryBuilder("ALTER SEQUENCE " + sequenceName + " OWNED BY " + target + ";"));
+						execute(connection, new QueryBuilder("ALTER SEQUENCE " + quoted(sequenceName) + " OWNED BY " + target + ";"));
 						usedSequences.remove(sequence);
 						reassigned = true;
 						break;
@@ -285,7 +286,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 				}
 			}
 
-			execute(connection, new QueryBuilder("DROP TABLE " + refId + " CASCADE;"));
+			execute(connection, new QueryBuilder("DROP TABLE " + quoted(refId) + " CASCADE;"));
 		}
 
 		connection.commit();
@@ -400,7 +401,8 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		private void createGhostTables() throws MigrationException {
 			try (Connection connection = backend.connect()) {
 				TableCreator creator = new TableCreator();
-				creator.create(connection, plan.getGhostTables());
+				creator.createTables(connection, plan.getGhostTables());
+				creator.createForeignKeys(connection, plan.getGhostTables());
 			}
 			catch (SQLException e) {
 				throw new MigrationException(e);

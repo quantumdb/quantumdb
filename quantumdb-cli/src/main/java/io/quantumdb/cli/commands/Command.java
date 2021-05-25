@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 import io.quantumdb.cli.utils.CliException;
@@ -74,13 +75,19 @@ public abstract class Command {
 
 		for (Version version : refLog.getVersions()) {
 			ChangeSet changeSet = version.getChangeSet();
-			writer.write(version.getId() + ": " + changeSet.getDescription(), Context.SUCCESS);
+			String description = Optional.ofNullable(changeSet.getDescription())
+					.orElse(changeSet.getId());
+
+			writer.write(version.getId() + ": " + description, Context.SUCCESS);
 		}
 
 		if (refLog.getVersions().isEmpty()) {
 			Version version = changelog.getRoot();
 			ChangeSet changeSet = version.getChangeSet();
-			writer.write(version.getId() + ": " + changeSet.getDescription(), Context.SUCCESS);
+			String description = Optional.ofNullable(changeSet.getDescription())
+					.orElse(changeSet.getId());
+
+			writer.write(version.getId() + ": " + description, Context.SUCCESS);
 		}
 
 		writer.indent(-1);
