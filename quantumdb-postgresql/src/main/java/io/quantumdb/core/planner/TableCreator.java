@@ -62,7 +62,7 @@ public class TableCreator {
 				queryBuilder.append(", ");
 			}
 
-			queryBuilder.append("\"" + column.getName() + "\" " + column.getType());
+			queryBuilder.append(quoted(column.getName()) + " " + column.getType());
 			if (column.isNotNull()) {
 				queryBuilder.append("NOT NULL");
 			}
