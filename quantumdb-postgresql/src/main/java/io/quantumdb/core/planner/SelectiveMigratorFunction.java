@@ -54,7 +54,7 @@ public class SelectiveMigratorFunction {
 				.collect(Collectors.toList());
 
 		List<String> functionParameters = primaryKeyColumns.stream()
-				.map(column -> functionParameterMapping.get(quoted(column.getName())) + " " + column.getType().toString())
+				.map(column -> functionParameterMapping.get(column.getName()) + " " + column.getType().toString())
 				.collect(Collectors.toList());
 
 		String functionName = "migrator_" + RandomHasher.generateHash();
