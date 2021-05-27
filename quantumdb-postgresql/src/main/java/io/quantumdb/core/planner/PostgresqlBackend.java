@@ -20,21 +20,11 @@ import lombok.extern.slf4j.Slf4j;
 public class PostgresqlBackend implements io.quantumdb.core.backends.Backend {
 
 	private final Backend backend;
-
-	private final String jdbcUrl;
-	private final String jdbcUser;
-	private final String jdbcPass;
-	private final String jdbcCatalog;
-	private final String driver;
+	private final Config config;
 
 	public PostgresqlBackend(Config config) {
-		this.driver = config.getDriver();
+		this.config = config;
 		this.backend = new Backend();
-
-		this.jdbcUrl = config.getUrl();
-		this.jdbcUser = config.getUser();
-		this.jdbcPass = config.getPassword();
-		this.jdbcCatalog = config.getCatalog();
 	}
 
 	@Override
@@ -42,13 +32,17 @@ public class PostgresqlBackend implements io.quantumdb.core.backends.Backend {
 		log.trace("Loading state from database...");
 		try (Connection connection = connect()) {
 			QuantumTables.prepare(connection);
-			Catalog catalog = CatalogLoader.load(connection, jdbcCatalog);
+			Catalog catalog = CatalogLoader.load(connection, config.getCatalog());
 			return backend.load(connection, catalog);
 		}
 	}
 
 	@Override
 	public void persistState(State state) throws SQLException {
+		if (config.isDryRun()) {
+			return;
+		}
+
 		log.info("Persisting state to database...");
 
 		try (Connection connection = connect()) {
@@ -60,7 +54,7 @@ public class PostgresqlBackend implements io.quantumdb.core.backends.Backend {
 
 	@Override
 	public PostgresqlMigrator getMigrator() {
-		return new PostgresqlMigrator(this);
+		return new PostgresqlMigrator(this, config);
 	}
 
 	@Override
@@ -86,8 +80,8 @@ public class PostgresqlBackend implements io.quantumdb.core.backends.Backend {
 	@Override
 	@SneakyThrows(ClassNotFoundException.class)
 	public Connection connect() throws SQLException {
-		Class.forName(driver);
-		Connection connection = DriverManager.getConnection(jdbcUrl, jdbcUser, jdbcPass);
+		Class.forName(config.getDriver());
+		Connection connection = DriverManager.getConnection(config.getUrl(), config.getUser(), config.getPassword());
 		try (Statement statement = connection.createStatement()) {
 			statement.execute("SET SCHEMA 'public';");
 		}

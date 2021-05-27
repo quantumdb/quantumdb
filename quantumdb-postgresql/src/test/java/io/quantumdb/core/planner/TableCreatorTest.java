@@ -25,8 +25,6 @@ public class TableCreatorTest {
 	@Rule
 	public final PostgresqlDatabase database = new PostgresqlDatabase();
 
-	private final TableCreator tableCreator = new TableCreator();
-
 	@Test
 	public void testCreatingSimpleTable() throws SQLException {
 		try (Connection connection = database.createConnection()) {
@@ -37,6 +35,7 @@ public class TableCreatorTest {
 
 			catalog.addTable(users);
 
+			TableCreator tableCreator = new TableCreator(database.getConfig());
 			tableCreator.create(connection, Lists.newArrayList(users));
 		}
 
@@ -70,6 +69,7 @@ public class TableCreatorTest {
 
 			catalog.addTable(users);
 
+			TableCreator tableCreator = new TableCreator(database.getConfig());
 			tableCreator.create(connection, Lists.newArrayList(users));
 		}
 
@@ -103,6 +103,7 @@ public class TableCreatorTest {
 
 			catalog.addTable(users);
 
+			TableCreator tableCreator = new TableCreator(database.getConfig());
 			tableCreator.create(connection, Lists.newArrayList(users));
 		}
 
@@ -137,6 +138,7 @@ public class TableCreatorTest {
 
 			catalog.addTable(users);
 
+			TableCreator tableCreator = new TableCreator(database.getConfig());
 			tableCreator.create(connection, Lists.newArrayList(users));
 		}
 
@@ -184,6 +186,7 @@ public class TableCreatorTest {
 			catalog.addTable(users);
 			catalog.addTable(messages);
 
+			TableCreator tableCreator = new TableCreator(database.getConfig());
 			tableCreator.create(connection, Lists.newArrayList(users, messages));
 		}
 

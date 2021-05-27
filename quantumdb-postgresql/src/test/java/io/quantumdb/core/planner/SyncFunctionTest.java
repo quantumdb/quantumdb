@@ -47,7 +47,7 @@ public class SyncFunctionTest {
 				.addColumn(new Column("id", PostgresTypes.bigint(), Hint.PRIMARY_KEY, Hint.AUTO_INCREMENT))
 				.addColumn(new Column("name", PostgresTypes.bigint(), Hint.NOT_NULL)));
 
-		NullRecords nullRecords = new NullRecords();
+		NullRecords nullRecords = new NullRecords(database.getConfig());
 
 		Map<ColumnRef, ColumnRef> columnMapping = refLog.getColumnMapping(t1, t2);
 		SyncFunction function = new SyncFunction(refLog, t1, t2, columnMapping, catalog, nullRecords,
