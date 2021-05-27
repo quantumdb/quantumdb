@@ -1,10 +1,8 @@
 package io.quantumdb.core.planner;
 
+import static io.quantumdb.core.planner.QueryUtils.execute;
 import static io.quantumdb.core.planner.QueryUtils.quoted;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -39,11 +37,13 @@ class TableDataMigrator {
 	private static final long BATCH_SIZE = 2_000;
 	private static final long WAIT_TIME = 50;
 
-	private final RefLog refLog;
 	private final Backend backend;
+	private final Config config;
+	private final RefLog refLog;
 
-	TableDataMigrator(Backend backend, RefLog refLog) {
+	TableDataMigrator(Backend backend, Config config, RefLog refLog) {
 		this.backend = backend;
+		this.config = config;
 		this.refLog = refLog;
 	}
 
@@ -67,56 +67,65 @@ class TableDataMigrator {
 		}
 
 		try (Connection connection = backend.connect()) {
-			execute(connection, initialMigrator.getCreateStatement());
-			execute(connection, successiveMigrator.getCreateStatement());
+			execute(connection, config, initialMigrator.getCreateStatement());
+			execute(connection, config, successiveMigrator.getCreateStatement());
 
-			long start = System.currentTimeMillis();
-			Map<String, Object> lastProcessedId = Maps.newHashMap();
+			if (!config.isDryRun()) {
+				migrate(connection, source, target, highestId, initialMigrator, successiveMigrator);
+			}
 
-			while (!Config.dry_run) {
-				long innerStart = System.currentTimeMillis();
+			execute(connection, config, initialMigrator.getDropStatement());
+			execute(connection, config, successiveMigrator.getDropStatement());
+		}
+	}
 
-				QueryBuilder migrator = new QueryBuilder();
-				if (lastProcessedId.isEmpty()) {
-					migrator.append("SELECT * FROM " + quoted(initialMigrator.getName()) + "();");
-				}
-				else {
-					List<String> values = successiveMigrator.getParameters().stream()
-							.map(parameterName -> asExpression(lastProcessedId.get(stripEscaping(parameterName))))
-							.collect(Collectors.toList());
+	private void migrate(Connection connection, Table source, Table target, Map<String, Object> highestId,
+			MigratorFunction initialMigrator, MigratorFunction successiveMigrator)
+			throws SQLException, InterruptedException {
 
-					migrator.append("SELECT * FROM " + quoted(successiveMigrator.getName()) + "(")
-							.append(Joiner.on(", ").join(values) + ");");
-				}
+		long start = System.currentTimeMillis();
+		Map<String, Object> lastProcessedId = Maps.newHashMap();
 
-				try (Statement statement = connection.createStatement()) {
-					ResultSet resultSet = statement.executeQuery(migrator.toString());
+		while (true) {
+			long innerStart = System.currentTimeMillis();
 
-					if (resultSet.next()) {
-						lastProcessedId.putAll(readIdentity(source, resultSet));
-						if (greaterThanOrEqualsTo(lastProcessedId, highestId)) {
-							break;
-						}
-					}
-					else {
-						// No records returned. We're done migrating data...
+			QueryBuilder migrator = new QueryBuilder();
+			if (lastProcessedId.isEmpty()) {
+				migrator.append("SELECT * FROM " + quoted(initialMigrator.getName()) + "();");
+			}
+			else {
+				List<String> values = successiveMigrator.getParameters().stream()
+						.map(parameterName -> asExpression(lastProcessedId.get(stripEscaping(parameterName))))
+						.collect(Collectors.toList());
+
+				migrator.append("SELECT * FROM " + quoted(successiveMigrator.getName()) + "(")
+						.append(Joiner.on(", ").join(values) + ");");
+			}
+
+			try (Statement statement = connection.createStatement()) {
+				ResultSet resultSet = statement.executeQuery(migrator.toString());
+
+				if (resultSet.next()) {
+					lastProcessedId.putAll(readIdentity(source, resultSet));
+					if (greaterThanOrEqualsTo(lastProcessedId, highestId)) {
 						break;
 					}
 				}
-
-				long innerEnd = System.currentTimeMillis();
-				log.info("Migration data source: {} target: {}, now at identity: {}, took: {} ms", source.getName(),
-						target.getName(), lastProcessedId, innerEnd - innerStart);
-
-				Thread.sleep(WAIT_TIME);
+				else {
+					// No records returned. We're done migrating data...
+					break;
+				}
 			}
 
-			long end = System.currentTimeMillis();
-			log.info("Migrating records source: {} target: {} took: {} ms", source.getName(), target.getName(), end - start);
+			long innerEnd = System.currentTimeMillis();
+			log.info("Migration data source: {} target: {}, now at identity: {}, took: {} ms", source.getName(),
+					target.getName(), lastProcessedId, innerEnd - innerStart);
 
-			execute(connection, initialMigrator.getDropStatement());
-			execute(connection, successiveMigrator.getDropStatement());
+			Thread.sleep(WAIT_TIME);
 		}
+
+		long end = System.currentTimeMillis();
+		log.info("Migrating records source: {} target: {} took: {} ms", source.getName(), target.getName(), end - start);
 	}
 
 	private String stripEscaping(String parameterName) {
@@ -266,27 +275,6 @@ class TableDataMigrator {
 			case UUID:
 			default:
 				return UUID.fromString(value);
-		}
-	}
-
-	private void execute(Connection connection, String query) throws SQLException {
-		if (Config.dry_run) {
-			try {
-				FileWriter myWriter = new FileWriter("dry-run.sql", true);
-				BufferedWriter writer = new BufferedWriter(myWriter);
-				writer.write(query);
-				writer.newLine();
-				writer.flush();
-			}
-			catch (IOException e) {
-				throw new SQLException(e);
-			}
-		}
-		else {
-			try (Statement statement = connection.createStatement()) {
-				log.debug("Executing: " + query);
-				statement.execute(query);
-			}
 		}
 	}
 

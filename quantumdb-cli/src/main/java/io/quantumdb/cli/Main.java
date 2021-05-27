@@ -6,7 +6,6 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
@@ -15,7 +14,6 @@ import io.quantumdb.cli.commands.Changelog;
 import io.quantumdb.cli.commands.Command;
 import io.quantumdb.cli.commands.Command.Identifier;
 import io.quantumdb.cli.commands.Drop;
-import io.quantumdb.cli.commands.DryRun;
 import io.quantumdb.cli.commands.Fork;
 import io.quantumdb.cli.commands.Init;
 import io.quantumdb.cli.commands.Nuke;
@@ -67,7 +65,6 @@ public class Main {
 				new Changelog(),
 				new Status(),
 				new Fork(),
-				new DryRun(),
 				new Nuke(),
 				new Drop(),
 				new Query()

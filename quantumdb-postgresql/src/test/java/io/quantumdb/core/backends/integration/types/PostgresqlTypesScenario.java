@@ -75,7 +75,7 @@ public class PostgresqlTypesScenario extends PostgresqlDatabase {
 	public void before() throws SQLException, MigrationException, ClassNotFoundException {
 		super.before();
 
-		TableCreator tableCreator = new TableCreator();
+		TableCreator tableCreator = new TableCreator(getConfig());
 
 		Table numeric_small = new Table(NUMERIC_SMALL_ID)
 				// Serial will automatically create a sequence (AUTO_INCREMENT) and NOT_NULL constraint

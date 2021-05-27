@@ -1,13 +1,10 @@
 package io.quantumdb.core.planner;
 
+import static io.quantumdb.core.planner.QueryUtils.execute;
 import static io.quantumdb.core.planner.QueryUtils.quoted;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -23,10 +20,14 @@ import io.quantumdb.core.schema.definitions.Index;
 import io.quantumdb.core.schema.definitions.Sequence;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.utils.QueryBuilder;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@RequiredArgsConstructor
 public class TableCreator {
+
+	private final Config config;
 
 	public void create(Connection connection, Collection<Table> tables) throws SQLException {
 		createTables(connection, tables);
@@ -80,7 +81,7 @@ public class TableCreator {
 					column.modifyDefaultValue(sequence);
 
 					shouldOwnSequence = true;
-					execute(connection, new QueryBuilder("CREATE SEQUENCE " + quoted(sequenceName) + ";"));
+					execute(connection, config, "CREATE SEQUENCE " + quoted(sequenceName) + ";");
 				}
 
 				sequences.put(sequence.getName(), column.getName());
@@ -101,15 +102,16 @@ public class TableCreator {
 			queryBuilder.append(", PRIMARY KEY(" + primaryKeyColumns.stream().map(QueryUtils::quoted).collect(Collectors.joining(", ")) + ")");
 		}
 
-		queryBuilder.append(")");
+		queryBuilder.append(");");
 
-		execute(connection, queryBuilder);
+		execute(connection, config, queryBuilder.toString());
 
 		if (shouldOwnSequence) {
 			for (Map.Entry<String, String> sequence : sequences.entrySet()) {
-				execute(connection, new QueryBuilder()
+				execute(connection, config, new QueryBuilder()
 						.append("ALTER SEQUENCE " + quoted(sequence.getKey()))
-						.append("OWNED BY " + quoted(table.getName()) + "." + quoted(sequence.getValue())));
+						.append("OWNED BY " + quoted(table.getName()) + "." + quoted(sequence.getValue()) + ";")
+						.toString());
 			}
 		}
 	}
@@ -127,7 +129,7 @@ public class TableCreator {
 			queryBuilder.append("DEFERRABLE");
 
 			log.info("Creating foreign key: {}", foreignKey.getForeignKeyName());
-			execute(connection, queryBuilder);
+			execute(connection, config, queryBuilder.toString());
 		}
 	}
 
@@ -143,7 +145,7 @@ public class TableCreator {
 			queryBuilder.append("(" + index.getColumns().stream().map(QueryUtils::quoted).collect(Collectors.joining(", ")) + ");");
 
 			log.info("Creating index key: {} ({})", index.getIndexName(), index.getColumns());
-			execute(connection, queryBuilder);
+			execute(connection, config, queryBuilder.toString());
 		}
 	}
 
@@ -155,30 +157,6 @@ public class TableCreator {
 			case SET_DEFAULT: return "SET DEFAULT";
 			case SET_NULL: return "SET NULL";
 			default: throw new IllegalArgumentException("Action: " + action + " is not supported!");
-		}
-	}
-
-	private void execute(Connection connection, QueryBuilder queryBuilder) throws SQLException {
-		String query = queryBuilder.toString();
-		if (Config.dry_run) {
-			try {
-				FileWriter myWriter = new FileWriter("dry-run.sql", true);
-				BufferedWriter writer = new BufferedWriter(myWriter);
-				writer.write(query);
-				writer.newLine();
-				writer.flush();
-			}catch (IOException e) {
-				throw new SQLException(e);
-			}
-		}
-		else {
-			try (Statement statement = connection.createStatement()) {
-				log.debug("Executing: " + query);
-				statement.execute(query);
-			}
-			catch (SQLException e) {
-				throw new SQLException(query, e);
-			}
 		}
 	}
 

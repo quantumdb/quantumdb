@@ -1,10 +1,8 @@
 package io.quantumdb.core.planner;
 
+import static io.quantumdb.core.planner.QueryUtils.execute;
 import static io.quantumdb.core.planner.QueryUtils.quoted;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -27,10 +25,14 @@ import io.quantumdb.core.schema.definitions.Identity;
 import io.quantumdb.core.schema.definitions.Sequence;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.utils.QueryBuilder;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@RequiredArgsConstructor
 public class NullRecords {
+
+	private final Config config;
 
 	private final Map<Table, Identity> identities = Maps.newHashMap();
 
@@ -42,6 +44,8 @@ public class NullRecords {
 		Map<Table, Identity> persisted = Maps.newHashMap();
 
 		try (Connection connection = backend.connect()) {
+			connection.setAutoCommit(false);
+
 			ensureDeferredConstraints(connection);
 
 			Set<String> tableNames = tables.stream()
@@ -70,6 +74,8 @@ public class NullRecords {
 		}
 
 		try (Connection connection = backend.connect()) {
+			connection.setAutoCommit(false);
+
 			ensureDeferredConstraints(connection);
 
 			log.debug("Dropping NULL objects for tables: " + tables);
@@ -104,26 +110,7 @@ public class NullRecords {
 				ColumnType type = column.getType();
 				type.getValueSetter().setValue(statement, i, value);
 			}
-			execute(statement);
-		}
-	}
-
-	private void execute(PreparedStatement statement) throws SQLException {
-		if (Config.dry_run) {
-			String query = statement.toString();
-			try {
-				FileWriter myWriter = new FileWriter("dry-run.sql", true);
-				BufferedWriter writer = new BufferedWriter(myWriter);
-				writer.write(query);
-				writer.newLine();
-				writer.flush();
-			}
-			catch (IOException e) {
-				throw new SQLException(e);
-			}
-		}
-		else {
-			statement.execute();
+			execute(connection, config, statement.toString());
 		}
 	}
 
@@ -186,7 +173,7 @@ public class NullRecords {
 
 			log.debug("Inserted " + table.getName() + " - " + values);
 
-			execute(statement);
+			execute(connection, config, statement.toString());
 		}
 		catch (SQLException e) {
 			log.error("Error while executing query: " + builder.toString() + " - " + e.getMessage(), e);
@@ -233,24 +220,7 @@ public class NullRecords {
 	}
 
 	private void ensureDeferredConstraints(Connection connection) throws SQLException {
-		if (Config.dry_run) {
-			try {
-				FileWriter myWriter = new FileWriter("dry-run.sql", true);
-				BufferedWriter writer = new BufferedWriter(myWriter);
-				writer.write("SET CONSTRAINTS ALL DEFERRED;");
-				writer.newLine();
-				writer.flush();
-			}
-			catch (IOException e) {
-				throw new SQLException(e);
-			}
-		}
-		else {
-			connection.setAutoCommit(false);
-			try (Statement statement = connection.createStatement()) {
-				statement.execute("SET CONSTRAINTS ALL DEFERRED;");
-			}
-		}
+		execute(connection, config, "SET CONSTRAINTS ALL DEFERRED;");
 	}
 
 	private void commit(Connection connection) throws SQLException {
