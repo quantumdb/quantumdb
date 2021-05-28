@@ -1,5 +1,7 @@
 package io.quantumdb.core.backends;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -9,8 +11,6 @@ import java.util.Properties;
 
 import com.google.common.collect.Lists;
 import lombok.extern.slf4j.Slf4j;
-
-import static com.google.common.base.Preconditions.checkArgument;
 
 @Slf4j
 public class Config {
@@ -23,6 +23,8 @@ public class Config {
 	private static final String CATALOG = "catalog";
 	private static final String PASSWORD = "password";
 	private static final String DRIVER = "driver";
+	private static final String DRY_RUN = "dryRun";
+	private static final String OUTPUT_FILE = "outputFile";
 
 	private static final String FILE = ".quantumdb";
 
@@ -35,64 +37,90 @@ public class Config {
 		return new Config(properties);
 	}
 
-	private final Properties properties;
+	private final Properties persistentProperties;
+	private final Properties transientProperties;
 
 	public Config() {
 		this(new Properties());
 	}
 
-	private Config(Properties properties) {
-		this.properties = properties;
+	private Config(Properties persistentProperties) {
+		this(persistentProperties, new Properties());
+	}
+
+	private Config(Properties persistentProperties, Properties transientProperties) {
+		this.persistentProperties = persistentProperties;
+		this.transientProperties = transientProperties;
 	}
 
 	public String getUrl() {
-		return properties.getProperty(URL);
+		return persistentProperties.getProperty(URL);
 	}
 
 	public Config setUrl(String url) {
-		properties.setProperty(URL, url);
+		persistentProperties.setProperty(URL, url);
 		return this;
 	}
 
 	public String getUser() {
-		return properties.getProperty(USER);
+		return persistentProperties.getProperty(USER);
 	}
 
 	public Config setUser(String user) {
-		properties.setProperty(USER, user);
+		persistentProperties.setProperty(USER, user);
 		return this;
 	}
 
 	public String getCatalog() {
-		return properties.getProperty(CATALOG);
+		return persistentProperties.getProperty(CATALOG);
 	}
 
 	public Config setCatalog(String catalog) {
-		properties.setProperty(CATALOG, catalog);
+		persistentProperties.setProperty(CATALOG, catalog);
 		return this;
 	}
 
 	public String getPassword() {
-		return properties.getProperty(PASSWORD);
+		return persistentProperties.getProperty(PASSWORD);
 	}
 
 	public Config setPassword(String password) {
-		properties.setProperty(PASSWORD, password);
+		persistentProperties.setProperty(PASSWORD, password);
 		return this;
 	}
 
 	public String getDriver() {
-		return properties.getProperty(DRIVER);
+		return persistentProperties.getProperty(DRIVER);
 	}
 
 	public Config setDriver(String password) {
-		properties.setProperty(DRIVER, password);
+		persistentProperties.setProperty(DRIVER, password);
 		return this;
+	}
+
+	public Config enableDryRun(String outputFile) {
+		transientProperties.setProperty(DRY_RUN, Boolean.toString(true));
+		transientProperties.setProperty(OUTPUT_FILE, outputFile);
+		return this;
+	}
+
+	public Config disableDryRun() {
+		transientProperties.setProperty(DRY_RUN, Boolean.toString(false));
+		transientProperties.remove(OUTPUT_FILE);
+		return this;
+	}
+
+	public boolean isDryRun() {
+		return Boolean.toString(true).equalsIgnoreCase(transientProperties.getProperty(DRY_RUN));
+	}
+
+	public String getOutputFile() {
+		return transientProperties.getProperty(OUTPUT_FILE);
 	}
 
 	public void persist() throws IOException {
 		try (FileWriter fileWriter = new FileWriter(FILE)) {
-			properties.store(fileWriter, null);
+			persistentProperties.store(fileWriter, null);
 		}
 	}
 

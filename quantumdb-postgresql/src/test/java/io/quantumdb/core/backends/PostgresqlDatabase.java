@@ -45,6 +45,16 @@ public class PostgresqlDatabase extends ExternalResource {
 		this.connection = createConnection();
 	}
 
+	public Config getConfig() {
+		Config config = new Config();
+		config.setCatalog(catalogName);
+		config.setDriver(jdbcDriver);
+		config.setUrl(jdbcUrl);
+		config.setUser(jdbcUser);
+		config.setPassword(jdbcPass);
+		return config;
+	}
+
 	public Connection createConnection() throws SQLException {
 		return DriverManager.getConnection(jdbcUrl + "/" + catalogName, jdbcUser, jdbcPass);
 	}

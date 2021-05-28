@@ -1,6 +1,9 @@
 package io.quantumdb.cli.commands;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -35,27 +38,53 @@ public class Drop extends Command {
 			String versionId = arguments.remove(0);
 			Version version = changelog.getVersion(versionId);
 
-			writer.write("Checking how many clients are still connected to: " + version.getId());
-			int count = backend.countClientsConnectedToVersion(version);
+			String outputFile = null;
+			boolean printDryRun = false;
+			boolean isDryRun = getArgument(arguments, "dry-run", Boolean.class, () -> false);
+			if (isDryRun) {
+				outputFile = getArgument(arguments, "output-file", String.class, () -> null);
+				if (outputFile == null) {
+					Path path = Files.createTempFile("drop", ".sql");
+					outputFile = path.toFile().getAbsolutePath();
+					printDryRun = true;
+				}
+				else if (new File(outputFile).exists()) {
+					new File(outputFile).delete();
+				}
 
-			if (count > 0) {
-				writer.indent(1)
-						.write("There are still " + count + " clients using this version.", Context.FAILURE)
-						.indent(-1);
-				return;
+				config.enableDryRun(outputFile);
 			}
-			else {
-				writer.indent(1)
-						.write("0 clients are using this version of the database schema.")
-						.indent(-1);
+
+			if (!isDryRun) {
+				writer.write("Checking how many clients are still connected to: " + version.getId());
+				int count = backend.countClientsConnectedToVersion(version);
+
+				if (count > 0) {
+					writer.indent(1)
+							.write("There are still " + count + " clients using this version.", Context.FAILURE)
+							.indent(-1);
+					return;
+				}
+				else {
+					writer.indent(1)
+							.write("0 clients are using this version of the database schema.")
+							.indent(-1);
+				}
 			}
 
 			writer.write("Dropping database schema version: " + version.getId() + "...");
 
 			backend.getMigrator().drop(state, version);
 
-			state = loadState(backend);
-			writeDatabaseState(writer, state.getRefLog(), state.getChangelog());
+			if (isDryRun) {
+				if (printDryRun) {
+					System.out.println(String.join("\n", Files.readAllLines(new File(outputFile).toPath())));
+				}
+			}
+			else {
+				state = loadState(backend);
+				writeDatabaseState(writer, state.getRefLog(), state.getChangelog());
+			}
 		}
 		catch (MigrationException | IOException | CliException | SQLException e) {
 			log.error(e.getMessage(), e);

@@ -1,6 +1,9 @@
 package io.quantumdb.cli.commands;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 import com.google.common.collect.Lists;
@@ -36,13 +39,37 @@ public class Fork extends Command {
 			Version from = getOriginVersion(arguments, state, changelog);
 			Version to = changelog.getVersion(arguments.remove(0));
 
+			String outputFile = null;
+			boolean printDryRun = false;
+			boolean isDryRun = getArgument(arguments, "dry-run", Boolean.class, () -> false);
+			if (isDryRun) {
+				outputFile = getArgument(arguments, "output-file", String.class, () -> null);
+				if (outputFile == null) {
+					Path path = Files.createTempFile("fork", ".sql");
+					outputFile = path.toFile().getAbsolutePath();
+					printDryRun = true;
+				}
+				else if (new File(outputFile).exists()) {
+					new File(outputFile).delete();
+				}
+
+				config.enableDryRun(outputFile);
+			}
+
 			writer.write("Forking database from: " + from.getId() + " to: " + to.getId() + "...");
 
 			Migrator migrator = new Migrator(backend);
 			migrator.migrate(from.getId(), to.getId());
 
-			state = loadState(backend);
-			writeDatabaseState(writer, state.getRefLog(), state.getChangelog());
+			if (isDryRun) {
+				if (printDryRun) {
+					System.out.println(String.join("\n", Files.readAllLines(new File(outputFile).toPath())));
+				}
+			}
+			else {
+				state = loadState(backend);
+				writeDatabaseState(writer, state.getRefLog(), state.getChangelog());
+			}
 		}
 		catch (MigrationException | IOException | CliException e) {
 			log.error(e.getMessage(), e);

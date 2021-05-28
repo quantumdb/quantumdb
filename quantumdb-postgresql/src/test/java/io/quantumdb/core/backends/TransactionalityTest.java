@@ -63,7 +63,7 @@ public class TransactionalityTest {
 		Connection connection = database.getConnection();
 
 		log.info("Creating source and target table...");
-		new TableCreator().create(connection, catalog.getTables());
+		new TableCreator(database.getConfig()).create(connection, catalog.getTables());
 
 		log.info("Creating functions and triggers...");
 		execute(connection, createSyncFunction(SYNC_FUNCTION, target.getName()));

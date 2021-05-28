@@ -1,5 +1,6 @@
 package io.quantumdb.core.planner;
 
+import static io.quantumdb.core.planner.QueryUtils.execute;
 import static io.quantumdb.core.planner.QueryUtils.quoted;
 
 import java.sql.Connection;
@@ -16,6 +17,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import io.quantumdb.core.backends.Backend;
+import io.quantumdb.core.backends.Config;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.ColumnType;
 import io.quantumdb.core.schema.definitions.ForeignKey;
@@ -23,10 +25,14 @@ import io.quantumdb.core.schema.definitions.Identity;
 import io.quantumdb.core.schema.definitions.Sequence;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.utils.QueryBuilder;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@RequiredArgsConstructor
 public class NullRecords {
+
+	private final Config config;
 
 	private final Map<Table, Identity> identities = Maps.newHashMap();
 
@@ -38,6 +44,8 @@ public class NullRecords {
 		Map<Table, Identity> persisted = Maps.newHashMap();
 
 		try (Connection connection = backend.connect()) {
+			connection.setAutoCommit(false);
+
 			ensureDeferredConstraints(connection);
 
 			Set<String> tableNames = tables.stream()
@@ -66,6 +74,8 @@ public class NullRecords {
 		}
 
 		try (Connection connection = backend.connect()) {
+			connection.setAutoCommit(false);
+
 			ensureDeferredConstraints(connection);
 
 			log.debug("Dropping NULL objects for tables: " + tables);
@@ -100,7 +110,7 @@ public class NullRecords {
 				ColumnType type = column.getType();
 				type.getValueSetter().setValue(statement, i, value);
 			}
-			statement.execute();
+			execute(connection, config, statement.toString());
 		}
 	}
 
@@ -163,7 +173,7 @@ public class NullRecords {
 
 			log.debug("Inserted " + table.getName() + " - " + values);
 
-			statement.execute();
+			execute(connection, config, statement.toString());
 		}
 		catch (SQLException e) {
 			log.error("Error while executing query: " + builder.toString() + " - " + e.getMessage(), e);
@@ -210,10 +220,7 @@ public class NullRecords {
 	}
 
 	private void ensureDeferredConstraints(Connection connection) throws SQLException {
-		connection.setAutoCommit(false);
-		try (Statement statement = connection.createStatement()) {
-			statement.execute("SET CONSTRAINTS ALL DEFERRED;");
-		}
+		execute(connection, config, "SET CONSTRAINTS ALL DEFERRED;");
 	}
 
 	private void commit(Connection connection) throws SQLException {

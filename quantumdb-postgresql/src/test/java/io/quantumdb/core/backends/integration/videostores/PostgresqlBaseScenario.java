@@ -56,7 +56,7 @@ public class PostgresqlBaseScenario extends PostgresqlDatabase {
 	public void before() throws SQLException, MigrationException, ClassNotFoundException {
 		super.before();
 
-		TableCreator tableCreator = new TableCreator();
+		TableCreator tableCreator = new TableCreator(getConfig());
 
 		Table stores = new Table(STORES_ID)
 				.addColumn(new Column("id", integer(), PRIMARY_KEY, AUTO_INCREMENT, NOT_NULL))
