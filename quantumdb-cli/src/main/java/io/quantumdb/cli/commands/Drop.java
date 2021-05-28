@@ -74,7 +74,7 @@ public class Drop extends Command {
 
 			writer.write("Dropping database schema version: " + version.getId() + "...");
 
-			backend.getMigrator().drop(state, version);
+			backend.getMigrator().drop(state, version, null);
 
 			if (isDryRun) {
 				if (printDryRun) {

@@ -112,18 +112,29 @@ class PostgresqlMigrator implements DatabaseMigrator {
 	}
 
 	@Override
-	public void drop(State state, Version version) throws MigrationException {
+	public void drop(State state, Version version, Stage stage) throws MigrationException {
 		// Check that the version's operation is of type DDL, or has no operation (root version).
 		checkArgument(version.getOperation() == null || version.getOperation().getType() == Type.DDL);
 
 		RefLog refLog = state.getRefLog();
 		Catalog catalog = state.getCatalog();
 
+		Set<Version> activeVersions = refLog.getVersions().stream()
+				.filter(version1 -> !version1.equals(version))
+				.collect(Collectors.toSet());
+
+		// Add latest version of intermediate steps
+		if (stage != null) {
+			activeVersions.add(stage.getLast());
+		}
+
+		// Drop tables that are not part of any active versions or last intermediate versions
 		List<TableRef> tablesToDrop = refLog.getTableRefs().stream()
 				.filter(tableRef -> tableRef.getVersions().contains(version))
-				.filter(tableRef -> tableRef.getVersions().stream()
-						.filter(otherVersion -> otherVersion.getOperation().getType() == Type.DDL)
-						.count() == 1)
+				// Get only tableRefs that are also not part of any active versions
+				.filter(tableRef -> tableRef.getVersions().stream().noneMatch(activeVersions::contains))
+				// Because the table can already be dropped, only select the tables that are present in the catalog
+				.filter(tableRef -> catalog.getTables().stream().anyMatch(table -> tableRef.getRefId().equals(table.getName())))
 				.collect(Collectors.toList());
 
 		Map<SyncRef, SyncFunction> newSyncFunctions = Maps.newLinkedHashMap();
