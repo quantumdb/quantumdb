@@ -188,30 +188,6 @@ class TableDataMigrator {
 				right = right.toString().toLowerCase();
 			}
 
-			if (left instanceof Long) {
-				left = new BigDecimal((Long) left);
-			}
-
-			if (right instanceof Long) {
-				right = new BigDecimal((Long) right);
-			}
-
-			if (left instanceof Double) {
-				left = BigDecimal.valueOf((Double) left);
-			}
-
-			if (right instanceof Double) {
-				right = BigDecimal.valueOf((Double) right);
-			}
-
-			if (left instanceof Float) {
-				left = BigDecimal.valueOf((Float) left);
-			}
-
-			if (right instanceof Float) {
-				right = BigDecimal.valueOf((Float) right);
-			}
-
 			Comparable leftComparable = (Comparable) left;
 			Comparable rightComparable = (Comparable) right;
 
@@ -270,11 +246,11 @@ class TableDataMigrator {
 		switch (type) {
 			case SMALLINT:
 			case INTEGER:
-				return Integer.parseInt(value);
 			case BIGINT:
-				return Long.parseLong(value);
+			case FLOAT:
+			case DOUBLE:
 			case NUMERIC:
-				return Double.parseDouble(value);
+				return new BigDecimal(value);
 			case BOOLEAN:
 				return Boolean.parseBoolean(value);
 			case TEXT:
@@ -284,8 +260,6 @@ class TableDataMigrator {
 				return value;
 			case DATE:
 				return Date.parse(value);
-			case FLOAT:
-				return Float.parseFloat(value);
 			case TIMESTAMP:
 				return Timestamp.parse(value);
 			case UUID:
