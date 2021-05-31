@@ -18,6 +18,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -333,7 +334,7 @@ class CatalogLoader {
 					parser.consume();
 				}
 
-				List<String> groups = parser.consumeGroup('(', ')', ',');
+				List<String> groups = parser.consumeGroup('(', ')', ',').stream().map(String::trim).collect(Collectors.toList());
 				// TODO: Add support for expressions. Now we only support column references.
 
 				Table table = catalog.getTable(indexTableName);

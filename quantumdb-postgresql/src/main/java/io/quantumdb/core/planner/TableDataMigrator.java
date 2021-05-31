@@ -196,6 +196,22 @@ class TableDataMigrator {
 				right = new BigDecimal((Long) right);
 			}
 
+			if (left instanceof Double) {
+				left = BigDecimal.valueOf((Double) left);
+			}
+
+			if (right instanceof Double) {
+				right = BigDecimal.valueOf((Double) right);
+			}
+
+			if (left instanceof Float) {
+				left = BigDecimal.valueOf((Float) left);
+			}
+
+			if (right instanceof Float) {
+				right = BigDecimal.valueOf((Float) right);
+			}
+
 			Comparable leftComparable = (Comparable) left;
 			Comparable rightComparable = (Comparable) right;
 
