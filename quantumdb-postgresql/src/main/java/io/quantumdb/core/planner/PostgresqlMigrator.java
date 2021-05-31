@@ -133,7 +133,14 @@ class PostgresqlMigrator implements DatabaseMigrator {
 				.filter(tableRef -> tableRef.getVersions().contains(version))
 				// Get only tableRefs that are also not part of any active versions
 				.filter(tableRef -> tableRef.getVersions().stream().noneMatch(activeVersions::contains))
-				// Because the table can already be dropped, only select the tables that are present in the catalog
+				.filter(tableRef -> refLog.getTableRefs().stream()
+						// If a TableRef exists with the same RefId
+						.filter(tableRef1 -> tableRef.getRefId().equals(tableRef1.getRefId()))
+						// But is not the same TableRef object (because of the renameTable migration)
+						.filter(tableRef1 -> !tableRef.equals(tableRef1))
+						// Do not drop the table if that TableRef object is still part of an active version
+						.noneMatch(tableRef1 -> tableRef1.getVersions().stream().anyMatch(activeVersions::contains)))
+				// Because the table may have already been dropped, only select the tables that are present in the catalog
 				.filter(tableRef -> catalog.getTables().stream().anyMatch(table -> tableRef.getRefId().equals(table.getName())))
 				.collect(Collectors.toList());
 
