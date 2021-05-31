@@ -187,7 +187,7 @@ public class PostgresTypes {
 
 	public static ColumnType smallserial() {
 		return new ColumnType(ColumnType.Type.SMALLINT, false, "smallserial", () -> 0,
-				(statement, position, value) -> statement.setInt(position, ((Number) value).intValue()));
+				(statement, position, value) -> statement.setShort(position, ((Number) value).shortValue()));
 	}
 
 	public static ColumnType serial() {
@@ -202,7 +202,7 @@ public class PostgresTypes {
 
 	public static ColumnType smallint() {
 		return new ColumnType(ColumnType.Type.SMALLINT, false, "smallint", () -> 0,
-				(statement, position, value) -> statement.setInt(position, ((Number) value).intValue()));
+				(statement, position, value) -> statement.setShort(position, ((Number) value).shortValue()));
 	}
 
 	public static ColumnType integer() {
