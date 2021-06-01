@@ -54,7 +54,7 @@ public class AddColumnToPaymentsTable {
 		target = setup.getChangelog().getLastAdded();
 		setup.getBackend().persistState(setup.getState());
 
-		setup.getMigrator().migrate(origin.getId(), target.getId());
+		setup.getMigrator().migrate(setup.getState(), origin.getId(), target.getId());
 
 		state = setup.getBackend().loadState();
 	}

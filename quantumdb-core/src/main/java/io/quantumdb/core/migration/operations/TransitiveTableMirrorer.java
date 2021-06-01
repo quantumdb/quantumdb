@@ -20,7 +20,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 class TransitiveTableMirrorer {
 
-	static Set<String> mirror(Catalog catalog, RefLog refLog, Version version, String... tableNames) {
+	static Set<String> mirror(Catalog catalog, RefLog refLog, Version version, Boolean cleanup, String... tableNames) {
 		refLog.fork(version);
 		Version parentVersion = version.getParent();
 		Set<String> mirrored = Sets.newHashSet();
@@ -35,7 +35,13 @@ class TransitiveTableMirrorer {
 				continue;
 			}
 
-			String newRefId = RandomHasher.generateRefId(refLog);
+			String newRefId;
+			if (cleanup && !tableRef.getRefId().equals(tableRef.getName())) {
+				newRefId = tableRef.getName();
+			}
+			else {
+				newRefId = RandomHasher.generateRefId(refLog);
+			}
 			Table table = catalog.getTable(tableRef.getRefId());
 			tableRef.ghost(newRefId, version);
 			catalog.addTable(table.copy().rename(newRefId));

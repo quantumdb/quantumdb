@@ -1,5 +1,8 @@
 package io.quantumdb.cli.commands;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static io.quantumdb.core.schema.operations.SchemaOperations.cleanupTables;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -14,17 +17,20 @@ import io.quantumdb.core.backends.Backend;
 import io.quantumdb.core.backends.Config;
 import io.quantumdb.core.backends.DatabaseMigrator.MigrationException;
 import io.quantumdb.core.migration.Migrator;
+import io.quantumdb.core.schema.operations.Operation;
+import io.quantumdb.core.utils.RandomHasher;
+import io.quantumdb.core.versioning.ChangeSet;
 import io.quantumdb.core.versioning.Changelog;
 import io.quantumdb.core.versioning.State;
 import io.quantumdb.core.versioning.Version;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class Fork extends Command {
+public class Cleanup extends Command {
 
 	@Override
 	public Identifier getIdentifier() {
-		return new Identifier("fork", "Forks an existing database schema, and applies a set of operations to the fork.");
+		return new Identifier("cleanup", "Renames all tables back to their original name.");
 	}
 
 	public void perform(CliWriter writer, List<String> arguments) {
@@ -36,8 +42,13 @@ public class Fork extends Command {
 			State state = loadState(backend);
 			Changelog changelog = state.getChangelog();
 
-			Version from = getOriginVersion(arguments, state, changelog);
-			Version to = changelog.getVersion(arguments.remove(0));
+			checkArgument(state.getRefLog().getVersions().size() == 1, "You may only call this command if you have 1 active version.");
+
+			Version last = changelog.getVersion(state.getRefLog().getVersions().toArray(new Version[0])[0].getId());
+			writer.write(last.getId());
+			ChangeSet changeSet = new ChangeSet("cleanup_" + RandomHasher.generateHash(), "QuantumDB");
+			Operation operation = cleanupTables();
+			changelog.addChangeSet(last, changeSet, operation);
 
 			String outputFile = null;
 			boolean printDryRun = false;
@@ -45,7 +56,7 @@ public class Fork extends Command {
 			if (isDryRun) {
 				outputFile = getArgument(arguments, "output-file", String.class, () -> null);
 				if (outputFile == null) {
-					Path path = Files.createTempFile("fork", ".sql");
+					Path path = Files.createTempFile("cleanup", ".sql");
 					outputFile = path.toFile().getAbsolutePath();
 					printDryRun = true;
 				}
@@ -56,10 +67,10 @@ public class Fork extends Command {
 				config.enableDryRun(outputFile);
 			}
 
-			writer.write("Forking database from: " + from.getId() + " to: " + to.getId() + "...");
+			writer.write("Renaming all tables back to their original name.");
 
 			Migrator migrator = new Migrator(backend);
-			migrator.migrate(state, from.getId(), to.getId());
+			migrator.migrate(state, last.getId(), changelog.getLastAdded().getId());
 
 			if (isDryRun) {
 				if (printDryRun) {

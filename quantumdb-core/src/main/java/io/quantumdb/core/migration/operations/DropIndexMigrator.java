@@ -15,7 +15,7 @@ class DropIndexMigrator implements SchemaOperationMigrator<DropIndex> {
 	@Override
 	public void migrate(Catalog catalog, RefLog refLog, Version version, DropIndex operation) {
 		String tableName = operation.getTableName();
-		TransitiveTableMirrorer.mirror(catalog, refLog, version, tableName);
+		TransitiveTableMirrorer.mirror(catalog, refLog, version, false, tableName);
 
 		TableRef tableRef = refLog.getTableRef(version, tableName);
 		String refId = tableRef.getRefId();

@@ -56,7 +56,7 @@ public class RenameCustomersTable {
 		target = setup.getChangelog().getLastAdded();
 		setup.getBackend().persistState(setup.getState());
 
-		setup.getMigrator().migrate(origin.getId(), target.getId());
+		setup.getMigrator().migrate(setup.getState(), origin.getId(), target.getId());
 
 		state = setup.getBackend().loadState();
 	}
@@ -154,7 +154,7 @@ public class RenameCustomersTable {
 				.put(RENTALS_ID, "rentals")
 				.build();
 
-		Map<String, String>expectedTargetRefIds = ImmutableMap.<String, String>builder()
+		Map<String, String> expectedTargetRefIds = ImmutableMap.<String, String>builder()
 				.put(STORES_ID, "stores")
 				.put(STAFF_ID, "staff")
 				.put(CUSTOMERS_ID, "clients")
