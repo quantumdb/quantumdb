@@ -705,7 +705,7 @@ public class Backend {
 	}
 
 	private void persistSynchronizerColumns(Connection connection, Map<Long, SyncRef> syncRefs,
-											Map<Long, RawColumnMapping> columnMapping) throws SQLException {
+			Map<Long, RawColumnMapping> columnMapping) throws SQLException {
 
 		Table<String, String, Long> syncIndex = HashBasedTable.create();
 		syncRefs.forEach((id, ref) -> syncIndex.put(ref.getSource().getRefId(), ref.getTarget().getRefId(), id));

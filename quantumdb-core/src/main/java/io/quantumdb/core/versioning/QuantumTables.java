@@ -20,12 +20,12 @@ public class QuantumTables {
 			"CREATE TABLE quantumdb.config (name VARCHAR(255) NOT NULL, value VARCHAR(255) NOT NULL, PRIMARY KEY (name));",
 
 			// Creates the "changelog" table which will store all the individual (schema) operations, and their ordering.
-			"CREATE TABLE quantumdb.changelog (version_id VARCHAR(10) NOT NULL, parent_version_id VARCHAR(10), operation_type VARCHAR(16), operation TEXT, PRIMARY KEY (version_id));",
+			"CREATE TABLE quantumdb.changelog (version_id VARCHAR(255) NOT NULL, parent_version_id VARCHAR(255), operation_type VARCHAR(255), operation TEXT, PRIMARY KEY (version_id));",
 			"ALTER TABLE quantumdb.changelog ADD CONSTRAINT changelog_parent_version_id FOREIGN KEY (parent_version_id) REFERENCES quantumdb.changelog (version_id) ON DELETE CASCADE;",
 			"ALTER TABLE quantumdb.changelog ADD CONSTRAINT changelog_no_self_reference CHECK (version_id != parent_version_id);",
 
 			// Creates the "changesets" table which describes all changesets - named lists of (schema) operations.
-			"CREATE TABLE quantumdb.changesets (id VARCHAR(255), version_id VARCHAR(10), author VARCHAR(255), created TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), description TEXT, alias VARCHAR(255), PRIMARY KEY (id));",
+			"CREATE TABLE quantumdb.changesets (id VARCHAR(255), version_id VARCHAR(255), author VARCHAR(255), created TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), description TEXT, alias VARCHAR(255), PRIMARY KEY (id));",
 			"ALTER TABLE quantumdb.changesets ADD CONSTRAINT changesets_version_id_unique UNIQUE (version_id);",
 			"ALTER TABLE quantumdb.changesets ADD CONSTRAINT changesets_version_id FOREIGN KEY (version_id) REFERENCES quantumdb.changelog (version_id) ON DELETE CASCADE;",
 
@@ -33,7 +33,7 @@ public class QuantumTables {
 			"CREATE TABLE quantumdb.refs (ref_id VARCHAR(255) NOT NULL, PRIMARY KEY (ref_id));",
 
 			// Creates the "ref_versions" table which describes which (physical) table exists at which version of the changelog.
-			"CREATE TABLE quantumdb.ref_versions (ref_id VARCHAR(255) NOT NULL, version_id VARCHAR(10) NOT NULL, table_name VARCHAR(255) NOT NULL, PRIMARY KEY (ref_id, version_id));",
+			"CREATE TABLE quantumdb.ref_versions (ref_id VARCHAR(255) NOT NULL, version_id VARCHAR(255) NOT NULL, table_name VARCHAR(255) NOT NULL, PRIMARY KEY (ref_id, version_id));",
 			"ALTER TABLE quantumdb.ref_versions ADD CONSTRAINT ref_versions_ref_id FOREIGN KEY (ref_id) REFERENCES quantumdb.refs (ref_id) ON DELETE CASCADE;",
 			"ALTER TABLE quantumdb.ref_versions ADD CONSTRAINT ref_versions_version_id FOREIGN KEY (version_id) REFERENCES quantumdb.changelog (version_id) ON DELETE CASCADE;",
 
@@ -66,7 +66,7 @@ public class QuantumTables {
 			"ALTER TABLE quantumdb.synchronizer_columns ADD CONSTRAINT synchronizer_columns_column_mapping_id FOREIGN KEY (column_mapping_id) REFERENCES quantumdb.column_mappings (id) ON DELETE CASCADE;",
 
 			// Creates the "active_versions" table which describes which versions are active at this time.
-			"CREATE TABLE quantumdb.active_versions (version_id VARCHAR(10), PRIMARY KEY (version_id));",
+			"CREATE TABLE quantumdb.active_versions (version_id VARCHAR(255), PRIMARY KEY (version_id));",
 			"ALTER TABLE quantumdb.active_versions ADD CONSTRAINT active_versions_version_id FOREIGN KEY (version_id) REFERENCES quantumdb.changelog (version_id) ON DELETE CASCADE;"
 	);
 

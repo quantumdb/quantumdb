@@ -502,7 +502,7 @@ public class RefLog {
 	 * This method retrieves the TableRef object from the RefLog with the specified table name at the specified
 	 * version. If no such TableRef matches these criteria an IllegalArgumentException will be thrown.
 	 *
-	 * @param version The version in which the TableRef should be present.
+	 * @param version   The version in which the TableRef should be present.
 	 * @param tableName The name of the table represented by the TableRef.
 	 * @return The retrieved TableRef object.
 	 * @throws IllegalArgumentException When no TableRef matches the specified criteria.
@@ -544,10 +544,10 @@ public class RefLog {
 	 * TableRef for that particular version, and creates a new TableRef with the new target table name, and table ID
 	 * for that particular version. The columns of the new TableRef will be based off the old TableRef.
 	 *
-	 * @param version The version at which the replace takes place.
+	 * @param version         The version at which the replace takes place.
 	 * @param sourceTableName The table name of the TableRef to replace.
 	 * @param targetTableName The table name of the TableRef which will replace the old TableRef.
-	 * @param refId The table ID of the TableRef which will replace the old TableRef.
+	 * @param refId           The table ID of the TableRef which will replace the old TableRef.
 	 * @return The created TableRef object.
 	 */
 	public TableRef replaceTable(Version version, String sourceTableName, String targetTableName, String refId) {
@@ -567,7 +567,7 @@ public class RefLog {
 	 * to the specified version, it will be disconnected from the RefLog. If the TableRef is connected to multiple
 	 * versions it will remain connected to the RefLog.
 	 *
-	 * @param version The version at which to remove the TableRef from the RefLog.
+	 * @param version   The version at which to remove the TableRef from the RefLog.
 	 * @param tableName The name of the table which the TableRef represents.
 	 * @return The dropped TableRef object.
 	 */
@@ -606,8 +606,8 @@ public class RefLog {
 	/**
 	 * Creates a new TableRef for the specified table ID, name, and columns at the specified version.
 	 *
-	 * @param name The name of the table.
-	 * @param refId The table ID of the table.
+	 * @param name    The name of the table.
+	 * @param refId   The table ID of the table.
 	 * @param version The version at which this table exists.
 	 * @param columns The columns present in the table.
 	 * @return The constructed TableRef object.
@@ -619,8 +619,8 @@ public class RefLog {
 	/**
 	 * Creates a new TableRef for the specified table ID, name, and columns at the specified version.
 	 *
-	 * @param name The name of the table.
-	 * @param refId The table ID of the table.
+	 * @param name    The name of the table.
+	 * @param refId   The table ID of the table.
 	 * @param version The version at which this table exists.
 	 * @param columns The columns present in the table.
 	 * @return The constructed TableRef object.
@@ -669,7 +669,7 @@ public class RefLog {
 	 * This method retrieves the ViewRef object from the RefLog with the specified table name at the specified
 	 * version. If no such ViewRef matches these criteria an IllegalArgumentException will be thrown.
 	 *
-	 * @param version The version in which the ViewRef should be present.
+	 * @param version  The version in which the ViewRef should be present.
 	 * @param viewName The name of the view represented by the ViewRef.
 	 * @return The retrieved ViewRef object.
 	 * @throws IllegalArgumentException When no ViewRef matches the specified criteria.
@@ -704,15 +704,17 @@ public class RefLog {
 				.filter(view -> view.getRefId().equals(refId))
 				.findFirst()
 				.orElseThrow(() -> new IllegalArgumentException("No view with id: " + refId));
-	}/**
+	}
+
+	/**
 	 * This method replaces an existing ViewRef specified through the version, and source view name, drops that
 	 * ViewRef for that particular version, and creates a new ViewRef with the new target view name, and view ID
 	 * for that particular version.
 	 *
-	 * @param version The version at which the replace takes place.
+	 * @param version        The version at which the replace takes place.
 	 * @param sourceViewName The view name of the ViewRef to replace.
 	 * @param targetViewName The view name of the ViewRef which will replace the old ViewRef.
-	 * @param refId The view ID of the ViewRef which will replace the old ViewRef.
+	 * @param refId          The view ID of the ViewRef which will replace the old ViewRef.
 	 * @return The created ViewRef object.
 	 */
 	public ViewRef replaceView(Version version, String sourceViewName, String targetViewName, String refId) {
@@ -730,7 +732,7 @@ public class RefLog {
 	 * to the specified version, it will be disconnected from the RefLog. If the ViewRef is connected to multiple
 	 * versions it will remain connected to the RefLog.
 	 *
-	 * @param version The version at which to remove the ViewRef from the RefLog.
+	 * @param version  The version at which to remove the ViewRef from the RefLog.
 	 * @param viewName The name of the view which the ViewRef represents.
 	 * @return The dropped ViewRef object.
 	 */
@@ -769,8 +771,8 @@ public class RefLog {
 	/**
 	 * Creates a new ViewRef for the specified view ID, and name at the specified version.
 	 *
-	 * @param name The name of the view.
-	 * @param refId The view ID of the view.
+	 * @param name    The name of the view.
+	 * @param refId   The view ID of the view.
 	 * @param version The version at which this view exists.
 	 * @return The constructed ViewRef object.
 	 */
@@ -795,9 +797,9 @@ public class RefLog {
 	 * Defines that there's a trigger and function which manage the synchronization between two different refMapping
 	 * in one particular direction.
 	 *
-	 * @param name The name of the trigger.
+	 * @param name         The name of the trigger.
 	 * @param functionName The name of the function.
-	 * @param columns The column mapping from the source table, to the target table.
+	 * @param columns      The column mapping from the source table, to the target table.
 	 * @return The constructed SyncRef object.
 	 */
 	public SyncRef addSync(String name, String functionName, Map<ColumnRef, ColumnRef> columns) {
@@ -812,7 +814,6 @@ public class RefLog {
 		return new SyncRef(name, functionName, columns);
 	}
 
-
 	public Multimap<TableRef, TableRef> getTableMapping(Version from, Version to) {
 		return getTableMapping(from, to, true);
 	}
@@ -822,7 +823,7 @@ public class RefLog {
 	 * to TableRefs in specified the 'to' version.
 	 *
 	 * @param from The starting version.
-	 * @param to The final version.
+	 * @param to   The final version.
 	 * @return The mapping between TableRefs between these two versions.
 	 */
 	public Multimap<TableRef, TableRef> getTableMapping(Version from, Version to, boolean filterUnchanged) {
@@ -854,7 +855,7 @@ public class RefLog {
 	 * 'from' TableRef, to the specified 'to' TableRef.
 	 *
 	 * @param from The source TableRef.
-	 * @param to The target TableRef.
+	 * @param to   The target TableRef.
 	 * @return The column mapping between the two TableRefs.
 	 */
 	public Map<ColumnRef, ColumnRef> getColumnMapping(TableRef from, TableRef to) {

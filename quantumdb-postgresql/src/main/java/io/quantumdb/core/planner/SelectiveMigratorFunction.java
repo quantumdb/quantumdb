@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
 import io.quantumdb.core.planner.MigratorFunction.Stage;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.ForeignKey;
@@ -182,15 +183,25 @@ public class SelectiveMigratorFunction {
 				.map(column -> functionParameterMapping.get(column.getName()) + " " + column.getType().toString())
 				.collect(Collectors.toList());
 
-		TableRef sourceRef = refLog.getTableRefById(source.getName());
-		TableRef targetRef = refLog.getTableRefById(target.getName());
+		Multimap<TableRef, TableRef> tableMapping = refLog.getTableMapping(from, to);
+
+		TableRef sourceRef = tableMapping.keySet().stream()
+				.filter(tableRef -> tableRef.getRefId().equals(source.getName()))
+				.findFirst().get();
+
+		TableRef targetRef = tableMapping.get(sourceRef).stream()
+				.filter(tableRef -> tableRef.getRefId().equals(target.getName()))
+				.findFirst().get();
+
 		Map<ColumnRef, ColumnRef> columnMapping = refLog.getColumnMapping(sourceRef, targetRef);
 
 		Map<String, String> values = columnMapping.entrySet().stream()
-				.filter(entry -> columns.contains(entry.getKey().getName()))
+				.filter(entry -> columns.contains(entry.getValue().getName()))
 				.collect(Collectors.toMap(entry -> entry.getValue().getName(),
 						entry -> "r." + quoted(entry.getKey().getName()),
-						(u, v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
+						(u, v) -> {
+							throw new IllegalStateException(String.format("Duplicate key %s", u));
+						},
 						Maps::newLinkedHashMap));
 
 		for (ForeignKey foreignKey : target.getForeignKeys()) {

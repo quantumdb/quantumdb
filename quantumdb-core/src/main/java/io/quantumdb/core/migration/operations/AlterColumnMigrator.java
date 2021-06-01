@@ -73,13 +73,8 @@ class AlterColumnMigrator implements SchemaOperationMigrator<AlterColumn> {
 			char first = trimmed.charAt(0);
 			char last = trimmed.charAt(trimmed.length() - 1);
 
-			if (first == last) {
-				if (first == '\'') {
-					return trimmed.substring(1, trimmed.length() - 1);
-				}
-				else if (last == '\"') {
-					return trimmed.substring(1, trimmed.length() - 1);
-				}
+			if (first == last && (first == '\'' || first == '\"')) {
+				return trimmed.substring(1, trimmed.length() - 1);
 			}
 		}
 
