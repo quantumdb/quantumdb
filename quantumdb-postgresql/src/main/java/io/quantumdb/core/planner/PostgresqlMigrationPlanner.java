@@ -233,26 +233,19 @@ public class PostgresqlMigrationPlanner implements MigrationPlanner {
 
 				Set<Step> dependentOnSteps = dependentOnTables.stream()
 						.map(plan::findFirstCopy)
-						.flatMap(o -> o.isPresent() ? Stream.of(o.get()) : Stream.empty())
+						.flatMap(o -> o.map(Stream::of).orElseGet(Stream::empty))
 						.collect(Collectors.toSet());
 
 				Map<Step, Set<Step>> mapping = dependentOnSteps.stream()
 						.collect(Collectors.toMap(Function.identity(), Step::getTransitiveDependencies));
 
 				while (!mapping.isEmpty()) {
-					Optional<Entry<Step, Set<Step>>> crucial = mapping.entrySet().stream()
-							.sorted(Comparator.comparing(entry -> entry.getValue().size() * -1))
-							.findFirst();
+					Optional<Entry<Step, Set<Step>>> crucial = mapping.entrySet().stream().min(Comparator.comparing(entry -> entry.getValue().size() * -1));
 
-					if (crucial.isPresent()) {
-						Entry<Step, Set<Step>> entry = crucial.get();
-						Step step = entry.getKey();
-						dependentOnSteps.removeAll(step.getTransitiveDependencies());
-						mapping.remove(step);
-					}
-					else {
-						break;
-					}
+					Entry<Step, Set<Step>> entry = crucial.get();
+					Step step = entry.getKey();
+					dependentOnSteps.removeAll(step.getTransitiveDependencies());
+					mapping.remove(step);
 				}
 
 				Step step = plan.copy(table, columns);
@@ -314,7 +307,6 @@ public class PostgresqlMigrationPlanner implements MigrationPlanner {
 						.filter(foreignKey -> !Sets.intersection(Sets.newHashSet(foreignKey.getReferencingColumns()), columns).isEmpty())
 						.map(ForeignKey::getReferredTableName)
 						.map(catalog::getTable)
-						.distinct()
 						.collect(Collectors.toSet());
 
 				Set<Step> dependentOnSteps = dependentOnTables.stream()
