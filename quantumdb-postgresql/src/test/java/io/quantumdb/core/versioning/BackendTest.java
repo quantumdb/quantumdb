@@ -78,7 +78,7 @@ public class BackendTest {
 
 		Backend backend = new Backend();
 		State expectedState = new State(catalog, refLog, changelog);
-		backend.persist(database.createConnection(), expectedState);
+		backend.persist(database.createConnection(), expectedState, null);
 
 		State actualState = backend.load(database.getConnection(), catalog);
 		assertEquals(expectedState, actualState);

@@ -104,7 +104,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 				}
 			}
 			connection.commit();
-			backend.persistState(state);
+			backend.persistState(state, stage);
 		}
 		catch (SQLException e) {
 			throw new MigrationException("Exception happened while performing data changes.", e);
@@ -178,7 +178,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 			}
 			dropTables(connection, refLog, catalog, tablesToDrop);
 			refLog.setVersionState(version, false);
-			backend.persistState(state);
+			backend.persistState(state, null);
 			connection.commit();
 		}
 		catch (SQLException e) {
@@ -328,7 +328,7 @@ class PostgresqlMigrator implements DatabaseMigrator {
 
 		private void persistState() throws MigrationException {
 			try {
-				backend.persistState(state);
+				backend.persistState(state, null);
 			}
 			catch (SQLException e) {
 				throw new MigrationException(e);

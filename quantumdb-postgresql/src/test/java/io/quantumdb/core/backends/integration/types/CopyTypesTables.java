@@ -83,7 +83,7 @@ public class CopyTypesTables {
 				SchemaOperations.copyTable("oid", "oid_backup"));
 
 		target = setup.getChangelog().getLastAdded();
-		setup.getBackend().persistState(setup.getState());
+		setup.getBackend().persistState(setup.getState(), null);
 
 		setup.getMigrator().migrate(setup.getState(), origin.getId(), target.getId());
 

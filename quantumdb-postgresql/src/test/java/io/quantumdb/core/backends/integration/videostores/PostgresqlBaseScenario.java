@@ -170,7 +170,7 @@ public class PostgresqlBaseScenario extends PostgresqlDatabase {
 			refLog.addTable(tableName, refId, changelog.getRoot(), columns);
 		});
 
-		backend.persistState(state);
+		backend.persistState(state, null);
 		migrator = new Migrator(backend);
 	}
 

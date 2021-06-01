@@ -8,6 +8,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 import io.quantumdb.core.backends.Config;
+import io.quantumdb.core.migration.Migrator.Stage;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.versioning.Backend;
 import io.quantumdb.core.versioning.QuantumTables;
@@ -38,7 +39,7 @@ public class PostgresqlBackend implements io.quantumdb.core.backends.Backend {
 	}
 
 	@Override
-	public void persistState(State state) throws SQLException {
+	public void persistState(State state, Stage stage) throws SQLException {
 		if (config.isDryRun()) {
 			return;
 		}
@@ -47,7 +48,7 @@ public class PostgresqlBackend implements io.quantumdb.core.backends.Backend {
 
 		try (Connection connection = connect()) {
 			connection.setAutoCommit(false);
-			backend.persist(connection, state);
+			backend.persist(connection, state, stage);
 			connection.commit();
 		}
 	}

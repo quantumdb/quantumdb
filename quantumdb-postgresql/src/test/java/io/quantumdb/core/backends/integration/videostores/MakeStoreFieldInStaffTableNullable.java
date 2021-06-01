@@ -49,7 +49,7 @@ public class MakeStoreFieldInStaffTableNullable {
 						.dropHint(NOT_NULL));
 
 		target = setup.getChangelog().getLastAdded();
-		setup.getBackend().persistState(setup.getState());
+		setup.getBackend().persistState(setup.getState(), null);
 
 		setup.getMigrator().migrate(setup.getState(), origin.getId(), target.getId());
 

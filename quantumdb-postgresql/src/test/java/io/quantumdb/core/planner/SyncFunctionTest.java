@@ -58,8 +58,8 @@ public class SyncFunctionTest {
 		String createFunctionStatement = function.createFunctionStatement().toString();
 		String createTriggerStatement = function.createTriggerStatement().toString();
 
-		assertEquals(createFunctionStatement, "CREATE OR REPLACE FUNCTION \"migrate_data\"() RETURNS TRIGGER AS $$ BEGIN IF TG_OP = 'INSERT' THEN INSERT INTO \"table_b\" (\"name\", \"id\") VALUES (NEW.\"name\", NEW.\"id\"); ELSIF TG_OP = 'UPDATE' THEN LOOP UPDATE \"table_b\" SET \"id\" = NEW.\"id\" WHERE \"id\" = OLD.\"id\"; IF found THEN EXIT; END IF; BEGIN INSERT INTO \"table_b\" (\"name\", \"id\") VALUES (NEW.\"name\", NEW.\"id\"); EXIT; EXCEPTION WHEN unique_violation THEN END; END LOOP; ELSIF TG_OP = 'DELETE' THEN DELETE FROM \"table_b\" WHERE \"id\" = OLD.\"id\"; END IF; RETURN NEW; END; $$ LANGUAGE 'plpgsql';");
-		assertEquals(createTriggerStatement, "CREATE TRIGGER \"migration_trigger\" AFTER INSERT OR UPDATE OR DELETE ON \"table_a\" FOR EACH ROW WHEN (pg_trigger_depth() = 0) EXECUTE PROCEDURE \"migrate_data\"();");
+		assertEquals("CREATE OR REPLACE FUNCTION \"migrate_data\"() RETURNS TRIGGER AS $$ BEGIN IF TG_OP = 'INSERT' THEN INSERT INTO \"table_b\" (\"name\", \"id\") VALUES (NEW.\"name\", NEW.\"id\"); ELSIF TG_OP = 'UPDATE' THEN LOOP UPDATE \"table_b\" SET \"id\" = NEW.\"id\", \"name\" = NEW.\"name\" WHERE \"id\" = OLD.\"id\"; IF found THEN EXIT; END IF; BEGIN INSERT INTO \"table_b\" (\"name\", \"id\") VALUES (NEW.\"name\", NEW.\"id\"); EXIT; EXCEPTION WHEN unique_violation THEN END; END LOOP; ELSIF TG_OP = 'DELETE' THEN DELETE FROM \"table_b\" WHERE \"id\" = OLD.\"id\"; END IF; RETURN NEW; END; $$ LANGUAGE 'plpgsql';", createFunctionStatement);
+		assertEquals("CREATE TRIGGER \"migration_trigger\" AFTER INSERT OR UPDATE OR DELETE ON \"table_a\" FOR EACH ROW WHEN (pg_trigger_depth() = 0) EXECUTE PROCEDURE \"migrate_data\"();", createTriggerStatement);
 	}
 
 }

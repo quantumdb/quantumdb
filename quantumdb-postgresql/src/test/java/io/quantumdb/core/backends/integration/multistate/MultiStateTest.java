@@ -65,7 +65,7 @@ public class MultiStateTest extends PostgresqlDatabase {
 						addColumn("test", "admin", bool(), "'false'", NOT_NULL))
 				.getLastAdded();
 
-		backend.persistState(state);
+		backend.persistState(state, null);
 	}
 
 	@Test

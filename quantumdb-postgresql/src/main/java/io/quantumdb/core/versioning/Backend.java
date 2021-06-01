@@ -33,6 +33,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSerializer;
+import io.quantumdb.core.migration.Migrator.Stage;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.ColumnType;
 import io.quantumdb.core.schema.definitions.PostgresTypes;
@@ -175,11 +176,14 @@ public class Backend {
 		return new State(catalog, refLog, changelog);
 	}
 
-	public void persist(Connection connection, State state) throws SQLException {
+	public void persist(Connection connection, State state, Stage stage) throws SQLException {
 		RefLog refLog = state.getRefLog();
 		Version lastActive = state.getChangelog().getLastAdded();
 		while (lastActive != null && !refLog.getVersions().contains(lastActive)) {
 			lastActive = lastActive.getParent();
+		}
+		if (stage != null) {
+			lastActive = stage.getLast();
 		}
 		persistChangelog(connection, state.getChangelog(), lastActive);
 
