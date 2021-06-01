@@ -101,19 +101,27 @@ public class SelectiveMigratorFunction {
 			}
 		}
 
-		TableRef sourceRef = refLog.getTableRefById(source.getName());
-		TableRef targetRef = refLog.getTableRefById(target.getName());
+		Multimap<TableRef, TableRef> tableMapping = refLog.getTableMapping(from, to);
+
+		TableRef sourceRef = tableMapping.keySet().stream()
+				.filter(tableRef -> tableRef.getRefId().equals(source.getName()))
+				.findFirst().get();
+
+		TableRef targetRef = tableMapping.get(sourceRef).stream()
+				.filter(tableRef -> tableRef.getRefId().equals(target.getName()))
+				.findFirst().get();
+
 		Map<ColumnRef, ColumnRef> columnMapping = refLog.getColumnMapping(sourceRef, targetRef);
 
 		Map<String, String> columnsToMigrate = columnMapping.entrySet().stream()
-				.filter(entry -> columnsToBeMigrated.contains(entry.getKey().getName()))
+				.filter(entry -> columnsToBeMigrated.contains(entry.getValue().getName()))
 				.map(entry -> {
 					String newColumnName = entry.getValue().getName();
 					Column newColumn = target.getColumn(newColumnName);
 					return new SimpleImmutableEntry<>(newColumn, entry.getKey().getName());
 				})
-				.collect(Collectors.toMap(entry -> quoted(entry.getKey().getName()),
-						entry -> quoted(entry.getValue())));
+				.collect(Collectors.toMap(entry -> entry.getKey().getName(),
+						SimpleImmutableEntry::getValue));
 
 		if (columnsToMigrate.isEmpty()) {
 			return null;
@@ -122,7 +130,7 @@ public class SelectiveMigratorFunction {
 		String updates = columnsToMigrate.keySet().stream()
 				.map(columnName -> {
 					String oldColumnName = columnsToMigrate.get(columnName);
-					return quoted(columnName) + " = r." + oldColumnName;
+					return quoted(columnName) + " = r." + quoted(oldColumnName);
 				})
 				.collect(Collectors.joining(", "));
 
