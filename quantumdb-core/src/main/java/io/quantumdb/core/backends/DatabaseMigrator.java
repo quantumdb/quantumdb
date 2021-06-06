@@ -39,6 +39,6 @@ public interface DatabaseMigrator {
 	 * @param version The version of the database schema to drop.
 	 * @throws MigrationException In case something prevented the drop.
 	 */
-	void drop(State state, Version version) throws MigrationException;
+	void drop(State state, Version version, Stage stage) throws MigrationException;
 
 }

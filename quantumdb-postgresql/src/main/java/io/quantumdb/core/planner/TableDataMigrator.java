@@ -5,11 +5,11 @@ import static io.quantumdb.core.planner.QueryUtils.quoted;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -188,14 +188,6 @@ class TableDataMigrator {
 				right = right.toString().toLowerCase();
 			}
 
-			if (left instanceof Long) {
-				left = new BigDecimal((Long) left);
-			}
-
-			if (right instanceof Long) {
-				right = new BigDecimal((Long) right);
-			}
-
 			Comparable leftComparable = (Comparable) left;
 			Comparable rightComparable = (Comparable) right;
 
@@ -253,12 +245,17 @@ class TableDataMigrator {
 
 		switch (type) {
 			case SMALLINT:
+				return Short.parseShort(value);
 			case INTEGER:
 				return Integer.parseInt(value);
 			case BIGINT:
 				return Long.parseLong(value);
-			case NUMERIC:
+			case FLOAT:
+				return Float.parseFloat(value);
+			case DOUBLE:
 				return Double.parseDouble(value);
+			case NUMERIC:
+				return new BigDecimal(value);
 			case BOOLEAN:
 				return Boolean.parseBoolean(value);
 			case TEXT:
@@ -267,11 +264,9 @@ class TableDataMigrator {
 			case OID:
 				return value;
 			case DATE:
-				return Date.parse(value);
-			case FLOAT:
-				return Float.parseFloat(value);
+				return Date.valueOf(value);
 			case TIMESTAMP:
-				return Timestamp.parse(value);
+				return Timestamp.valueOf(value);
 			case UUID:
 			default:
 				return UUID.fromString(value);

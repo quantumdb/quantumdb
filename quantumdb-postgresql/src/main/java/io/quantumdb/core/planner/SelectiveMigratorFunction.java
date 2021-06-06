@@ -145,7 +145,7 @@ public class SelectiveMigratorFunction {
 		createStatement.append("		  WHERE  " + primaryKeyCondition + ";");
 		createStatement.append("	  EXCEPTION WHEN unique_violation THEN END;");
 		createStatement.append("	END LOOP;");
-		createStatement.append("  RETURN CONCAT('(', " + primaryKeyColumnNames.stream().map(value -> "r." + quoted(value)).collect(Collectors.joining(", ")) + ", ')');");
+		createStatement.append("  RETURN CONCAT('(', " + primaryKeyColumnNames.stream().map(value -> "r." + quoted(value)).collect(Collectors.joining(",',', ")) + ", ')');");
 		createStatement.append("END; $$ LANGUAGE 'plpgsql';");
 
 		QueryBuilder dropStatement = new QueryBuilder();
@@ -269,7 +269,7 @@ public class SelectiveMigratorFunction {
 		createStatement.append("		  VALUES (" + Joiner.on(", ").join(values.values()) + ");");
 		createStatement.append("	  EXCEPTION WHEN unique_violation THEN END;");
 		createStatement.append("	END LOOP;");
-		createStatement.append("  RETURN CONCAT('(', " + primaryKeyColumnNames.stream().map(value -> "r." + quoted(value)).collect(Collectors.joining(", ")) + ", ')');");
+		createStatement.append("  RETURN CONCAT('(', " + primaryKeyColumnNames.stream().map(value -> "r." + quoted(value)).collect(Collectors.joining(",',', ")) + ", ')');");
 		createStatement.append("END; $$ LANGUAGE 'plpgsql';");
 
 

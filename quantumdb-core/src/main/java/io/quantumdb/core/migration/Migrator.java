@@ -97,7 +97,7 @@ public class Migrator {
 				migrator.applySchemaChanges(state, stage.getParent(), stage.getLast());
 				if (intermediate != null) {
 					log.info("Dropping intermediate state: {}", intermediate.getId());
-					migrator.drop(state, intermediate);
+					migrator.drop(state, intermediate, stage);
 				}
 				intermediate = stage.getLast();
 			}
@@ -115,7 +115,7 @@ public class Migrator {
 		Changelog changelog = state.getChangelog();
 		Version version = changelog.getVersion(versionId);
 
-		migrator.drop(state, version);
+		migrator.drop(state, version, null);
 	}
 
 	private State loadState() throws MigrationException {
