@@ -39,7 +39,7 @@ public abstract class Command {
 
 	void persistChanges(Backend backend, State state) {
 		try {
-			backend.persistState(state);
+			backend.persistState(state, null);
 		}
 		catch (SQLException e) {
 			log.error(e.getMessage(), e);
