@@ -140,7 +140,7 @@ public class TableCreator {
 			if (index.isUnique()) {
 				queryBuilder.append("UNIQUE");
 			}
-			queryBuilder.append("INDEX " + quoted(index.getIndexName()));
+			queryBuilder.append("INDEX CONCURRENTLY " + quoted(index.getIndexName()));
 			queryBuilder.append("ON " + quoted(index.getParent().getName()));
 			queryBuilder.append("(" + index.getColumns().stream().map(QueryUtils::quoted).collect(Collectors.joining(", ")) + ");");
 
