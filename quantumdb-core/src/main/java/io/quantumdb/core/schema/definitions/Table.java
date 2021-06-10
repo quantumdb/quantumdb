@@ -221,7 +221,7 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 		return new ForeignKeyBuilder(this, referringColumns);
 	}
 
-	void dropForeignKey(ForeignKey constraint) {
+	public void dropForeignKey(ForeignKey constraint) {
 		foreignKeys.remove(constraint);
 	}
 
@@ -237,10 +237,21 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 	}
 
 	void canBeDropped() {
-		for (Column column : columns) {
-			checkState(column.getIncomingForeignKeys().isEmpty(), "The column: " + column.getName()
-					+ " in table: " + name + " is still being referenced by " + column.getIncomingForeignKeys().size()
-					+ " foreign key constraints.");
+		boolean error = false;
+		StringBuilder builder = new StringBuilder("Table: " + name + " is still being referenced to:\n");
+		for (ForeignKey foreignKey : parent.getForeignKeys()) {
+			if (!foreignKey.getReferredTableName().equals(name)) {
+				continue;
+			}
+
+			error = true;
+			builder.append(" - Foreign key: " + foreignKey.getForeignKeyName()
+					+ " refers to column(s): " + foreignKey.getReferredColumns()
+					+ " from table: " + foreignKey.getReferencingTableName() + "\n");
+		}
+
+		if (error) {
+			throw new IllegalStateException(builder.toString());
 		}
 	}
 

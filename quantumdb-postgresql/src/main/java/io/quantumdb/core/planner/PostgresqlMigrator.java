@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
@@ -29,6 +30,7 @@ import io.quantumdb.core.migration.Migrator.Stage;
 import io.quantumdb.core.migration.VersionTraverser.Direction;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
+import io.quantumdb.core.schema.definitions.ForeignKey;
 import io.quantumdb.core.schema.definitions.Sequence;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.schema.operations.DataOperation;
@@ -112,18 +114,36 @@ class PostgresqlMigrator implements DatabaseMigrator {
 	}
 
 	@Override
-	public void drop(State state, Version version) throws MigrationException {
+	public void drop(State state, Version version, Stage stage) throws MigrationException {
 		// Check that the version's operation is of type DDL, or has no operation (root version).
 		checkArgument(version.getOperation() == null || version.getOperation().getType() == Type.DDL);
 
 		RefLog refLog = state.getRefLog();
 		Catalog catalog = state.getCatalog();
 
+		Set<Version> activeVersions = refLog.getVersions().stream()
+				.filter(version1 -> !version1.equals(version))
+				.collect(Collectors.toSet());
+
+		// Add latest version of intermediate steps
+		if (stage != null) {
+			activeVersions.add(stage.getLast());
+		}
+
+		// Drop tables that are not part of any active versions or last intermediate versions
 		List<TableRef> tablesToDrop = refLog.getTableRefs().stream()
 				.filter(tableRef -> tableRef.getVersions().contains(version))
-				.filter(tableRef -> tableRef.getVersions().stream()
-						.filter(otherVersion -> otherVersion.getOperation().getType() == Type.DDL)
-						.count() == 1)
+				// Get only tableRefs that are also not part of any active versions
+				.filter(tableRef -> tableRef.getVersions().stream().noneMatch(activeVersions::contains))
+				.filter(tableRef -> refLog.getTableRefs().stream()
+						// If a TableRef exists with the same RefId
+						.filter(tableRef1 -> tableRef.getRefId().equals(tableRef1.getRefId()))
+						// But is not the same TableRef object (because of the renameTable migration)
+						.filter(tableRef1 -> !tableRef.equals(tableRef1))
+						// Do not drop the table if that TableRef object is still part of an active version
+						.noneMatch(tableRef1 -> tableRef1.getVersions().stream().anyMatch(activeVersions::contains)))
+				// Because the table may have already been dropped, only select the tables that are present in the catalog
+				.filter(tableRef -> catalog.getTables().stream().anyMatch(table -> tableRef.getRefId().equals(table.getName())))
 				.collect(Collectors.toList());
 
 		Map<SyncRef, SyncFunction> newSyncFunctions = Maps.newLinkedHashMap();
@@ -264,7 +284,20 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		}
 
 		connection.commit();
+
+		// Drop tables from the reflog.
 		tablesToDrop.forEach(refLog::dropTable);
+
+		// Drop all FKs connected to any table that is to be dropped.
+		tablesToDrop.forEach(tableRef -> {
+			Table table = catalog.getTable(tableRef.getRefId());
+			// Defensive copy to avoid concurrent modification
+			List<ForeignKey> foreignKeys = Lists.newArrayList(table.getForeignKeys());
+			foreignKeys.forEach(ForeignKey::drop);
+		});
+
+		// Drop tables from the catalog.
+		tablesToDrop.forEach(tableRef -> catalog.removeTable(tableRef.getRefId()));
 	}
 
 	static class InternalPlanner {

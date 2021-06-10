@@ -49,7 +49,7 @@ public class PostgresqlDatabase extends ExternalResource {
 		Config config = new Config();
 		config.setCatalog(catalogName);
 		config.setDriver(jdbcDriver);
-		config.setUrl(jdbcUrl);
+		config.setUrl(jdbcUrl + "/" + catalogName);
 		config.setUser(jdbcUser);
 		config.setPassword(jdbcPass);
 		return config;
