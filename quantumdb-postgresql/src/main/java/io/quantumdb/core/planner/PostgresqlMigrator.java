@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
@@ -29,6 +30,7 @@ import io.quantumdb.core.migration.Migrator.Stage;
 import io.quantumdb.core.migration.VersionTraverser.Direction;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.Column;
+import io.quantumdb.core.schema.definitions.ForeignKey;
 import io.quantumdb.core.schema.definitions.Sequence;
 import io.quantumdb.core.schema.definitions.Table;
 import io.quantumdb.core.schema.operations.DataOperation;
@@ -282,7 +284,20 @@ class PostgresqlMigrator implements DatabaseMigrator {
 		}
 
 		connection.commit();
+
+		// Drop tables from the reflog.
 		tablesToDrop.forEach(refLog::dropTable);
+
+		// Drop all FKs connected to any table that is to be dropped.
+		tablesToDrop.forEach(tableRef -> {
+			Table table = catalog.getTable(tableRef.getRefId());
+			// Defensive copy to avoid concurrent modification
+			List<ForeignKey> foreignKeys = Lists.newArrayList(table.getForeignKeys());
+			foreignKeys.forEach(ForeignKey::drop);
+		});
+
+		// Drop tables from the catalog.
+		tablesToDrop.forEach(tableRef -> catalog.removeTable(tableRef.getRefId()));
 	}
 
 	static class InternalPlanner {

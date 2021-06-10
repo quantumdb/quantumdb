@@ -94,6 +94,26 @@ public class PostgresqlMigrationPlanner implements MigrationPlanner {
 		Set<String> newTableRefIds = Sets.difference(postTableRefIds, preTableRefIds);
 		Set<String> newViewRefIds = Sets.difference(postViewRefIds, preViewRefIds);
 
+		/*
+		 * TODO: The planner currently pollutes the catalog with intermediate tables and views during the planning
+		 *  process. Unfortunately it seems that some processes rely on these to be present. This should be fixed in
+		 *  the future. Below you'll find the code that makes the planner clean up intermediate views and tables.
+		 */
+		
+//		// Remove tables that were added to the changelog during the process, but don't end up in the end result.
+//		catalog.getTables().stream()
+//				.map(Table::getName)
+//				.filter(tableName -> !preTableRefIds.contains(tableName) && !postTableRefIds.contains(tableName))
+//				.collect(Collectors.toSet())
+//				.forEach(catalog::removeTable);
+//
+//		// Remove views that were added to the changelog during the process, but don't end up in the end result.
+//		catalog.getViews().stream()
+//				.map(View::getName)
+//				.filter(viewName -> !preViewRefIds.contains(viewName) && !postViewRefIds.contains(viewName))
+//				.collect(Collectors.toSet())
+//				.forEach(catalog::removeView);
+
 		log.debug("The following ghost tables will be created: " + newTableRefIds.stream()
 				.collect(Collectors.toMap(Function.identity(), (id) -> refLog.getTableRefById(id).getName())));
 
