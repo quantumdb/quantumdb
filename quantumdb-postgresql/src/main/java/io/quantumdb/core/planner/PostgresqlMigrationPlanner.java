@@ -44,6 +44,11 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class PostgresqlMigrationPlanner implements MigrationPlanner {
 
+	private static class ResetException extends RuntimeException {
+		ResetException() {
+		}
+	}
+
 	public Plan createPlan(io.quantumdb.core.versioning.State state, Version from, Version to) {
 		log.debug("Creating migration plan for migration from version: {} to: {}", from, to);
 
@@ -97,11 +102,6 @@ public class PostgresqlMigrationPlanner implements MigrationPlanner {
 				.collect(Collectors.toMap(Function.identity(), (id) -> refLog.getViewRefById(id).getName())));
 
 		return new Planner(state, from, to, newTableRefIds, newViewRefIds, migrator.getRefLog()).createPlan();
-	}
-
-	private static class ResetException extends RuntimeException {
-		ResetException() {
-		}
 	}
 
 	private static class Planner {
@@ -240,7 +240,8 @@ public class PostgresqlMigrationPlanner implements MigrationPlanner {
 						.collect(Collectors.toMap(Function.identity(), Step::getTransitiveDependencies));
 
 				while (!mapping.isEmpty()) {
-					Optional<Entry<Step, Set<Step>>> crucial = mapping.entrySet().stream().min(Comparator.comparing(entry -> entry.getValue().size() * -1));
+					Optional<Entry<Step, Set<Step>>> crucial = mapping.entrySet().stream()
+							.min(Comparator.comparing(entry -> entry.getValue().size() * -1));
 
 					Entry<Step, Set<Step>> entry = crucial.get();
 					Step step = entry.getKey();
@@ -318,7 +319,8 @@ public class PostgresqlMigrationPlanner implements MigrationPlanner {
 						.collect(Collectors.toMap(Function.identity(), Step::getTransitiveDependencies));
 
 				while (!mapping.isEmpty()) {
-					Optional<Entry<Step, Set<Step>>> crucial = mapping.entrySet().stream().min(Comparator.comparing(entry -> entry.getValue().size() * -1));
+					Optional<Entry<Step, Set<Step>>> crucial = mapping.entrySet().stream()
+							.min(Comparator.comparing(entry -> entry.getValue().size() * -1));
 
 					Entry<Step, Set<Step>> entry = crucial.get();
 					Step step = entry.getKey();
@@ -439,7 +441,8 @@ public class PostgresqlMigrationPlanner implements MigrationPlanner {
 							.collect(Collectors.toMap(Function.identity(), Step::getTransitiveDependencies));
 
 					while (!mapping.isEmpty()) {
-						Optional<Entry<Step, Set<Step>>> crucial = mapping.entrySet().stream().min(Comparator.comparing(entry -> entry.getValue().size() * -1));
+						Optional<Entry<Step, Set<Step>>> crucial = mapping.entrySet().stream()
+								.min(Comparator.comparing(entry -> entry.getValue().size() * -1));
 
 						Entry<Step, Set<Step>> entry = crucial.get();
 						Step key = entry.getKey();

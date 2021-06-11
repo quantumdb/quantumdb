@@ -12,11 +12,6 @@ import lombok.Data;
 @Data
 public class XmlChangeset {
 
-	private final List<XmlOperation<?>> operations = Lists.newArrayList();
-	private String id;
-	private String author;
-	private String description;
-
 	static XmlChangeset convert(XmlElement element) {
 		checkArgument(element.getTag().equals("changeset"));
 
@@ -43,5 +38,10 @@ public class XmlChangeset {
 
 		return changeset;
 	}
+
+	private final List<XmlOperation<?>> operations = Lists.newArrayList();
+	private String id;
+	private String author;
+	private String description;
 
 }

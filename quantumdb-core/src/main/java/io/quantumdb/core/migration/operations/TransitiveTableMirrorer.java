@@ -29,7 +29,7 @@ class TransitiveTableMirrorer {
 				.map(tableName -> refLog.getTableRef(parentVersion, tableName))
 				.collect(Collectors.toList());
 
-		while (!tablesToMirror.isEmpty()) {
+		while(!tablesToMirror.isEmpty()) {
 			TableRef tableRef = tablesToMirror.remove(0);
 			if (mirrored.contains(tableRef.getName())) {
 				continue;
@@ -50,7 +50,7 @@ class TransitiveTableMirrorer {
 		}
 
 		// Copying foreign keys for each affected table.
-		for (String tableName : mirrored) {
+		for(String tableName : mirrored) {
 			String oldRefId = refLog.getTableRef(parentVersion, tableName).getRefId();
 			String newRefId = refLog.getTableRef(version, tableName).getRefId();
 

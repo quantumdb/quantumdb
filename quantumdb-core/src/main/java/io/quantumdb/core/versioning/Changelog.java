@@ -23,7 +23,7 @@ import lombok.Setter;
  * This class allows you to define a series of successive ChangeSets, building up a changelog in the process.
  */
 @Data
-@EqualsAndHashCode(exclude = {"idGenerator"})
+@EqualsAndHashCode(exclude = { "idGenerator" })
 public class Changelog {
 
 	private final Version root;
@@ -92,8 +92,8 @@ public class Changelog {
 	/**
 	 * Adds a new ChangeSet to the Changelog object.
 	 *
-	 * @param appendTo   The Version to append the ChangeSet to.
-	 * @param changeSet  The ChangeSet to add to this Changelog object.
+	 * @param appendTo The Version to append the ChangeSet to.
+	 * @param changeSet The ChangeSet to add to this Changelog object.
 	 * @param operations The Collection of Operations associated with this ChangeSet.
 	 * @return The Changelog object.
 	 */
@@ -111,7 +111,7 @@ public class Changelog {
 	/**
 	 * Adds a new ChangeSet to the Changelog object.
 	 *
-	 * @param appendTo  The Version to append the ChangeSet to.
+	 * @param appendTo The Version to append the ChangeSet to.
 	 * @param versionId The Version ID of this change.
 	 * @param changeSet The ChangeSet to add to this Changelog object.
 	 * @param operation The Operation associated with this version.

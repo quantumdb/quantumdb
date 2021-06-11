@@ -101,7 +101,7 @@ public class Migrator {
 				}
 				intermediate = stage.getLast();
 			}
-			else if (stage.getType() == Type.DML) {
+			else  if (stage.getType() == Type.DML) {
 				log.info("Executing data changes: {}", stage.getVersions());
 				migrator.applyDataChanges(state, stage);
 			}
