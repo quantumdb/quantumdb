@@ -100,15 +100,9 @@ public class Changelog {
 	 */
 	public Changelog addChangeSet(Version appendTo, ChangeSet changeSet, Collection<Operation> operations) {
 		lastAdded = appendTo;
-		int size = operations.size();
+
 		for (Operation operation : operations) {
-			size--;
-			if (size == 0) {
-				lastAdded = new Version(changeSet.getId(), lastAdded, changeSet, operation);
-			}
-			else {
 				lastAdded = new Version(idGenerator.generateId(), lastAdded, changeSet, operation);
-			}
 		}
 
 		changeSet.setVersion(lastAdded);

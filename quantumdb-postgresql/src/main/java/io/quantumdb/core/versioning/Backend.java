@@ -38,6 +38,7 @@ import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.ColumnType;
 import io.quantumdb.core.schema.definitions.PostgresTypes;
 import io.quantumdb.core.schema.operations.Operation;
+import io.quantumdb.core.utils.RandomHasher;
 import io.quantumdb.core.versioning.RefLog.ColumnRef;
 import io.quantumdb.core.versioning.RefLog.SyncRef;
 import io.quantumdb.core.versioning.RefLog.TableRef;
@@ -877,7 +878,7 @@ public class Backend {
 		}
 
 		if (root == null) {
-			root = new RawChangelogEntry("initial", null, null, null);
+			root = new RawChangelogEntry(RandomHasher.generateHash(), null, null, null);
 		}
 
 		List<RawChangelogEntry> pointer = Lists.newArrayList(root);

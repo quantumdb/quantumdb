@@ -1,6 +1,5 @@
 package io.quantumdb.cli.commands;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static io.quantumdb.core.schema.operations.SchemaOperations.cleanupTables;
 
 import java.io.File;
@@ -9,7 +8,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-import com.google.common.collect.Lists;
 import io.quantumdb.cli.utils.CliException;
 import io.quantumdb.cli.utils.CliWriter;
 import io.quantumdb.cli.utils.CliWriter.Context;
@@ -41,8 +39,6 @@ public class Cleanup extends Command {
 
 			State state = loadState(backend);
 			Changelog changelog = state.getChangelog();
-
-			checkArgument(state.getRefLog().getVersions().size() == 1, "You may only call this command if you have 1 active version.");
 
 			Version last = changelog.getVersion(state.getRefLog().getVersions().toArray(new Version[0])[0].getId());
 			writer.write(last.getId());
@@ -86,22 +82,6 @@ public class Cleanup extends Command {
 			log.error(e.getMessage(), e);
 			writer.write(e.getMessage(), Context.FAILURE);
 		}
-	}
-
-	private Version getOriginVersion(List<String> arguments, State state, Changelog changelog) {
-		String versionId = getArgument(arguments, "from", String.class, () -> {
-			List<Version> versions = Lists.newArrayList(state.getRefLog().getVersions());
-			if (versions.isEmpty()) {
-				versions.add(changelog.getRoot());
-			}
-
-			if (versions.size() == 1) {
-				return versions.get(0).getId();
-			}
-			throw new CliException("You must specify a version to fork from!");
-		});
-
-		return changelog.getVersion(versionId);
 	}
 
 }

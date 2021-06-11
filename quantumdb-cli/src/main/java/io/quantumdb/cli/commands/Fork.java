@@ -37,7 +37,13 @@ public class Fork extends Command {
 			Changelog changelog = state.getChangelog();
 
 			Version from = getOriginVersion(arguments, state, changelog);
-			Version to = changelog.getVersion(arguments.remove(0));
+
+			String toChangeSet = arguments.remove(0);
+			Version version = changelog.getRoot();
+			while (!version.getChangeSet().getId().equals(toChangeSet)) {
+				version = version.getChild();
+			}
+			Version to = version.getChangeSet().getVersion();
 
 			String outputFile = null;
 			boolean printDryRun = false;
@@ -78,19 +84,28 @@ public class Fork extends Command {
 	}
 
 	private Version getOriginVersion(List<String> arguments, State state, Changelog changelog) {
-		String versionId = getArgument(arguments, "from", String.class, () -> {
+		String changesetId = getArgument(arguments, "from", String.class, () -> {
 			List<Version> versions = Lists.newArrayList(state.getRefLog().getVersions());
-			if (versions.isEmpty()) {
-				versions.add(changelog.getRoot());
+			Version version = changelog.getRoot();
+			Version lastVersion = version;
+
+			version = version.getChild();
+			while (version != null) {
+				if (versions.contains(version)) {
+					lastVersion = version;
+				}
+				version = version.getChild();
 			}
 
-			if (versions.size() == 1) {
-				return versions.get(0).getId();
-			}
-			throw new CliException("You must specify a version to fork from!");
+			return lastVersion.getChangeSet().getId();
 		});
 
-		return changelog.getVersion(versionId);
+		Version version = changelog.getRoot();
+		while (!version.getChangeSet().getId().equals(changesetId)) {
+			version = version.getChild();
+		}
+
+		return version.getChangeSet().getVersion();
 	}
 
 }

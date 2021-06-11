@@ -47,7 +47,7 @@ public class Changelog extends Command {
 				Version version = versions.remove(0);
 				ChangeSet currentChangeset = version.getChangeSet();
 
-				if (version.getId().equals(from)) {
+				if (currentChangeset.getId().equals(from)) {
 					print = true;
 				}
 
@@ -56,7 +56,7 @@ public class Changelog extends Command {
 					limit--;
 				}
 
-				if (version.getId().equals(until) || limit <= 0) {
+				if (currentChangeset.getId().equals(until) || limit <= 0) {
 					print = false;
 				}
 
@@ -86,11 +86,13 @@ public class Changelog extends Command {
 			pointer = pointer.getParent();
 		}
 
-		String id = lastVersion.getId();
+		String id = changeSet.getId();
 		if (active) {
 			id += " (active)";
 		}
-		id += " - " + changeSet.getId();
+		if (changeSet.getDescription() != null) {
+			id += " - " + changeSet.getDescription();
+		}
 
 		writer.setIndent(0);
 		writer.write(id, Context.SUCCESS);

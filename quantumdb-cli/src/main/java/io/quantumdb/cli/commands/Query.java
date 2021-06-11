@@ -188,7 +188,7 @@ public class Query extends Command {
 
 	private Version getVersionId(List<String> arguments, Config config) {
 		State state = loadState(config.getBackend());
-		String versionId = getArgument(arguments, "version", String.class, () -> {
+		String changeSetId = getArgument(arguments, "version", String.class, () -> {
 			List<Version> versions = Lists.newArrayList(state.getRefLog().getVersions());
 			if (versions.isEmpty()) {
 				versions.add(state.getChangelog().getRoot());
@@ -199,10 +199,15 @@ public class Query extends Command {
 			}
 			throw new CliException("You must specify a version to query!");
 		});
+		Version version = state.getChangelog().getRoot();
+		while (version != null && !version.getChangeSet().equals(changeSetId)) {
+			version = version.getChild();
+		}
+		if (version == null) {
+			throw new CliException("You must specify a (valid) version to query");
+		}
 
-		return Optional.ofNullable(versionId)
-				.map(state.getChangelog()::getVersion)
-				.orElseThrow(() -> new CliException("You must specify a (valid) version to query"));
+		return version.getChangeSet().getVersion();
 	}
 
 }

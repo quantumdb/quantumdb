@@ -35,8 +35,12 @@ public class Drop extends Command {
 			State state = loadState(backend);
 			Changelog changelog = state.getChangelog();
 
-			String versionId = arguments.remove(0);
-			Version version = changelog.getVersion(versionId);
+			String changeSetId = arguments.remove(0);
+			Version version = changelog.getRoot();
+			while (!version.getChangeSet().getId().equals(changeSetId)) {
+				version = version.getChild();
+			}
+			version = version.getChangeSet().getVersion();
 
 			String outputFile = null;
 			boolean printDryRun = false;
@@ -56,7 +60,7 @@ public class Drop extends Command {
 			}
 
 			if (!isDryRun) {
-				writer.write("Checking how many clients are still connected to: " + version.getId());
+				writer.write("Checking how many clients are still connected to: " + version.getChangeSet().getId());
 				int count = backend.countClientsConnectedToVersion(version);
 
 				if (count > 0) {
@@ -72,7 +76,7 @@ public class Drop extends Command {
 				}
 			}
 
-			writer.write("Dropping database schema version: " + version.getId() + "...");
+			writer.write("Dropping database schema version: " + version.getChangeSet().getId() + "...");
 
 			backend.getMigrator().drop(state, version);
 
