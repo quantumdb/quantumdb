@@ -812,6 +812,7 @@ public class RefLog {
 		return new SyncRef(name, functionName, columns);
 	}
 
+
 	public Multimap<TableRef, TableRef> getTableMapping(Version from, Version to) {
 		return getTableMapping(from, to, true);
 	}

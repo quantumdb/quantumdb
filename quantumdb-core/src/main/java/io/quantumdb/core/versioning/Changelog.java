@@ -95,6 +95,7 @@ public class Changelog {
 	 * @param appendTo The Version to append the ChangeSet to.
 	 * @param changeSet The ChangeSet to add to this Changelog object.
 	 * @param operations The Collection of Operations associated with this ChangeSet.
+	 *
 	 * @return The Changelog object.
 	 */
 	public Changelog addChangeSet(Version appendTo, ChangeSet changeSet, Collection<Operation> operations) {
@@ -115,6 +116,7 @@ public class Changelog {
 	 * @param versionId The Version ID of this change.
 	 * @param changeSet The ChangeSet to add to this Changelog object.
 	 * @param operation The Operation associated with this version.
+	 *
 	 * @return The Changelog object.
 	 */
 	Changelog addChangeSet(Version appendTo, String versionId, ChangeSet changeSet, Operation operation) {
