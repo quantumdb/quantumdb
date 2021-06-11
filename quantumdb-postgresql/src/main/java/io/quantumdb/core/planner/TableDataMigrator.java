@@ -94,8 +94,8 @@ class TableDataMigrator {
 				migrator.append("SELECT * FROM " + quoted(initialMigrator.getName()) + "();");
 			}
 			else {
-				List<String> values = successiveMigrator.getParameters().stream()
-						.map(parameterName -> asExpression(lastProcessedId.get(stripEscaping(parameterName))))
+				List<String> values = successiveMigrator.getParameters().keySet().stream()
+						.map(parameterName -> asExpression(lastProcessedId.get(stripEscaping(parameterName))) + "::" + successiveMigrator.getParameters().get(parameterName))
 						.collect(Collectors.toList());
 
 				migrator.append("SELECT * FROM " + quoted(successiveMigrator.getName()) + "(")
@@ -104,9 +104,13 @@ class TableDataMigrator {
 
 			try (Statement statement = connection.createStatement()) {
 				ResultSet resultSet = statement.executeQuery(migrator.toString());
-
 				if (resultSet.next()) {
-					lastProcessedId.putAll(readIdentity(source, resultSet));
+					Map<String, Object> identityMap = readIdentity(source, resultSet);
+					if (identityMap.keySet().isEmpty()) {
+						break;
+					}
+
+					lastProcessedId.putAll(identityMap);
 					if (greaterThanOrEqualsTo(lastProcessedId, highestId)) {
 						break;
 					}
@@ -229,6 +233,11 @@ class TableDataMigrator {
 
 		Map<String, Object> identity = Maps.newHashMap();
 		List<Column> primaryKeyColumns = from.getPrimaryKeyColumns();
+
+		if (parts.size() != primaryKeyColumns.size()) {
+			return identity;
+		}
+
 		for (int i = 0; i < primaryKeyColumns.size(); i++) {
 			Column column = primaryKeyColumns.get(i);
 			String columnName = column.getName();
