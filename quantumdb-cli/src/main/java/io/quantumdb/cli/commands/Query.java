@@ -183,7 +183,7 @@ public class Query extends Command {
 	}
 
 	private String createUrl(String url, String catalog, String versionId) {
-		return url.replace("jdbc:", "jdbc:quantumdb:") + "/" + catalog + "?version=" + versionId;
+		return url.replace("jdbc:", "jdbc:quantumdb:") + "&version=" + versionId;
 	}
 
 	private Version getVersionId(List<String> arguments, Config config) {
