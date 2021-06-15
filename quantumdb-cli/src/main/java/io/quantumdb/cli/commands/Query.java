@@ -168,7 +168,7 @@ public class Query extends Command {
 	}
 
 	private void doInTransaction(Config config, Version version, ConnectionConsumer consumer) throws Throwable {
-		String url = createUrl(config.getUrl(), config.getCatalog(), version.getId());
+		String url = createUrl(config.getUrl(), version.getId());
 		try (Connection connection = DriverManager.getConnection(url, config.getUser(), config.getPassword())) {
 			connection.setAutoCommit(false);
 			try {
@@ -182,8 +182,8 @@ public class Query extends Command {
 		}
 	}
 
-	private String createUrl(String url, String catalog, String versionId) {
-		return url.replace("jdbc:", "jdbc:quantumdb:") + "/" + catalog + "?version=" + versionId;
+	private String createUrl(String url, String versionId) {
+		return url.replace("jdbc:", "jdbc:quantumdb:") + "&version=" + versionId;
 	}
 
 	private Version getVersionId(List<String> arguments, Config config) {
