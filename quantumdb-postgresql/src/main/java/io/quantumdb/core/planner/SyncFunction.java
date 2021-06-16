@@ -83,7 +83,9 @@ public class SyncFunction {
 		Map<String, String> expressions = mapping.entrySet().stream()
 				.collect(Collectors.toMap(entry -> quoted(entry.getValue()),
 						entry -> "NEW." + quoted(entry.getKey()),
-						(u, v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
+						(u, v) -> {
+							throw new IllegalStateException(String.format("Duplicate key %s", u));
+						},
 						Maps::newLinkedHashMap));
 
 		for (ForeignKey foreignKey : targetTable.getForeignKeys()) {
@@ -113,16 +115,22 @@ public class SyncFunction {
 		this.insertExpressions = ImmutableMap.copyOf(expressions);
 		this.updateExpressions = ImmutableMap.copyOf(insertExpressions);
 
-		this.updateIdentitiesForInserts = ImmutableMap.copyOf((Map<? extends String, ? extends String>)targetTable.getPrimaryKeyColumns().stream()
+		this.updateIdentitiesForInserts = ImmutableMap.copyOf((Map<? extends String, ? extends String>) targetTable.getColumns().stream()
+				.filter(column -> reverseLookup(mapping, column.getName()) != null)
 				.collect(Collectors.toMap(column -> quoted(column.getName()),
-						column -> "NEW." + quoted(reverseLookup(mapping, column.getName())) + "",
-						(u, v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
+						column -> "NEW." + quoted(reverseLookup(mapping, column.getName())),
+						(u, v) -> {
+							throw new IllegalStateException(String.format("Duplicate key %s", u));
+						},
 						Maps::newLinkedHashMap)));
 
-		this.updateIdentities = ImmutableMap.copyOf((Map<? extends String, ? extends String>)targetTable.getPrimaryKeyColumns().stream()
+		this.updateIdentities = ImmutableMap.copyOf((Map<? extends String, ? extends String>) targetTable.getPrimaryKeyColumns().stream()
+				.filter(column -> reverseLookup(mapping, column.getName()) != null)
 				.collect(Collectors.toMap(column -> quoted(column.getName()),
 						column -> "OLD." + quoted(reverseLookup(mapping, column.getName())),
-						(u, v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
+						(u, v) -> {
+							throw new IllegalStateException(String.format("Duplicate key %s", u));
+						},
 						Maps::newLinkedHashMap)));
 	}
 
@@ -131,7 +139,7 @@ public class SyncFunction {
 				.filter(entry -> entry.getValue().equals(value))
 				.findFirst()
 				.map(Entry::getKey)
-				.get();
+				.orElse(null);
 	}
 
 	public QueryBuilder createFunctionStatement() {

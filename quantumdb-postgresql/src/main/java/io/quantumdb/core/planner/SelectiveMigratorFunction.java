@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
 import io.quantumdb.core.planner.MigratorFunction.Stage;
 import io.quantumdb.core.schema.definitions.Column;
 import io.quantumdb.core.schema.definitions.ForeignKey;
@@ -100,19 +101,27 @@ public class SelectiveMigratorFunction {
 			}
 		}
 
-		TableRef sourceRef = refLog.getTableRefById(source.getName());
-		TableRef targetRef = refLog.getTableRefById(target.getName());
+		Multimap<TableRef, TableRef> tableMapping = refLog.getTableMapping(from, to);
+
+		TableRef sourceRef = tableMapping.keySet().stream()
+				.filter(tableRef -> tableRef.getRefId().equals(source.getName()))
+				.findFirst().get();
+
+		TableRef targetRef = tableMapping.get(sourceRef).stream()
+				.filter(tableRef -> tableRef.getRefId().equals(target.getName()))
+				.findFirst().get();
+
 		Map<ColumnRef, ColumnRef> columnMapping = refLog.getColumnMapping(sourceRef, targetRef);
 
 		Map<String, String> columnsToMigrate = columnMapping.entrySet().stream()
-				.filter(entry -> columnsToBeMigrated.contains(entry.getKey().getName()))
+				.filter(entry -> columnsToBeMigrated.contains(entry.getValue().getName()))
 				.map(entry -> {
 					String newColumnName = entry.getValue().getName();
 					Column newColumn = target.getColumn(newColumnName);
 					return new SimpleImmutableEntry<>(newColumn, entry.getKey().getName());
 				})
-				.collect(Collectors.toMap(entry -> quoted(entry.getKey().getName()),
-						entry -> quoted(entry.getValue())));
+				.collect(Collectors.toMap(entry -> entry.getKey().getName(),
+						SimpleImmutableEntry::getValue));
 
 		if (columnsToMigrate.isEmpty()) {
 			return null;
@@ -121,7 +130,7 @@ public class SelectiveMigratorFunction {
 		String updates = columnsToMigrate.keySet().stream()
 				.map(columnName -> {
 					String oldColumnName = columnsToMigrate.get(columnName);
-					return quoted(columnName) + " = r." + oldColumnName;
+					return quoted(columnName) + " = r." + quoted(oldColumnName);
 				})
 				.collect(Collectors.joining(", "));
 
@@ -182,15 +191,25 @@ public class SelectiveMigratorFunction {
 				.map(column -> functionParameterMapping.get(column.getName()) + " " + column.getType().toString())
 				.collect(Collectors.toList());
 
-		TableRef sourceRef = refLog.getTableRefById(source.getName());
-		TableRef targetRef = refLog.getTableRefById(target.getName());
+		Multimap<TableRef, TableRef> tableMapping = refLog.getTableMapping(from, to);
+
+		TableRef sourceRef = tableMapping.keySet().stream()
+				.filter(tableRef -> tableRef.getRefId().equals(source.getName()))
+				.findFirst().get();
+
+		TableRef targetRef = tableMapping.get(sourceRef).stream()
+				.filter(tableRef -> tableRef.getRefId().equals(target.getName()))
+				.findFirst().get();
+
 		Map<ColumnRef, ColumnRef> columnMapping = refLog.getColumnMapping(sourceRef, targetRef);
 
 		Map<String, String> values = columnMapping.entrySet().stream()
-				.filter(entry -> columns.contains(entry.getKey().getName()))
+				.filter(entry -> columns.contains(entry.getValue().getName()))
 				.collect(Collectors.toMap(entry -> entry.getValue().getName(),
 						entry -> "r." + quoted(entry.getKey().getName()),
-						(u, v) -> { throw new IllegalStateException(String.format("Duplicate key %s", u)); },
+						(u, v) -> {
+							throw new IllegalStateException(String.format("Duplicate key %s", u));
+						},
 						Maps::newLinkedHashMap));
 
 		for (ForeignKey foreignKey : target.getForeignKeys()) {

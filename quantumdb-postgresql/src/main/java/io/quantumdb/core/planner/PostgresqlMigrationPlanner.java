@@ -45,7 +45,8 @@ import lombok.extern.slf4j.Slf4j;
 public class PostgresqlMigrationPlanner implements MigrationPlanner {
 
 	private static class ResetException extends RuntimeException {
-		ResetException() {}
+		ResetException() {
+		}
 	}
 
 	public Plan createPlan(io.quantumdb.core.versioning.State state, Version from, Version to) {
@@ -252,7 +253,7 @@ public class PostgresqlMigrationPlanner implements MigrationPlanner {
 
 				Set<Step> dependentOnSteps = dependentOnTables.stream()
 						.map(plan::findFirstCopy)
-						.flatMap(o -> o.isPresent() ? Stream.of(o.get()) : Stream.empty())
+						.flatMap(o -> o.map(Stream::of).orElseGet(Stream::empty))
 						.collect(Collectors.toSet());
 
 				Map<Step, Set<Step>> mapping = dependentOnSteps.stream()
@@ -260,18 +261,12 @@ public class PostgresqlMigrationPlanner implements MigrationPlanner {
 
 				while (!mapping.isEmpty()) {
 					Optional<Entry<Step, Set<Step>>> crucial = mapping.entrySet().stream()
-							.sorted(Comparator.comparing(entry -> entry.getValue().size() * -1))
-							.findFirst();
+							.min(Comparator.comparing(entry -> entry.getValue().size() * -1));
 
-					if (crucial.isPresent()) {
-						Entry<Step, Set<Step>> entry = crucial.get();
-						Step step = entry.getKey();
-						dependentOnSteps.removeAll(step.getTransitiveDependencies());
-						mapping.remove(step);
-					}
-					else {
-						break;
-					}
+					Entry<Step, Set<Step>> entry = crucial.get();
+					Step step = entry.getKey();
+					dependentOnSteps.removeAll(step.getTransitiveDependencies());
+					mapping.remove(step);
 				}
 
 				Step step = plan.copy(table, columns);
@@ -333,12 +328,11 @@ public class PostgresqlMigrationPlanner implements MigrationPlanner {
 						.filter(foreignKey -> !Sets.intersection(Sets.newHashSet(foreignKey.getReferencingColumns()), columns).isEmpty())
 						.map(ForeignKey::getReferredTableName)
 						.map(catalog::getTable)
-						.distinct()
 						.collect(Collectors.toSet());
 
 				Set<Step> dependentOnSteps = dependentOnTables.stream()
 						.map(plan::findFirstCopy)
-						.flatMap(o -> o.isPresent() ? Stream.of(o.get()) : Stream.empty())
+						.flatMap(o -> o.map(Stream::of).orElseGet(Stream::empty))
 						.collect(Collectors.toSet());
 
 				Map<Step, Set<Step>> mapping = dependentOnSteps.stream()
@@ -346,18 +340,12 @@ public class PostgresqlMigrationPlanner implements MigrationPlanner {
 
 				while (!mapping.isEmpty()) {
 					Optional<Entry<Step, Set<Step>>> crucial = mapping.entrySet().stream()
-							.sorted(Comparator.comparing(entry -> entry.getValue().size() * -1))
-							.findFirst();
+							.min(Comparator.comparing(entry -> entry.getValue().size() * -1));
 
-					if (crucial.isPresent()) {
-						Entry<Step, Set<Step>> entry = crucial.get();
-						Step step = entry.getKey();
-						dependentOnSteps.removeAll(step.getTransitiveDependencies());
-						mapping.remove(step);
-					}
-					else {
-						break;
-					}
+					Entry<Step, Set<Step>> entry = crucial.get();
+					Step step = entry.getKey();
+					dependentOnSteps.removeAll(step.getTransitiveDependencies());
+					mapping.remove(step);
 				}
 
 				Step step = plan.copy(table, columns);
@@ -466,7 +454,7 @@ public class PostgresqlMigrationPlanner implements MigrationPlanner {
 
 					Set<Step> dependentOnSteps = dependentOnTables.stream()
 							.map(plan::findFirstCopy)
-							.flatMap(o -> o.isPresent() ? Stream.of(o.get()) : Stream.empty())
+							.flatMap(o -> o.map(Stream::of).orElseGet(Stream::empty))
 							.collect(Collectors.toSet());
 
 					Map<Step, Set<Step>> mapping = dependentOnSteps.stream()
@@ -474,18 +462,12 @@ public class PostgresqlMigrationPlanner implements MigrationPlanner {
 
 					while (!mapping.isEmpty()) {
 						Optional<Entry<Step, Set<Step>>> crucial = mapping.entrySet().stream()
-								.sorted(Comparator.comparing(entry -> entry.getValue().size() * -1))
-								.findFirst();
+								.min(Comparator.comparing(entry -> entry.getValue().size() * -1));
 
-						if (crucial.isPresent()) {
-							Entry<Step, Set<Step>> entry = crucial.get();
-							Step key = entry.getKey();
-							dependentOnSteps.removeAll(key.getTransitiveDependencies());
-							mapping.remove(key);
-						}
-						else {
-							break;
-						}
+						Entry<Step, Set<Step>> entry = crucial.get();
+						Step key = entry.getKey();
+						dependentOnSteps.removeAll(key.getTransitiveDependencies());
+						mapping.remove(key);
 					}
 
 					Step dependent = plan.copy(table, toMigrate);
@@ -502,7 +484,7 @@ public class PostgresqlMigrationPlanner implements MigrationPlanner {
 			Multimap<TableRef, TableRef> ghostedRefIds = refLog.getTableMapping(from, to, true);
 			Set<String> createdGhostRefIds = Sets.newHashSet();
 
-			while(!refIdsToMirror.isEmpty()) {
+			while (!refIdsToMirror.isEmpty()) {
 				String refId = refIdsToMirror.remove(0);
 				if (ghostedRefIds.entries().stream()
 						.anyMatch(entry -> entry.getKey().getRefId().equals(refId))) {
