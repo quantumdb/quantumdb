@@ -15,8 +15,8 @@ public class XmlChangeset {
 		checkArgument(element.getTag().equals("changeset"));
 
 		XmlChangeset changeset = new XmlChangeset();
-		changeset.setId(element.getAttributes().get("id"));
-		changeset.setAuthor(element.getAttributes().get("author"));
+		changeset.setId(element.getAttributes().remove("id"));
+		changeset.setAuthor(element.getAttributes().remove("author"));
 
 		for (XmlElement child : element.getChildren()) {
 			if (child.getTag().equals("operations")) {
@@ -33,6 +33,13 @@ public class XmlChangeset {
 
 				changeset.setDescription(description);
 			}
+			else {
+				throw new IllegalArgumentException("Child element: " + child.getTag() + " is not valid!");
+			}
+		}
+
+		if (!element.getAttributes().keySet().isEmpty()) {
+			throw new IllegalArgumentException("Attributes: " + element.getAttributes().keySet() + " is/are not valid!");
 		}
 
 		return changeset;

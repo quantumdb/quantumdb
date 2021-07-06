@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<changelog
+		xmlns="http://www.quantumdb.io/xml/ns/quantumdb-changelog"
+>
+
+	<changeset id="id1" author="Nick Richter">
+		<description>Test changeset 1</description>
+		<operations>
+			<sql>INSERT VALUES ("user1", 1, "Nick") INTO table1;</sql>
+		</operations>
+	</changeset>
+
+</changelog>

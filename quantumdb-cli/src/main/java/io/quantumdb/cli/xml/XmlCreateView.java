@@ -16,9 +16,9 @@ public class XmlCreateView implements XmlOperation<CreateView> {
 		checkArgument(element.getTag().equals(TAG));
 
 		XmlCreateView operation = new XmlCreateView();
-		operation.setViewName(element.getAttributes().get("viewName"));
-		operation.setRecursive(Boolean.TRUE.toString().equals(element.getAttributes().get("recursive")));
-		operation.setTemporary(Boolean.TRUE.toString().equals(element.getAttributes().get("temporary")));
+		operation.setViewName(element.getAttributes().remove("viewName"));
+		operation.setRecursive(Boolean.TRUE.toString().equals(element.getAttributes().remove("recursive")));
+		operation.setTemporary(Boolean.TRUE.toString().equals(element.getAttributes().remove("temporary")));
 		operation.setQuery(Strings.emptyToNull(element.getChildren().stream()
 				.filter(child -> child.getTag().equals(XmlQuery.TAG))
 				.map(child -> (XmlQuery) XmlQuery.convert(child))
@@ -26,6 +26,10 @@ public class XmlCreateView implements XmlOperation<CreateView> {
 				.findFirst()
 				.orElseThrow(() -> new RuntimeException("No query specified!"))
 				.trim()));
+
+		if (!element.getAttributes().keySet().isEmpty()) {
+			throw new IllegalArgumentException("Attributes: " + element.getAttributes().keySet() + " is/are not valid!");
+		}
 
 		return operation;
 	}

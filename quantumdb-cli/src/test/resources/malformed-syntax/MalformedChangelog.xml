@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<changeLog
+		xmlns="http://www.quantumdb.io/xml/ns/quantumdb-changelog"
+>
+
+	<changeset id="id1" author="Nick Richter">
+		<description>Test changeset 1</description>
+		<operations>
+			<addColumn tableName="table1">
+				<column name="column1" type="varchar"/>
+			</addColumn>
+		</operations>
+	</changeset>
+
+	<changeset id="id2" author="Nick Richter">
+		<description>Test changeset 2</description>
+		<operations>
+			<addColumn tableName="table2">
+				<column name="column2" type="varchar" nullable="true"/>
+			</addColumn>
+		</operations>
+	</changeset>
+
+	<changeset id="id3" author="Nick Richter">
+		<description>Test changeset 3</description>
+		<operations>
+			<addColumn tableName="table3">
+				<column name="column3" type="varchar" nullable="false" defaultExpression="test"/>
+			</addColumn>
+		</operations>
+	</changeset>
+
+	<changeset id="id4" author="Nick Richter">
+		<description>Test changeset 4</description>
+		<operations>
+			<addColumn tableName="table4">
+				<column name="column4" type="numeric" primaryKey="true"/>
+			</addColumn>
+		</operations>
+	</changeset>
+
+	<changeset id="id5" author="Nick Richter">
+		<description>Test changeset 5</description>
+		<operations>
+			<addColumn tableName="table5">
+				<column name="column5" type="numeric" autoIncrement="true"/>
+			</addColumn>
+		</operations>
+	</changeset>
+
+	<changeset id="id6" author="Nick Richter">
+		<description>Test changeset 6</description>
+		<operations>
+			<addColumn tableName="table6">
+				<column name="column6" type="numeric" primaryKey="true" nullable="false"/>
+			</addColumn>
+		</operations>
+	</changeset>
+
+	<changeset id="id7" author="Nick Richter">
+		<description>Test changeset 7</description>
+		<operations>
+			<addColumn tableName="table7">
+				<column name="column7" type="varchar" nullable="true" defaultExpression="test"/>
+			</addColumn>
+		</operations>
+	</changeset>
+
+</changeLog>

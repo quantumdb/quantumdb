@@ -15,8 +15,13 @@ public class XmlRenameTable implements XmlOperation<RenameTable> {
 		checkArgument(element.getTag().equals(TAG));
 
 		XmlRenameTable operation = new XmlRenameTable();
-		operation.setOldTableName(element.getAttributes().get("oldTableName"));
-		operation.setNewTableName(element.getAttributes().get("newTableName"));
+		operation.setOldTableName(element.getAttributes().remove("oldTableName"));
+		operation.setNewTableName(element.getAttributes().remove("newTableName"));
+
+		if (!element.getAttributes().keySet().isEmpty()) {
+			throw new IllegalArgumentException("Attributes: " + element.getAttributes().keySet() + " is/are not valid!");
+		}
+
 		return operation;
 	}
 

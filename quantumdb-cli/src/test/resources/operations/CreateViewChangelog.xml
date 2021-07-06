@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<changelog
+		xmlns="http://www.quantumdb.io/xml/ns/quantumdb-changelog"
+>
+
+	<changeset id="id1" author="Nick Richter">
+		<description>Test changeset 1</description>
+		<operations>
+			<createView viewName="view1">
+				<sql>
+					SELECT * FROM table1 WHERE admin = true;
+				</sql>
+			</createView>
+		</operations>
+	</changeset>
+
+	<changeset id="id2" author="Nick Richter">
+		<description>Test changeset 2</description>
+		<operations>
+			<createView viewName="view2" temporary="true" recursive="true">
+				<sql>
+					SELECT * FROM table2 WHERE admin = true;
+				</sql>
+			</createView>
+		</operations>
+	</changeset>
+
+</changelog>

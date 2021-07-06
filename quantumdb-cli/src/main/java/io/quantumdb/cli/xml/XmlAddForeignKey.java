@@ -12,27 +12,31 @@ import lombok.Data;
 @Data
 public class XmlAddForeignKey implements XmlOperation<AddForeignKey> {
 
-	static final String TAG = "addForeignKey";
+	static final String TAG = "createForeignKey";
 
 	static XmlOperation convert(XmlElement element) {
 		checkArgument(element.getTag().equals(TAG));
 
 		XmlAddForeignKey operation = new XmlAddForeignKey();
-		operation.setTableName(element.getAttributes().get("tableName"));
-		operation.setColumnNames(element.getAttributes().get("columnNames").split(","));
-		operation.setReferencedTableName(element.getAttributes().get("referencesTableName"));
-		operation.setReferencedColumnNames(element.getAttributes().get("referencesColumnNames").split(","));
+		operation.setTableName(element.getAttributes().remove("tableName"));
+		operation.setColumnNames(element.getAttributes().remove("columnNames").split(","));
+		operation.setReferencedTableName(element.getAttributes().remove("referencesTableName"));
+		operation.setReferencedColumnNames(element.getAttributes().remove("referencesColumnNames").split(","));
 
-		Optional.ofNullable(element.getAttributes().get("name"))
+		Optional.ofNullable(element.getAttributes().remove("name"))
 				.ifPresent(operation::setName);
 
-		Optional.ofNullable(element.getAttributes().get("onDelete"))
+		Optional.ofNullable(element.getAttributes().remove("onDelete"))
 				.map(Action::valueOf)
 				.ifPresent(operation::setOnDelete);
 
-		Optional.ofNullable(element.getAttributes().get("onUpdate"))
+		Optional.ofNullable(element.getAttributes().remove("onUpdate"))
 				.map(Action::valueOf)
 				.ifPresent(operation::setOnUpdate);
+
+		if (!element.getAttributes().keySet().isEmpty()) {
+			throw new IllegalArgumentException("Attributes: " + element.getAttributes().keySet() + " is/are not valid!");
+		}
 
 		return operation;
 	}

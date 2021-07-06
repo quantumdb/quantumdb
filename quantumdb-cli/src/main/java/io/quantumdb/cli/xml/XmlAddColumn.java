@@ -21,12 +21,19 @@ public class XmlAddColumn implements XmlOperation<AddColumn> {
 		checkArgument(element.getTag().equals(TAG));
 
 		XmlAddColumn operation = new XmlAddColumn();
-		operation.setTableName(element.getAttributes().get("tableName"));
+		operation.setTableName(element.getAttributes().remove("tableName"));
 
 		for (XmlElement child : element.getChildren()) {
 			if (child.getTag().equals("column")) {
 				operation.setColumn(XmlColumn.convert(child));
 			}
+			else {
+				throw new IllegalArgumentException("Child element: " + child.getTag() + " is not valid!");
+			}
+		}
+
+		if (!element.getAttributes().keySet().isEmpty()) {
+			throw new IllegalArgumentException("Attributes: " + element.getAttributes().keySet() + " is/are not valid!");
 		}
 
 		return operation;

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<changelog
+		xmlns="http://www.quantumdb.io/xml/ns/quantumdb-changelog"
+>
+
+	<changeset id="id1" author="Nick Richter">
+		<description>Test changeset 1</description>
+		<operations>
+			<renameTable oldTableName="table1" newTableName="table2"/>
+		</operations>
+	</changeset>
+
+</changelog>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<changelog
+		xmlns="http://www.quantumdb.io/xml/ns/quantumdb-changelog"
+>
+
+	<changeset id="id1" author="Nick Richter">
+		<description>Test changeset 1</description>
+		<operations>
+			<createTable tableName="table1">
+				<columns>
+					<column name="column1" type="bigserial" primaryKey="true"/>
+					<column name="column2" type="varchar" defaultExpression="Test"/>
+					<column name="column3" type="timestamp" nullable="false"/>
+					<column name="column4" type="numeric" autoIncrement="true"/>
+					<column name="column5" type="numeric" nullable="false" autoIncrement="true" primaryKey="true"/>
+				</columns>
+			</createTable>
+		</operations>
+	</changeset>
+
+</changelog>

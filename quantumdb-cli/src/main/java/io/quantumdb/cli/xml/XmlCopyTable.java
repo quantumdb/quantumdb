@@ -15,8 +15,13 @@ public class XmlCopyTable implements XmlOperation<CopyTable> {
 		checkArgument(element.getTag().equals(TAG));
 
 		XmlCopyTable operation = new XmlCopyTable();
-		operation.setSourceTableName(element.getAttributes().get("sourceTableName"));
-		operation.setTargetTableName(element.getAttributes().get("targetTableName"));
+		operation.setSourceTableName(element.getAttributes().remove("sourceTableName"));
+		operation.setTargetTableName(element.getAttributes().remove("targetTableName"));
+
+		if (!element.getAttributes().keySet().isEmpty()) {
+			throw new IllegalArgumentException("Attributes: " + element.getAttributes().keySet() + " is/are not valid!");
+		}
+
 		return operation;
 	}
 
