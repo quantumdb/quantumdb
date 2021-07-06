@@ -75,7 +75,6 @@ public class Changelog extends Command {
 
 	private void print(CliWriter writer, ChangeSet changeSet, Set<Version> activeVersions, boolean printShort) {
 		Version pointer = changeSet.getVersion();
-		Version lastVersion = pointer;
 		boolean active = activeVersions.contains(pointer);
 
 		int operations = 0;

@@ -42,6 +42,9 @@ public class Fork extends Command {
 			Version version = changelog.getRoot();
 			while (!version.getChangeSet().getId().equals(toChangeSet)) {
 				version = version.getChild();
+				if (version == null) {
+					throw new IllegalArgumentException("Please specify a valid Changeset ID to fork to!");
+				}
 			}
 			Version to = version.getChangeSet().getVersion();
 
@@ -65,7 +68,7 @@ public class Fork extends Command {
 			writer.write("Forking database from: " + from.getId() + " to: " + to.getId() + "...");
 
 			Migrator migrator = new Migrator(backend);
-			migrator.migrate(state, from.getId(), to.getId());
+			migrator.migrate(from.getId(), to.getId());
 
 			if (isDryRun) {
 				if (printDryRun) {

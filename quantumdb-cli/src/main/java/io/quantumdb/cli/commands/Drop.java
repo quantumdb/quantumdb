@@ -39,6 +39,9 @@ public class Drop extends Command {
 			Version version = changelog.getRoot();
 			while (!version.getChangeSet().getId().equals(changeSetId)) {
 				version = version.getChild();
+				if (version == null) {
+					throw new IllegalArgumentException("Please specify a valid Changeset ID to drop!");
+				}
 			}
 			version = version.getChangeSet().getVersion();
 

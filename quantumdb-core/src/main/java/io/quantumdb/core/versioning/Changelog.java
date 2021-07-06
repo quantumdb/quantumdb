@@ -102,7 +102,7 @@ public class Changelog {
 		lastAdded = appendTo;
 
 		for (Operation operation : operations) {
-				lastAdded = new Version(idGenerator.generateId(), lastAdded, changeSet, operation);
+			lastAdded = new Version(idGenerator.generateId(), lastAdded, changeSet, operation);
 		}
 
 		changeSet.setVersion(lastAdded);

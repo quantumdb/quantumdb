@@ -197,14 +197,14 @@ public class Query extends Command {
 			if (versions.size() == 1) {
 				return versions.get(0).getId();
 			}
-			throw new CliException("You must specify a version to query!");
+			throw new CliException("You must specify a Changeset ID to query!");
 		});
 		Version version = state.getChangelog().getRoot();
 		while (version != null && !version.getChangeSet().equals(changeSetId)) {
 			version = version.getChild();
 		}
 		if (version == null) {
-			throw new CliException("You must specify a (valid) version to query");
+			throw new CliException("You must specify a (valid) Changeset ID to query");
 		}
 
 		return version.getChangeSet().getVersion();

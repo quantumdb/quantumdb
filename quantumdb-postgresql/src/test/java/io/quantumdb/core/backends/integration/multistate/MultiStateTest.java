@@ -50,19 +50,19 @@ public class MultiStateTest extends PostgresqlDatabase {
 		step0 = changelog.getRoot();
 
 		step1 = changelog.addChangeSet("step1", "Michael de Jong", "Create test table.",
-						createTable("test").with("id", bigint(), PRIMARY_KEY, AUTO_INCREMENT))
+				createTable("test").with("id", bigint(), PRIMARY_KEY, AUTO_INCREMENT))
 				.getLastAdded();
 
 		changelog.addChangeSet("step2", "Michael de Jong", "Add name column to test table.",
-						addColumn("test", "name", varchar(255), "''", NOT_NULL))
+				addColumn("test", "name", varchar(255), "''", NOT_NULL))
 				.getLastAdded();
 
 		changelog.addChangeSet("step3", "Michael de Jong", "Insert default user account into test table.",
-						execute("INSERT INTO test (name) VALUES ('Hello');"))
+				execute("INSERT INTO test (name) VALUES ('Hello');"))
 				.getLastAdded();
 
 		step4 = changelog.addChangeSet("step4", "Michael de Jong", "Created admin flag for test table.",
-						addColumn("test", "admin", bool(), "'false'", NOT_NULL))
+				addColumn("test", "admin", bool(), "'false'", NOT_NULL))
 				.getLastAdded();
 
 		backend.persistState(state, null);
@@ -71,9 +71,8 @@ public class MultiStateTest extends PostgresqlDatabase {
 	@Test
 	public void testMigratingOverDataChange() throws MigrationException, SQLException {
 		Migrator migrator = new Migrator(backend);
-		State state = backend.loadState();
-		migrator.migrate(state, step0.getId(), step1.getId());
-		migrator.migrate(state, step1.getId(), step4.getId());
+		migrator.migrate(step0.getId(), step1.getId());
+		migrator.migrate(step1.getId(), step4.getId());
 		migrator.drop(step1.getId());
 	}
 
