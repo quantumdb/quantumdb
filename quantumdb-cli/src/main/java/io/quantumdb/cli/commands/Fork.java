@@ -68,7 +68,7 @@ public class Fork extends Command {
 			writer.write("Forking database from: " + from.getId() + " to: " + to.getId() + "...");
 
 			Migrator migrator = new Migrator(backend);
-			migrator.migrate(from.getId(), to.getId());
+			migrator.migrate(state, from.getId(), to.getId());
 
 			if (isDryRun) {
 				if (printDryRun) {

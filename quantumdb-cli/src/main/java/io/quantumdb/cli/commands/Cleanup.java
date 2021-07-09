@@ -66,7 +66,7 @@ public class Cleanup extends Command {
 			writer.write("Renaming all tables back to their original name.");
 
 			Migrator migrator = new Migrator(backend);
-			migrator.migrate(last.getId(), changelog.getLastAdded().getId());
+			migrator.migrate(state, last.getId(), changelog.getLastAdded().getId());
 
 			if (isDryRun) {
 				if (printDryRun) {

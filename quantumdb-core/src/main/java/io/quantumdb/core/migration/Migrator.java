@@ -61,10 +61,8 @@ public class Migrator {
 		this.backend = backend;
 	}
 
-	public void migrate(String sourceVersionId, String targetVersionId) throws MigrationException {
+	public void migrate(State state, String sourceVersionId, String targetVersionId) throws MigrationException {
 		log.info("Forking from version: {} to version: {}", sourceVersionId, targetVersionId);
-
-		State state = loadState();
 
 		Changelog changelog = state.getChangelog();
 		Version from = changelog.getVersion(sourceVersionId);

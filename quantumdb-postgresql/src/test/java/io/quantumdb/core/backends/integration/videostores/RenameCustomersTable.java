@@ -56,7 +56,7 @@ public class RenameCustomersTable {
 		target = setup.getChangelog().getLastAdded();
 		setup.getBackend().persistState(setup.getState(), null);
 
-		setup.getMigrator().migrate(origin.getId(), target.getId());
+		setup.getMigrator().migrate(setup.getState(), origin.getId(), target.getId());
 
 		state = setup.getBackend().loadState();
 	}
