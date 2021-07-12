@@ -54,9 +54,9 @@ public class AddForeignKeyToPaymentsTable {
 				SchemaOperations.addForeignKey("payments", "store_id").referencing("stores", "id"));
 
 		target = setup.getChangelog().getLastAdded();
-		setup.getBackend().persistState(setup.getState());
+		setup.getBackend().persistState(setup.getState(), null);
 
-		setup.getMigrator().migrate(origin.getId(), target.getId());
+		setup.getMigrator().migrate(setup.getState(), origin.getId(), target.getId());
 
 		state = setup.getBackend().loadState();
 	}
@@ -144,7 +144,7 @@ public class AddForeignKeyToPaymentsTable {
 		newPayments.addForeignKey("store_id").referencing(stores, "id");
 
 		List<Table> tables = Lists.newArrayList(stores, staff, customers, films, inventory, paychecks, payments, rentals,
-						newPayments);
+				newPayments);
 
 		Catalog expected = new Catalog(setup.getCatalog().getName());
 		tables.forEach(expected::addTable);

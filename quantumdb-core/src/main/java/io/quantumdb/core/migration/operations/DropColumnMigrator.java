@@ -19,7 +19,7 @@ class DropColumnMigrator implements SchemaOperationMigrator<DropColumn> {
 	@Override
 	public void migrate(Catalog catalog, RefLog refLog, Version version, DropColumn operation) {
 		String tableName = operation.getTableName();
-		TransitiveTableMirrorer.mirror(catalog, refLog, version, tableName);
+		TransitiveTableMirrorer.mirror(catalog, refLog, version, false, tableName);
 
 		TableRef tableRef = refLog.getTableRef(version, tableName);
 		String refId = tableRef.getRefId();

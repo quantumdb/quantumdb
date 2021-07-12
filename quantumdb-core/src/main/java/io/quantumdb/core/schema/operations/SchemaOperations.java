@@ -20,6 +20,10 @@ public class SchemaOperations {
 		return new RenameTable(tableName, newTableName);
 	}
 
+	public static CleanupTables cleanupTables() {
+		return new CleanupTables();
+	}
+
 	public static CopyTable copyTable(String sourceTableName, String targetTableName) {
 		return new CopyTable(sourceTableName, targetTableName);
 	}

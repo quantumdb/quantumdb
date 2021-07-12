@@ -83,9 +83,9 @@ public class CopyTypesTables {
 				SchemaOperations.copyTable("oid", "oid_backup"));
 
 		target = setup.getChangelog().getLastAdded();
-		setup.getBackend().persistState(setup.getState());
+		setup.getBackend().persistState(setup.getState(), null);
 
-		setup.getMigrator().migrate(origin.getId(), target.getId());
+		setup.getMigrator().migrate(setup.getState(), origin.getId(), target.getId());
 
 		state = setup.getBackend().loadState();
 	}
@@ -102,7 +102,7 @@ public class CopyTypesTables {
 				.addColumn(new Column("smallint", smallint(), NOT_NULL))
 				.addColumn(new Column("smallnumeric_integer", numeric(5, 0), NOT_NULL))
 				.addColumn(new Column("smallnumeric_decimal", numeric(5, 2), NOT_NULL))
-				.addColumn(new Column("smallnumeric", numeric(5,0), NOT_NULL));
+				.addColumn(new Column("smallnumeric", numeric(5, 0), NOT_NULL));
 
 		Table numeric = new Table(refLog.getTableRef(origin, "numeric").getRefId())
 				.addColumn(new Column("id", integer(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT))
@@ -111,7 +111,7 @@ public class CopyTypesTables {
 				.addColumn(new Column("double", doubles(), NOT_NULL))
 				.addColumn(new Column("numeric_integer", numeric(10, 0), NOT_NULL))
 				.addColumn(new Column("numeric_decimal", numeric(10, 5), NOT_NULL))
-				.addColumn(new Column("numeric", numeric(10,0), NOT_NULL));
+				.addColumn(new Column("numeric", numeric(10, 0), NOT_NULL));
 
 		Table numeric_big = new Table(refLog.getTableRef(origin, "numeric_big").getRefId())
 				.addColumn(new Column("id", bigint(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT))
@@ -161,7 +161,7 @@ public class CopyTypesTables {
 				.addColumn(new Column("smallint", smallint(), NOT_NULL))
 				.addColumn(new Column("smallnumeric_integer", numeric(5, 0), NOT_NULL))
 				.addColumn(new Column("smallnumeric_decimal", numeric(5, 2), NOT_NULL))
-				.addColumn(new Column("smallnumeric", numeric(5,0), NOT_NULL));
+				.addColumn(new Column("smallnumeric", numeric(5, 0), NOT_NULL));
 
 		Table new_numeric = new Table(refLog.getTableRef(target, "numeric_backup").getRefId())
 				.addColumn(new Column("id", integer(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT))
@@ -170,7 +170,7 @@ public class CopyTypesTables {
 				.addColumn(new Column("double", doubles(), NOT_NULL))
 				.addColumn(new Column("numeric_integer", numeric(10, 0), NOT_NULL))
 				.addColumn(new Column("numeric_decimal", numeric(10, 5), NOT_NULL))
-				.addColumn(new Column("numeric", numeric(10,0), NOT_NULL));
+				.addColumn(new Column("numeric", numeric(10, 0), NOT_NULL));
 
 		Table new_numeric_big = new Table(refLog.getTableRef(target, "numeric_big_backup").getRefId())
 				.addColumn(new Column("id", bigint(), PRIMARY_KEY, NOT_NULL, AUTO_INCREMENT))
@@ -365,14 +365,14 @@ public class CopyTypesTables {
 		catch (SQLException throwables) {
 			throwables.printStackTrace();
 		}
-		
+
 	}
 
 	public void insertTestDataInCopiedTables() throws SQLException {
 		RefLog refLog = state.getRefLog();
-		
+
 		Connection connection = setup.getConnection();
-		
+
 		connection.setAutoCommit(false);
 		connection.createStatement().execute("SET CONSTRAINTS ALL DEFERRED");
 

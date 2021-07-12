@@ -17,13 +17,20 @@ public class ChangelogLoader {
 		List<XmlChangeset> changesets = xml.getChangesets();
 
 		Version pointer = changelog.getRoot().getChild();
-		for (XmlChangeset changeset : changesets) {
+		for (int i = 0; i < changesets.size(); i++) {
+			XmlChangeset changeset = changesets.get(i);
 			String changesetId = changeset.getId();
 			if (pointer != null) {
 				for (int index = 1; index <= changeset.getOperations().size(); index++) {
 					XmlOperation<?> xmlOperation = changeset.getOperations().get(index - 1);
 					Operation operation = xmlOperation.toOperation();
 					Operation currentOperation = pointer.getOperation();
+
+					if (pointer.getChangeSet().getAuthor().equals("QuantumDB")) {
+						pointer = pointer.getChild();
+						i--;
+						break;
+					}
 
 					if (!operation.equals(currentOperation)) {
 						throw new IllegalStateException("Operation at index: " + index + " in changeset: "

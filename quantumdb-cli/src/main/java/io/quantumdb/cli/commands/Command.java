@@ -39,7 +39,7 @@ public abstract class Command {
 
 	void persistChanges(Backend backend, State state) {
 		try {
-			backend.persistState(state);
+			backend.persistState(state, null);
 		}
 		catch (SQLException e) {
 			log.error(e.getMessage(), e);
@@ -78,7 +78,7 @@ public abstract class Command {
 			String description = Optional.ofNullable(changeSet.getDescription())
 					.orElse(changeSet.getId());
 
-			writer.write(version.getId() + ": " + description, Context.SUCCESS);
+			writer.write(changeSet.getId() + ": " + description, Context.SUCCESS);
 		}
 
 		if (refLog.getVersions().isEmpty()) {
@@ -87,7 +87,7 @@ public abstract class Command {
 			String description = Optional.ofNullable(changeSet.getDescription())
 					.orElse(changeSet.getId());
 
-			writer.write(version.getId() + ": " + description, Context.SUCCESS);
+			writer.write(changeSet.getId() + ": " + description, Context.SUCCESS);
 		}
 
 		writer.indent(-1);

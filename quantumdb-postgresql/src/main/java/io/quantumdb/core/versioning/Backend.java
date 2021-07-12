@@ -33,6 +33,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSerializer;
+import io.quantumdb.core.migration.Migrator.Stage;
 import io.quantumdb.core.schema.definitions.Catalog;
 import io.quantumdb.core.schema.definitions.ColumnType;
 import io.quantumdb.core.schema.definitions.PostgresTypes;
@@ -176,10 +177,17 @@ public class Backend {
 		return new State(catalog, refLog, changelog);
 	}
 
-	public void persist(Connection connection, State state) throws SQLException {
-		persistChangelog(connection, state.getChangelog());
-
+	public void persist(Connection connection, State state, Stage stage) throws SQLException {
 		RefLog refLog = state.getRefLog();
+		Version lastActive = state.getChangelog().getLastAdded();
+		while (lastActive != null && !refLog.getVersions().contains(lastActive)) {
+			lastActive = lastActive.getParent();
+		}
+		if (stage != null) {
+			lastActive = stage.getLast();
+		}
+		persistChangelog(connection, state.getChangelog(), lastActive);
+
 		persistRefs(connection, refLog);
 		persistRefVersions(connection, refLog);
 		Collection<RawTableColumn> columns = persistTableColumns(connection, refLog);
@@ -189,12 +197,12 @@ public class Backend {
 		persistActiveVersions(connection, refLog);
 	}
 
-	private void persistChangelog(Connection connection, Changelog changelog) throws SQLException {
-		persistChangelogEntries(connection, changelog);
-		persistChangesets(connection, changelog);
+	private void persistChangelog(Connection connection, Changelog changelog, Version lastActive) throws SQLException {
+		persistChangelogEntries(connection, changelog, lastActive);
+		persistChangesets(connection, changelog, lastActive);
 	}
 
-	private void persistChangelogEntries(Connection connection, Changelog changelog) throws SQLException {
+	private void persistChangelogEntries(Connection connection, Changelog changelog, Version lastActive) throws SQLException {
 		Map<String, Version> mapping = Maps.newLinkedHashMap();
 		List<Version> versions = Lists.newLinkedList();
 		versions.add(changelog.getRoot());
@@ -202,7 +210,7 @@ public class Backend {
 		while (!versions.isEmpty()) {
 			Version version = versions.remove(0);
 			mapping.put(version.getId(), version);
-			if (version.getChild() != null) {
+			if (version.getChild() != null && !version.equals(lastActive)) {
 				versions.add(version.getChild());
 			}
 		}
@@ -289,7 +297,7 @@ public class Backend {
 		}
 	}
 
-	private void persistChangesets(Connection connection, Changelog changelog) throws SQLException {
+	private void persistChangesets(Connection connection, Changelog changelog, Version lastActive) throws SQLException {
 		Map<String, ChangeSet> mapping = Maps.newHashMap();
 		List<Version> versions = Lists.newLinkedList();
 		versions.add(changelog.getRoot());
@@ -306,7 +314,7 @@ public class Backend {
 				versionIdsToDrop.forEach(mapping::remove);
 			}
 			mapping.put(version.getId(), changeSet);
-			if (version.getChild() != null) {
+			if (version.getChild() != null && !version.equals(lastActive)) {
 				versions.add(version.getChild());
 			}
 		}

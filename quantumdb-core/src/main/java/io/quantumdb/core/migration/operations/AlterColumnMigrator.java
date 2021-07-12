@@ -23,7 +23,7 @@ class AlterColumnMigrator implements SchemaOperationMigrator<AlterColumn> {
 	@Override
 	public void migrate(Catalog catalog, RefLog refLog, Version version, AlterColumn operation) {
 		String tableName = operation.getTableName();
-		TransitiveTableMirrorer.mirror(catalog, refLog, version, tableName);
+		TransitiveTableMirrorer.mirror(catalog, refLog, version, false, tableName);
 
 		TableRef tableRef = refLog.getTableRef(version, tableName);
 		Table table = catalog.getTable(tableRef.getRefId());

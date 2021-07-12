@@ -11,6 +11,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.quantumdb.cli.commands.Changelog;
+import io.quantumdb.cli.commands.Cleanup;
 import io.quantumdb.cli.commands.Command;
 import io.quantumdb.cli.commands.Command.Identifier;
 import io.quantumdb.cli.commands.Drop;
@@ -67,7 +68,8 @@ public class Main {
 				new Fork(),
 				new Nuke(),
 				new Drop(),
-				new Query()
+				new Query(),
+				new Cleanup()
 		);
 
 		LinkedHashMap<String, Command> result = Maps.newLinkedHashMap();

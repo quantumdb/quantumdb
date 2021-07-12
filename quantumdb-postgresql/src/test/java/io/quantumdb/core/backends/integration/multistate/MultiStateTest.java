@@ -26,6 +26,7 @@ import org.junit.Test;
 public class MultiStateTest extends PostgresqlDatabase {
 
 	private Backend backend;
+	private State state;
 	private Version step0;
 	private Version step1;
 	private Version step4;
@@ -44,7 +45,7 @@ public class MultiStateTest extends PostgresqlDatabase {
 
 		backend = config.getBackend();
 
-		State state = backend.loadState();
+		state = backend.loadState();
 		Changelog changelog = state.getChangelog();
 
 		step0 = changelog.getRoot();
@@ -65,14 +66,16 @@ public class MultiStateTest extends PostgresqlDatabase {
 				addColumn("test", "admin", bool(), "'false'", NOT_NULL))
 				.getLastAdded();
 
-		backend.persistState(state);
+		System.out.println(changelog);
+
+		backend.persistState(state, null);
 	}
 
 	@Test
-	public void testMigratingOverDataChange() throws MigrationException {
+	public void testMigratingOverDataChange() throws MigrationException, SQLException {
 		Migrator migrator = new Migrator(backend);
-		migrator.migrate(step0.getId(), step1.getId());
-		migrator.migrate(step1.getId(), step4.getId());
+		migrator.migrate(state, step0.getId(), step1.getId());
+		migrator.migrate(state, step1.getId(), step4.getId());
 		migrator.drop(step1.getId());
 	}
 

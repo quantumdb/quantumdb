@@ -7,6 +7,7 @@ import com.google.common.collect.HashBiMap;
 import io.quantumdb.core.schema.operations.AddColumn;
 import io.quantumdb.core.schema.operations.AddForeignKey;
 import io.quantumdb.core.schema.operations.AlterColumn;
+import io.quantumdb.core.schema.operations.CleanupTables;
 import io.quantumdb.core.schema.operations.CopyTable;
 import io.quantumdb.core.schema.operations.CreateIndex;
 import io.quantumdb.core.schema.operations.CreateTable;
@@ -47,6 +48,7 @@ class Operations {
 		mapping.put("merge-table", MergeTable.class);
 		mapping.put("partition-table", PartitionTable.class);
 		mapping.put("rename-table", RenameTable.class);
+		mapping.put("cleanup-tables", CleanupTables.class);
 	}
 
 	public Optional<Class<? extends Operation>> getOperationType(String operationType) {

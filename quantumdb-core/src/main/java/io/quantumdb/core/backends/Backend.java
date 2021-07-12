@@ -3,6 +3,7 @@ package io.quantumdb.core.backends;
 import java.sql.Connection;
 import java.sql.SQLException;
 
+import io.quantumdb.core.migration.Migrator.Stage;
 import io.quantumdb.core.versioning.State;
 import io.quantumdb.core.versioning.Version;
 
@@ -21,10 +22,11 @@ public interface Backend {
 	 * Persists the current state of the database schema and its evolution to the database.
 	 *
 	 * @param state The current state of the database schema.
+	 * @param stage The stage that QuantumDB might want to save. Can be null.
 	 *
 	 * @throws SQLException In case the database could not be reached, or queried correctly.
 	 */
-	void persistState(State state) throws SQLException;
+	void persistState(State state, Stage stage) throws SQLException;
 
 	/**
 	 * Creates a connection to the database.
