@@ -73,7 +73,7 @@ public class AlterColumn implements SchemaOperation {
 	}
 
 	public AlterColumn dropDefaultExpression() {
-		this.newDefaultValueExpression = Optional.ofNullable("");
+		this.newDefaultValueExpression = Optional.of("");
 		return this;
 	}
 

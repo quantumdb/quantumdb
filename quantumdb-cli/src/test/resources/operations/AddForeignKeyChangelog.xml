@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<changelog
+		xmlns="http://www.quantumdb.io/xml/ns/quantumdb-changelog"
+>
+
+	<changeset id="id1" author="Nick Richter">
+		<description>Test changeset 1</description>
+		<operations>
+			<createForeignKey tableName="table1" columnNames="column1" referencesTableName="table2"
+						   referencesColumnNames="column1" name="foreign_key1"/>
+		</operations>
+	</changeset>
+
+	<changeset id="id2" author="Nick Richter">
+		<description>Test changeset 2</description>
+		<operations>
+			<createForeignKey tableName="table1" columnNames="column1,column2" referencesTableName="table2"
+						   referencesColumnNames="column1,column2" name="foreign_key2"/>
+		</operations>
+	</changeset>
+
+	<changeset id="id3" author="Nick Richter">
+		<description>Test changeset 3</description>
+		<operations>
+			<createForeignKey tableName="table1" columnNames="column1" referencesTableName="table2"
+						   referencesColumnNames="column1" name="foreign_key3" onDelete="RESTRICT" onUpdate="CASCADE"/>
+		</operations>
+	</changeset>
+
+	<changeset id="id4" author="Nick Richter">
+		<description>Test changeset 4</description>
+		<operations>
+			<createForeignKey tableName="table1" columnNames="column1" referencesTableName="table2"
+						   referencesColumnNames="column1" name="foreign_key4" onDelete="SET_DEFAULT"
+						   onUpdate="SET_NULL"/>
+		</operations>
+	</changeset>
+
+	<changeset id="id5" author="Nick Richter">
+		<description>Test changeset 5</description>
+		<operations>
+			<createForeignKey tableName="table1" columnNames="column1" referencesTableName="table2"
+						   referencesColumnNames="column1" name="foreign_key5" onDelete="NO_ACTION"
+						   onUpdate="NO_ACTION"/>
+		</operations>
+	</changeset>
+
+</changelog>

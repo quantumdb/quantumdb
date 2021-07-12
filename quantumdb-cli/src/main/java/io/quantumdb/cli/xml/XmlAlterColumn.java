@@ -2,7 +2,6 @@ package io.quantumdb.cli.xml;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import java.util.Map;
 import java.util.Optional;
 
 import io.quantumdb.core.schema.definitions.Column.Hint;
@@ -18,21 +17,24 @@ public class XmlAlterColumn implements XmlOperation<AlterColumn> {
 
 	static XmlOperation convert(XmlElement element) {
 		checkArgument(element.getTag().equals(TAG));
-		Map<String, String> attributes = element.getAttributes();
 
 		XmlAlterColumn operation = new XmlAlterColumn();
-		operation.setTableName(attributes.get("tableName"));
-		operation.setColumnName(attributes.get("columnName"));
+		operation.setTableName(element.getAttributes().remove("tableName"));
+		operation.setColumnName(element.getAttributes().remove("columnName"));
 
-		Optional.ofNullable(attributes.get("newColumnName"))
+		Optional.ofNullable(element.getAttributes().remove("newColumnName"))
 				.ifPresent(operation::setNewColumnName);
 
-		Optional.ofNullable(attributes.get("newType"))
+		Optional.ofNullable(element.getAttributes().remove("newDataType"))
 				.ifPresent(operation::setNewType);
 
-		Optional.ofNullable(attributes.get("nullable"))
+		Optional.ofNullable(element.getAttributes().remove("nullable"))
 				.map(Boolean.TRUE.toString()::equals)
 				.ifPresent(operation::setNullable);
+
+		if (!element.getAttributes().keySet().isEmpty()) {
+			throw new IllegalArgumentException("Attributes: " + element.getAttributes().keySet() + " is/are not valid!");
+		}
 
 		return operation;
 	}

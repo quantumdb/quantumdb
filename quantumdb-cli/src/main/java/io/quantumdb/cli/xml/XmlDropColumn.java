@@ -15,8 +15,13 @@ public class XmlDropColumn implements XmlOperation<DropColumn> {
 		checkArgument(element.getTag().equals(TAG));
 
 		XmlDropColumn operation = new XmlDropColumn();
-		operation.setTableName(element.getAttributes().get("tableName"));
-		operation.setColumnName(element.getAttributes().get("columnName"));
+		operation.setTableName(element.getAttributes().remove("tableName"));
+		operation.setColumnName(element.getAttributes().remove("columnName"));
+
+		if (!element.getAttributes().keySet().isEmpty()) {
+			throw new IllegalArgumentException("Attributes: " + element.getAttributes().keySet() + " is/are not valid!");
+		}
+
 		return operation;
 	}
 

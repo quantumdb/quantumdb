@@ -15,8 +15,13 @@ public class XmlDropIndex implements XmlOperation<DropIndex> {
 		checkArgument(element.getTag().equals(TAG));
 
 		XmlDropIndex operation = new XmlDropIndex();
-		operation.setTableName(element.getAttributes().get("tableName"));
-		operation.setColumnNames(element.getAttributes().get("columnNames").split(","));
+		operation.setTableName(element.getAttributes().remove("tableName"));
+		operation.setColumnNames(element.getAttributes().remove("columnNames").split(","));
+
+		if (!element.getAttributes().keySet().isEmpty()) {
+			throw new IllegalArgumentException("Attributes: " + element.getAttributes().keySet() + " is/are not valid!");
+		}
+
 		return operation;
 	}
 

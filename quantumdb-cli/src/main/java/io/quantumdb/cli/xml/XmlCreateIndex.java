@@ -17,12 +17,16 @@ public class XmlCreateIndex implements XmlOperation<CreateIndex> {
 		checkArgument(element.getTag().equals(TAG));
 
 		XmlCreateIndex operation = new XmlCreateIndex();
-		operation.setTableName(element.getAttributes().get("tableName"));
-		operation.setColumnNames(element.getAttributes().get("columnNames").split(","));
+		operation.setTableName(element.getAttributes().remove("tableName"));
+		operation.setColumnNames(element.getAttributes().remove("columnNames").split(","));
 
-		Optional.ofNullable(element.getAttributes().get("unique"))
+		Optional.ofNullable(element.getAttributes().remove("unique"))
 				.map(Boolean.TRUE.toString()::equals)
 				.ifPresent(operation::setUnique);
+
+		if (!element.getAttributes().keySet().isEmpty()) {
+			throw new IllegalArgumentException("Attributes: " + element.getAttributes().keySet() + " is/are not valid!");
+		}
 
 		return operation;
 	}

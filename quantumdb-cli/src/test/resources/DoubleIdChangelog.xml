@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<changelog
+		xmlns="http://www.quantumdb.io/xml/ns/quantumdb-changelog"
+>
+
+	<changeset id="id" author="Nick Richter">
+		<description>Test changeset</description>
+		<operations>
+			<addColumn tableName="table1">
+				<column name="column1" type="varchar" nullable="true"/>
+			</addColumn>
+		</operations>
+	</changeset>
+
+	<changeset id="id" author="Nick Richter">
+		<description>Test changeset</description>
+		<operations>
+			<addColumn tableName="table1">
+				<column name="column1" type="varchar" nullable="true"/>
+			</addColumn>
+		</operations>
+	</changeset>
+
+</changelog>

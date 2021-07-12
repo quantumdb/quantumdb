@@ -2,8 +2,6 @@ package io.quantumdb.cli.xml;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import java.util.Map;
-
 import io.quantumdb.core.schema.operations.AlterColumn;
 import io.quantumdb.core.schema.operations.SchemaOperations;
 import lombok.Data;
@@ -15,12 +13,16 @@ public class XmlAlterDefaultExpression implements XmlOperation<AlterColumn> {
 
 	static XmlOperation convert(XmlElement element) {
 		checkArgument(element.getTag().equals(TAG));
-		Map<String, String> attributes = element.getAttributes();
 
 		XmlAlterDefaultExpression operation = new XmlAlterDefaultExpression();
-		operation.setTableName(attributes.get("tableName"));
-		operation.setColumnName(attributes.get("columnName"));
-		operation.setDefaultExpression(attributes.get("defaultExpression"));
+		operation.setTableName(element.getAttributes().remove("tableName"));
+		operation.setColumnName(element.getAttributes().remove("columnName"));
+		operation.setDefaultExpression(element.getAttributes().remove("defaultExpression"));
+
+		if (!element.getAttributes().keySet().isEmpty()) {
+			throw new IllegalArgumentException("Attributes: " + element.getAttributes().keySet() + " is/are not valid!");
+		}
+
 		return operation;
 	}
 

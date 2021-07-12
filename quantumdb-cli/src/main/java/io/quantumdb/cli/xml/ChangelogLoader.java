@@ -1,6 +1,7 @@
 package io.quantumdb.cli.xml;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -15,6 +16,26 @@ public class ChangelogLoader {
 	public Changelog load(Changelog changelog, String file) throws IOException {
 		XmlChangelog xml = new XmlMapper().loadChangelog(file);
 		List<XmlChangeset> changesets = xml.getChangesets();
+
+		Set<String> idSet = new HashSet<>();
+		Version temp = changelog.getRoot();
+		idSet.add(temp.getId());
+		while (temp.getChild() != null) {
+			temp = temp.getChild();
+			if (idSet.contains(temp.getId())) {
+				throw new IllegalStateException("Existing changelog in the database already has two id's with the name: " + temp.getId() + ", please change one id in the database.");
+			}
+			idSet.add(temp.getId());
+		}
+
+		for (XmlChangeset changeset : changesets) {
+			if (idSet.contains(changeset.getId())) {
+				throw new IllegalStateException("Changelog must contain only unique id's, id: " + changeset.getId() + " is already present.");
+			}
+			else {
+				idSet.add(changeset.getId());
+			}
+		}
 
 		Version pointer = changelog.getRoot().getChild();
 		for (int i = 0; i < changesets.size(); i++) {

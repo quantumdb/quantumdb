@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<changelog
+		xmlns="http://www.quantumdb.io/xml/ns/quantumdb-changelog"
+>
+
+	<changeset id="id1" author="Nick Richter">
+		<description>Test changeset 1</description>
+		<operations>
+			<alterColumn tableName="table1" columnName="column1" nullable="true"/>
+		</operations>
+	</changeset>
+
+	<changeset id="id2" author="Nick Richter">
+		<description>Test changeset 2</description>
+		<operations>
+			<alterColumn tableName="table1" columnName="column1" newColumnName="column2"/>
+		</operations>
+	</changeset>
+
+	<changeset id="id3" author="Nick Richter">
+		<description>Test changeset 3</description>
+		<operations>
+			<alterColumn tableName="table1" columnName="column1" newDataType="TIMESTAMP"/>
+		</operations>
+	</changeset>
+
+	<!--	<changeset id="id4" author="Nick Richter">-->
+	<!--		<description>Test changeset 4</description>-->
+	<!--		<operations>-->
+	<!--			<alterColumn tableName="table1" columnName="column1" autoIncrement="true" />-->
+	<!--		</operations>-->
+	<!--	</changeset>-->
+
+	<!--	<changeset id="id5" author="Nick Richter">-->
+	<!--		<description>Test changeset 5</description>-->
+	<!--		<operations>-->
+	<!--			<alterColumn tableName="table1" columnName="column1" newDataType="bigserial" primaryKey="true" />-->
+	<!--		</operations>-->
+	<!--	</changeset>-->
+
+	<changeset id="id6" author="Nick Richter">
+		<description>Test changeset 6</description>
+		<operations>
+			<alterDefaultExpression tableName="table1" columnName="column1" defaultExpression="NOW()"/>
+		</operations>
+	</changeset>
+
+	<changeset id="id7" author="Nick Richter">
+		<description>Test changeset 7</description>
+		<operations>
+			<dropDefaultExpression tableName="table1" columnName="column1"/>
+		</operations>
+	</changeset>
+
+</changelog>

@@ -15,8 +15,13 @@ public class XmlDropForeignKey implements XmlOperation<DropForeignKey> {
 		checkArgument(element.getTag().equals(TAG));
 
 		XmlDropForeignKey operation = new XmlDropForeignKey();
-		operation.setTableName(element.getAttributes().get("tableName"));
-		operation.setForeignKeyName(element.getAttributes().get("foreignKeyName"));
+		operation.setTableName(element.getAttributes().remove("tableName"));
+		operation.setForeignKeyName(element.getAttributes().remove("foreignKeyName"));
+
+		if (!element.getAttributes().keySet().isEmpty()) {
+			throw new IllegalArgumentException("Attributes: " + element.getAttributes().keySet() + " is/are not valid!");
+		}
+
 		return operation;
 	}
 

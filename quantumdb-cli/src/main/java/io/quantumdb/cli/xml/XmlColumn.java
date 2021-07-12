@@ -11,12 +11,17 @@ public class XmlColumn {
 		checkArgument(element.getTag().equals("column"));
 
 		XmlColumn column = new XmlColumn();
-		column.setName(element.getAttributes().get("name"));
-		column.setType(element.getAttributes().get("type"));
-		column.setDefaultExpression(element.getAttributes().get("defaultExpression"));
-		column.setPrimaryKey(Boolean.TRUE.toString().equals(element.getAttributes().get("primaryKey")));
-		column.setAutoIncrement(Boolean.TRUE.toString().equals(element.getAttributes().get("autoIncrement")));
-		column.setNullable(!Boolean.FALSE.toString().equals(element.getAttributes().get("nullable")));
+		column.setName(element.getAttributes().remove("name"));
+		column.setType(element.getAttributes().remove("type"));
+		column.setDefaultExpression(element.getAttributes().remove("defaultExpression"));
+		column.setPrimaryKey(Boolean.TRUE.toString().equals(element.getAttributes().remove("primaryKey")));
+		column.setAutoIncrement(Boolean.TRUE.toString().equals(element.getAttributes().remove("autoIncrement")));
+		column.setNullable(!Boolean.FALSE.toString().equals(element.getAttributes().remove("nullable")));
+
+		if (!element.getAttributes().keySet().isEmpty()) {
+			throw new IllegalArgumentException("Attributes: " + element.getAttributes().keySet() + " is/are not valid!");
+		}
+
 		return column;
 	}
 

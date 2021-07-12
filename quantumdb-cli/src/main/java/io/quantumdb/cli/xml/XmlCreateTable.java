@@ -21,7 +21,7 @@ public class XmlCreateTable implements XmlOperation<CreateTable> {
 		checkArgument(element.getTag().equals(TAG));
 
 		XmlCreateTable operation = new XmlCreateTable();
-		operation.setTableName(element.getAttributes().get("tableName"));
+		operation.setTableName(element.getAttributes().remove("tableName"));
 
 		for (XmlElement child : element.getChildren()) {
 			if (child.getTag().equals("columns")) {
@@ -29,6 +29,13 @@ public class XmlCreateTable implements XmlOperation<CreateTable> {
 					operation.getColumns().add(XmlColumn.convert(subChild));
 				}
 			}
+			else {
+				throw new IllegalArgumentException("Child element: " + child.getTag() + " is not valid!");
+			}
+		}
+
+		if (!element.getAttributes().keySet().isEmpty()) {
+			throw new IllegalArgumentException("Attributes: " + element.getAttributes().keySet() + " is/are not valid!");
 		}
 
 		return operation;

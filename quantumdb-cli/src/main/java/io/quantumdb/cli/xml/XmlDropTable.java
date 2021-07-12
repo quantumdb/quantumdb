@@ -15,7 +15,12 @@ public class XmlDropTable implements XmlOperation<DropTable> {
 		checkArgument(element.getTag().equals(TAG));
 
 		XmlDropTable operation = new XmlDropTable();
-		operation.setTableName(element.getAttributes().get("tableName"));
+		operation.setTableName(element.getAttributes().remove("tableName"));
+
+		if (!element.getAttributes().keySet().isEmpty()) {
+			throw new IllegalArgumentException("Attributes: " + element.getAttributes().keySet() + " is/are not valid!");
+		}
+
 		return operation;
 	}
 

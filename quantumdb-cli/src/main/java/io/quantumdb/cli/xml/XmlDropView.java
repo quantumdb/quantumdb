@@ -15,7 +15,12 @@ public class XmlDropView implements XmlOperation<DropView> {
 		checkArgument(element.getTag().equals(TAG));
 
 		XmlDropView operation = new XmlDropView();
-		operation.setViewName(element.getAttributes().get("viewName"));
+		operation.setViewName(element.getAttributes().remove("viewName"));
+
+		if (!element.getAttributes().keySet().isEmpty()) {
+			throw new IllegalArgumentException("Attributes: " + element.getAttributes().keySet() + " is/are not valid!");
+		}
+
 		return operation;
 	}
 

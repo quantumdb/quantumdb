@@ -26,6 +26,10 @@ public class XmlQuery implements XmlOperation<DataOperation> {
 						.findFirst()
 						.orElseThrow(() -> new RuntimeException("No query specified!"))));
 
+		if (!element.getAttributes().keySet().isEmpty()) {
+			throw new IllegalArgumentException("Attributes: " + element.getAttributes().keySet() + " is/are not valid!");
+		}
+
 		return operation;
 	}
 
