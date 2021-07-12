@@ -17,7 +17,7 @@ public class ChangelogLoader {
 		XmlChangelog xml = new XmlMapper().loadChangelog(file);
 		List<XmlChangeset> changesets = xml.getChangesets();
 
-		HashSet<String> idSet = new HashSet<>();
+		Set<String> idSet = new HashSet<>();
 		Version temp = changelog.getRoot();
 		idSet.add(temp.getId());
 		while (temp.getChild() != null) {
