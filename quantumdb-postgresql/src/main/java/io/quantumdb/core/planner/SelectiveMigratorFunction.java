@@ -157,21 +157,26 @@ public class SelectiveMigratorFunction {
 		createStatement.append("  RETURN CONCAT('(', " + primaryKeyColumnNames.stream().map(value -> "r." + quoted(value)).collect(Collectors.joining(",',', ")) + ", ')');");
 		createStatement.append("END; $$ LANGUAGE 'plpgsql';");
 
+		List<String> parameterTypes = primaryKeyColumns.stream()
+				.map(column -> column.getType().getType().toString())
+				.collect(Collectors.toList());
+
 		QueryBuilder dropStatement = new QueryBuilder();
 		switch (stage) {
 			case INITIAL:
 				dropStatement.append("DROP FUNCTION " + quoted(functionName) + "();");
 				break;
 			case CONSECUTIVE:
-				List<String> parameterTypes = primaryKeyColumns.stream()
-						.map(column -> column.getType().toString())
-						.collect(Collectors.toList());
-
 				dropStatement.append("DROP FUNCTION " + quoted(functionName) + "(" + Joiner.on(",").join(parameterTypes) + ");");
 				break;
 		}
 
-		return new MigratorFunction(functionName, primaryKeyColumnNames, createStatement.toString(), dropStatement.toString());
+		LinkedHashMap<String, String> zippedPrimaryKeys = Maps.newLinkedHashMap();
+		for (int i = 0; i < primaryKeyColumnNames.size(); i++) {
+			zippedPrimaryKeys.put(primaryKeyColumnNames.get(i), parameterTypes.get(i));
+		}
+
+		return new MigratorFunction(functionName, zippedPrimaryKeys, createStatement.toString(), dropStatement.toString());
 	}
 
 	private static MigratorFunction createInsertMigrator(NullRecords nullRecords, RefLog refLog, Table source,
@@ -291,6 +296,9 @@ public class SelectiveMigratorFunction {
 		createStatement.append("  RETURN CONCAT('(', " + primaryKeyColumnNames.stream().map(value -> "r." + quoted(value)).collect(Collectors.joining(",',', ")) + ", ')');");
 		createStatement.append("END; $$ LANGUAGE 'plpgsql';");
 
+		List<String> parameterTypes = primaryKeyColumns.stream()
+				.map(column -> column.getType().getType().toString())
+				.collect(Collectors.toList());
 
 		QueryBuilder dropStatement = new QueryBuilder();
 
@@ -299,15 +307,16 @@ public class SelectiveMigratorFunction {
 				dropStatement.append("DROP FUNCTION " + quoted(functionName) + "();");
 				break;
 			case CONSECUTIVE:
-				List<String> parameterTypes = primaryKeyColumns.stream()
-						.map(column -> column.getType().toString())
-						.collect(Collectors.toList());
-
 				dropStatement.append("DROP FUNCTION " + quoted(functionName) + "(" + Joiner.on(",").join(parameterTypes) + ");");
 				break;
 		}
 
-		return new MigratorFunction(functionName, primaryKeyColumnNames, createStatement.toString(), dropStatement.toString());
+		LinkedHashMap<String, String> zippedPrimaryKeys = Maps.newLinkedHashMap();
+		for (int i = 0; i < primaryKeyColumnNames.size(); i++) {
+			zippedPrimaryKeys.put(primaryKeyColumnNames.get(i), parameterTypes.get(i));
+		}
+
+		return new MigratorFunction(functionName, zippedPrimaryKeys, createStatement.toString(), dropStatement.toString());
 	}
 
 }
