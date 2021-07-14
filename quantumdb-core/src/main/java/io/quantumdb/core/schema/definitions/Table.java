@@ -116,7 +116,7 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 		checkArgument(!columns.isEmpty(), "You must specify at least one entry in 'columns'.");
 
 		return indexes.stream()
-				.anyMatch(c -> c.getColumns().equals(Lists.newArrayList(columns)));
+				.anyMatch(c -> c.getColumns().size() == Lists.newArrayList(columns).size() && c.getColumns().containsAll(Lists.newArrayList(columns)));
 	}
 
 	public Index removeIndex(String... columns) {
@@ -140,7 +140,7 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 		checkArgument(!columns.isEmpty(), "You must specify at least one 'columns'.");
 
 		return indexes.stream()
-				.filter(c -> c.getColumns().equals(Lists.newArrayList(columns)))
+				.filter(c -> c.getColumns().size() == Lists.newArrayList(columns).size() && c.getColumns().containsAll(Lists.newArrayList(columns)))
 				.findFirst()
 				.orElse(null);
 	}

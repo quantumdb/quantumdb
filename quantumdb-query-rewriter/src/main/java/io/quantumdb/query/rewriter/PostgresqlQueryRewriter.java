@@ -51,31 +51,32 @@ public class PostgresqlQueryRewriter implements QueryRewriter {
 		for (state.cursor = 0; state.cursor < query.length(); state.cursor++) {
 			char currentCharacter = query.charAt(state.cursor);
 
-				switch (currentCharacter) {
-					case '\'':
-					case '\"':
-					case '`':
-						Character onStack = state.stack.peekFirst();
-						if (onStack != null && onStack.equals(currentCharacter)) {
-							state.stack.removeFirst();
-						}
-						else {
-							state.stack.addFirst(currentCharacter);
-						}
-						processWordStartOrMiddle(state);
-						break;
-					case ' ':
-					case ',':
-					case ';':
-						if (state.stack.isEmpty()) {
-							processWordEnding(state);
-						}
-						processWordStartOrMiddle(state);
-						break;
-					default:
-						processWordStartOrMiddle(state);
-						break;
-				}
+			switch (currentCharacter) {
+				case '\'':
+				case '\"':
+				case '`':
+					Character onStack = state.stack.peekFirst();
+					if (onStack != null && onStack.equals(currentCharacter)) {
+						state.stack.removeFirst();
+					}
+					else {
+						state.stack.addFirst(currentCharacter);
+					}
+					processWordStartOrMiddle(state);
+					break;
+				case ' ':
+				case '\t':
+				case ',':
+				case ';':
+					if (state.stack.isEmpty()) {
+						processWordEnding(state);
+					}
+					processWordStartOrMiddle(state);
+					break;
+				default:
+					processWordStartOrMiddle(state);
+					break;
+			}
 		}
 
 		processWordEnding(state);
@@ -115,7 +116,7 @@ public class PostgresqlQueryRewriter implements QueryRewriter {
 			}
 
 			String schema = null;
-			if (word != null && word.startsWith(DEFAULT_SCHEMA + ".")) {
+			if (word.startsWith(DEFAULT_SCHEMA + ".")) {
 				schema = DEFAULT_SCHEMA;
 				word = word.substring(DEFAULT_SCHEMA.length() + 1, word.length());
 			}
@@ -131,19 +132,19 @@ public class PostgresqlQueryRewriter implements QueryRewriter {
 				}
 			}
 
-			if (tableName == null) {
-				//throw new SQLException("No table with name: '" + word + "' exists.");
-			}
-			else {
+			if (tableName != null) {
 				word = tableName;
 			}
+//			else {
+//				throw new SQLException("No table with name: '" + word + "' exists.");
+//			}
 
 			if (schema != null) {
 				word = schema + "." + word;
 			}
 
 			if (isQuoted) {
-				word = "'" + word + "'";
+				word = "\"" + word + "\"";
 			}
 		}
 
@@ -159,7 +160,7 @@ public class PostgresqlQueryRewriter implements QueryRewriter {
 			return false;
 		}
 
-		return first == '\'';
+		return first == '\"';
 	}
 
 }
