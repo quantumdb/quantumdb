@@ -334,11 +334,13 @@ class CatalogLoader {
 					parser.consume();
 				}
 
-				List<String> groups = parser.consumeGroup('(', ')', ',').stream().map(String::trim).collect(Collectors.toList());
+				List<String> groups = parser.consumeGroup('(', ')', ',').stream().map(String::trim).map(CatalogLoader::removeOuterQuotes).collect(Collectors.toList());
 				// TODO: Add support for expressions. Now we only support column references.
 
 				Table table = catalog.getTable(indexTableName);
-				table.addIndex(new Index(indexName, groups, unique));
+				if (!table.containsIndex(groups)) {
+					table.addIndex(new Index(indexName, groups, unique));
+				}
 			}
 		}
 	}

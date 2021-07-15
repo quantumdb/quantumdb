@@ -20,6 +20,7 @@ import io.quantumdb.core.migration.Migrator;
 import io.quantumdb.core.versioning.Changelog;
 import io.quantumdb.core.versioning.State;
 import io.quantumdb.core.versioning.Version;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -77,6 +78,11 @@ public class MultiStateTest extends PostgresqlDatabase {
 		migrator.migrate(state, step0.getId(), step1.getId());
 		migrator.migrate(state, step1.getId(), step4.getId());
 		migrator.drop(step1.getId());
+	}
+
+	@After
+	public void dropDatabase() {
+		super.after();
 	}
 
 }

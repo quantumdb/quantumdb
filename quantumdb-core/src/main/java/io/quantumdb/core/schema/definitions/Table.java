@@ -101,7 +101,7 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 
 	public Table addIndex(Index index) {
 		checkArgument(index != null, "You must specify an 'index'.");
-		checkState(!containsIndex(index.getIndexName()), "Table already contains an index with name: " + index.getIndexName());
+		checkState(!containsIndex(index.getColumns()), "Table already contains an index: " + index.getIndexName() + " with columns: " + index.getColumns());
 
 		indexes.add(index);
 		index.setParent(this);
@@ -116,7 +116,7 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 		checkArgument(!columns.isEmpty(), "You must specify at least one entry in 'columns'.");
 
 		return indexes.stream()
-				.anyMatch(c -> c.getColumns().size() == Lists.newArrayList(columns).size() && c.getColumns().containsAll(Lists.newArrayList(columns)));
+				.anyMatch(c -> Sets.newHashSet(c.getColumns()).equals(Sets.newHashSet(columns)));
 	}
 
 	public Index removeIndex(String... columns) {
@@ -140,7 +140,7 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 		checkArgument(!columns.isEmpty(), "You must specify at least one 'columns'.");
 
 		return indexes.stream()
-				.filter(c -> c.getColumns().size() == Lists.newArrayList(columns).size() && c.getColumns().containsAll(Lists.newArrayList(columns)))
+				.filter(c -> Sets.newHashSet(c.getColumns()).equals(Sets.newHashSet(columns)))
 				.findFirst()
 				.orElse(null);
 	}
@@ -245,9 +245,13 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 			}
 
 			error = true;
-			builder.append(" - Foreign key: " + foreignKey.getForeignKeyName()
-					+ " refers to column(s): " + foreignKey.getReferredColumns()
-					+ " from table: " + foreignKey.getReferencingTableName() + "\n");
+			builder.append(" - Foreign key: ")
+					.append(foreignKey.getForeignKeyName())
+					.append(" refers to column(s): ")
+					.append(foreignKey.getReferredColumns())
+					.append(" from table: ")
+					.append(foreignKey.getReferencingTableName())
+					.append("\n");
 		}
 
 		if (error) {
@@ -275,8 +279,8 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 	@Override
 	public Table copy() {
 		Table copy = new Table(name);
-		columns.stream().forEachOrdered(column -> copy.addColumn(column.copy()));
-		indexes.stream().forEachOrdered(index -> copy.addIndex(new Index(index.getColumns(), index.isUnique())));
+		columns.forEach(column -> copy.addColumn(column.copy()));
+		indexes.forEach(index -> copy.addIndex(new Index(index.getColumns(), index.isUnique())));
 		return copy;
 	}
 
