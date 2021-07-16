@@ -288,7 +288,7 @@ public class SelectiveMigratorFunction {
 		createStatement.append("		LIMIT " + batchSize);
 		createStatement.append("	LOOP");
 		createStatement.append("	  BEGIN");
-		createStatement.append("		INSERT INTO " + target.getName());
+		createStatement.append("		INSERT INTO " + quoted(target.getName()));
 		createStatement.append("		  (" + values.keySet().stream().map(QueryUtils::quoted).collect(Collectors.joining(", ")) + ")");
 		createStatement.append("		  VALUES (" + Joiner.on(", ").join(values.values()) + ");");
 		createStatement.append("	  EXCEPTION WHEN unique_violation THEN END;");

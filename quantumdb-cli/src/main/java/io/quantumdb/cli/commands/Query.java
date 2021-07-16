@@ -11,8 +11,7 @@ import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.stream.Collectors;
+
 
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
@@ -41,8 +40,7 @@ public class Query extends Command {
 		try {
 			Config config = Config.load();
 			Version version = getVersionId(arguments, config);
-			String query = arguments.stream()
-					.collect(Collectors.joining(" "));
+			String query = String.join(" ", arguments);
 
 			Class.forName("io.quantumdb.driver.Driver");
 
@@ -200,7 +198,7 @@ public class Query extends Command {
 			throw new CliException("You must specify a Changeset ID to query!");
 		});
 		Version version = state.getChangelog().getRoot();
-		while (version != null && !version.getChangeSet().equals(changeSetId)) {
+		while (version != null && !version.getChangeSet().getId().equals(changeSetId)) {
 			version = version.getChild();
 		}
 		if (version == null) {
