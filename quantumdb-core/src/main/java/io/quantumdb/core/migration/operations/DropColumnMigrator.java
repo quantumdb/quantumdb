@@ -30,7 +30,9 @@ class DropColumnMigrator implements SchemaOperationMigrator<DropColumn> {
 
 		List<Index> indexes = Lists.newArrayList(table.getIndexes());
 		for (Index index : indexes) {
-			table.removeIndex(index.getColumns());
+			if (index.getColumns().contains(operation.getColumnName())) {
+				table.removeIndex(index.getColumns());
+			}
 		}
 	}
 

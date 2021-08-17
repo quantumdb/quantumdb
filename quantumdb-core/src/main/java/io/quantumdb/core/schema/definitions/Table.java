@@ -101,29 +101,35 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 
 	public Table addIndex(Index index) {
 		checkArgument(index != null, "You must specify an 'index'.");
-		checkState(!containsIndex(index.getColumns()), "Table already contains an index: " + index.getIndexName() + " with columns: " + index.getColumns());
+		checkState(!containsIndexName(index.getIndexName()), "Table already contains an index with the name: " + index.getIndexName());
 
 		indexes.add(index);
 		index.setParent(this);
 		return this;
 	}
 
-	public boolean containsIndex(String... columns) {
-		return containsIndex(Sets.newHashSet(columns));
+	public boolean containsIndexName(String indexName) {
+		checkArgument(indexName != null, "The indexName cannot be null.");
+
+		return indexes.stream().anyMatch(i -> i.getIndexName().equals(indexName));
 	}
 
-	public boolean containsIndex(Collection<String> columns) {
+	public boolean containsIndex(String... columns) {
+		return containsIndex(Lists.newArrayList(columns));
+	}
+
+	public boolean containsIndex(List<String> columns) {
 		checkArgument(!columns.isEmpty(), "You must specify at least one entry in 'columns'.");
 
 		return indexes.stream()
-				.anyMatch(c -> Sets.newHashSet(c.getColumns()).equals(Sets.newHashSet(columns)));
+				.anyMatch(i -> i.getColumns().equals(columns));
 	}
 
 	public Index removeIndex(String... columns) {
-		return removeIndex(Sets.newHashSet(columns));
+		return removeIndex(Lists.newArrayList(columns));
 	}
 
-	public Index removeIndex(Collection<String> columns) {
+	public Index removeIndex(List<String> columns) {
 		checkState(containsIndex(columns), "You cannot remove an index which does not exist: " + columns);
 
 		Index index = getIndex(columns);
@@ -133,14 +139,14 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 	}
 
 	public Index getIndex(String... columns) {
-		return getIndex(Sets.newHashSet(columns));
+		return getIndex(Lists.newArrayList(columns));
 	}
 
-	public Index getIndex(Collection<String> columns) {
+	public Index getIndex(List<String> columns) {
 		checkArgument(!columns.isEmpty(), "You must specify at least one 'columns'.");
 
 		return indexes.stream()
-				.filter(c -> Sets.newHashSet(c.getColumns()).equals(Sets.newHashSet(columns)))
+				.filter(i -> i.getColumns().equals(columns))
 				.findFirst()
 				.orElse(null);
 	}

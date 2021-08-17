@@ -316,7 +316,7 @@ class CatalogLoader {
 				parser.present("CONCURRENTLY");
 				String indexName = parser.consume();
 				indexName = removeOuterQuotes(indexName);
-				if (indexName.startsWith("pk_")) {
+				if (indexName.endsWith("_pkey")) {
 					continue;
 				}
 

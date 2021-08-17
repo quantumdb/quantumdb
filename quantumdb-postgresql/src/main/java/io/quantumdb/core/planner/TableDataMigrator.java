@@ -157,7 +157,7 @@ class TableDataMigrator {
 				if (resultSet.next()) {
 					Map<String, Object> id = Maps.newHashMap();
 					for (String primaryKeyColumn : primaryKeyColumns) {
-						Object value = resultSet.getObject(primaryKeyColumn);
+						Object value = parseValue(from.getColumn(primaryKeyColumn).getType().getType(),resultSet.getObject(primaryKeyColumn).toString());
 						id.put(primaryKeyColumn, value);
 					}
 					return id;
