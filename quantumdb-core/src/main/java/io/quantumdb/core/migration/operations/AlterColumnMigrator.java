@@ -50,8 +50,8 @@ class AlterColumnMigrator implements SchemaOperationMigrator<AlterColumn> {
 			}
 		});
 
-		operation.getHintsToDrop().stream().forEach(column::dropHint);
-		operation.getHintsToAdd().stream().forEach(column::addHint);
+		operation.getHintsToDrop().forEach(column::dropHint);
+		operation.getHintsToAdd().forEach(column::addHint);
 		operation.getNewColumnType().ifPresent(column::modifyType);
 
 		Optional<String> newDefaultValueExpression = operation.getNewDefaultValueExpression();

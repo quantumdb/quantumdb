@@ -101,29 +101,35 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 
 	public Table addIndex(Index index) {
 		checkArgument(index != null, "You must specify an 'index'.");
-		checkState(!containsIndex(index.getIndexName()), "Table already contains an index with name: " + index.getIndexName());
+		checkState(!containsIndexName(index.getIndexName()), "Table already contains an index with the name: " + index.getIndexName());
 
 		indexes.add(index);
 		index.setParent(this);
 		return this;
 	}
 
-	public boolean containsIndex(String... columns) {
-		return containsIndex(Sets.newHashSet(columns));
+	public boolean containsIndexName(String indexName) {
+		checkArgument(indexName != null, "The indexName cannot be null.");
+
+		return indexes.stream().anyMatch(i -> i.getIndexName().equals(indexName));
 	}
 
-	public boolean containsIndex(Collection<String> columns) {
+	public boolean containsIndex(String... columns) {
+		return containsIndex(Lists.newArrayList(columns));
+	}
+
+	public boolean containsIndex(List<String> columns) {
 		checkArgument(!columns.isEmpty(), "You must specify at least one entry in 'columns'.");
 
 		return indexes.stream()
-				.anyMatch(c -> c.getColumns().equals(Lists.newArrayList(columns)));
+				.anyMatch(i -> i.getColumns().equals(columns));
 	}
 
 	public Index removeIndex(String... columns) {
-		return removeIndex(Sets.newHashSet(columns));
+		return removeIndex(Lists.newArrayList(columns));
 	}
 
-	public Index removeIndex(Collection<String> columns) {
+	public Index removeIndex(List<String> columns) {
 		checkState(containsIndex(columns), "You cannot remove an index which does not exist: " + columns);
 
 		Index index = getIndex(columns);
@@ -133,14 +139,14 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 	}
 
 	public Index getIndex(String... columns) {
-		return getIndex(Sets.newHashSet(columns));
+		return getIndex(Lists.newArrayList(columns));
 	}
 
-	public Index getIndex(Collection<String> columns) {
+	public Index getIndex(List<String> columns) {
 		checkArgument(!columns.isEmpty(), "You must specify at least one 'columns'.");
 
 		return indexes.stream()
-				.filter(c -> c.getColumns().equals(Lists.newArrayList(columns)))
+				.filter(i -> i.getColumns().equals(columns))
 				.findFirst()
 				.orElse(null);
 	}
@@ -245,9 +251,13 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 			}
 
 			error = true;
-			builder.append(" - Foreign key: " + foreignKey.getForeignKeyName()
-					+ " refers to column(s): " + foreignKey.getReferredColumns()
-					+ " from table: " + foreignKey.getReferencingTableName() + "\n");
+			builder.append(" - Foreign key: ")
+					.append(foreignKey.getForeignKeyName())
+					.append(" refers to column(s): ")
+					.append(foreignKey.getReferredColumns())
+					.append(" from table: ")
+					.append(foreignKey.getReferencingTableName())
+					.append("\n");
 		}
 
 		if (error) {
@@ -275,8 +285,8 @@ public class Table implements Copyable<Table>, Comparable<Table> {
 	@Override
 	public Table copy() {
 		Table copy = new Table(name);
-		columns.stream().forEachOrdered(column -> copy.addColumn(column.copy()));
-		indexes.stream().forEachOrdered(index -> copy.addIndex(new Index(index.getColumns(), index.isUnique())));
+		columns.forEach(column -> copy.addColumn(column.copy()));
+		indexes.forEach(index -> copy.addIndex(new Index(index.getColumns(), index.isUnique())));
 		return copy;
 	}
 

@@ -48,15 +48,15 @@ public class PostgresqlQueryRewriterTest {
 
 	@Test
 	public void testSelectQueryWithTableNameBetweenQuotes() throws SQLException {
-		String input = "SELECT * FROM 'users'";
-		String expected = "SELECT * FROM 'users_v2'";
+		String input = "SELECT * FROM \"users\"";
+		String expected = "SELECT * FROM \"users_v2\"";
 		assertEquals(expected, rewrite(input));
 	}
 
 	@Ignore
 	@Test(expected = SQLException.class)
 	public void testThatQuotedTableNameInFromIsCaseSensitive() throws SQLException {
-		String input = "SELECT * FROM 'Users'";
+		String input = "SELECT * FROM \"Users\"";
 		rewrite(input);
 	}
 

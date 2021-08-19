@@ -75,7 +75,20 @@ public class XmlMapper {
 
 					if (stack.size() > 0) {
 						XmlElement parent = stack.get(stack.size() - 1);
-						parent.getChildren().add(element);
+						if (parent.getTag() == null) {
+							element = new XmlElement(null, parent.getText().concat(body));
+							element.getChildren().addAll(parent.getChildren());
+							element.getAttributes().putAll(parent.getAttributes());
+							if (stack.size() > 1) {
+								XmlElement grandParent = stack.get(stack.size() - 2);
+								grandParent.getChildren().remove(parent);
+								grandParent.getChildren().add(element);
+							}
+							stack.remove(parent);
+						}
+						else {
+							parent.getChildren().add(element);
+						}
 					}
 
 					stack.add(element);
